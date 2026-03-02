@@ -24,14 +24,6 @@ export default function Page() {
     setMorphing(false);
   };
 
-  // Entrance animation style
-  const entranceStyle = {
-    opacity: 0,
-    transform: "translateY(20px)",
-    transition: "opacity 1s ease-out, transform 1s ease-out",
-    ...(mounted ? { opacity: 1, transform: "translateY(0)" } : {}),
-  };
-
   return (
     <div
       style={{
@@ -82,15 +74,10 @@ export default function Page() {
           bottom: "3rem",
           right: "3rem",
           zIndex: 10,
-          opacity: morphing ? 0 : 1,
           pointerEvents: morphing ? "none" : "auto",
-          transition: "opacity 0.6s ease",
-          ...entranceStyle,
-          transition: "opacity 0.6s ease",
-          ...(mounted && !morphing
-            ? { opacity: 1, transform: "translateY(0)" }
-            : {}),
-          ...(morphing ? { opacity: 0 } : {}),
+          transition: "opacity 0.6s ease, transform 1s ease-out",
+          opacity: !mounted ? 0 : morphing ? 0 : 1,
+          transform: mounted ? "translateY(0)" : "translateY(20px)",
         }}
       >
         <button
