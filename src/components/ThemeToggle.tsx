@@ -2,37 +2,29 @@
 
 import { useEffect, useState } from "react";
 
-const DARK_THEMES = [
-  { background: "#244466", foreground: "#f5dcc8" },
-  { background: "#344a34", foreground: "#f5dcc8" },
-];
-
-function pickRandomTheme() {
-  return DARK_THEMES[Math.floor(Math.random() * DARK_THEMES.length)];
-}
-
 function applyDark() {
-  const theme = pickRandomTheme();
-  document.documentElement.style.setProperty("--background", theme.background);
-  document.documentElement.style.setProperty("--foreground", theme.foreground);
+  document.documentElement.style.setProperty("--background", "#344a34");
+  document.documentElement.style.setProperty("--foreground", "#f5dcc8");
   document.documentElement.classList.add("dark");
 }
 
 function applyLight() {
-  document.documentElement.style.setProperty("--background", "#f5f0eb");
-  document.documentElement.style.setProperty("--foreground", "#1a1816");
+  document.documentElement.style.setProperty("--background", "#f5dcc8");
+  document.documentElement.style.setProperty("--foreground", "#344a34");
   document.documentElement.classList.remove("dark");
 }
 
 export default function ThemeToggle() {
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState(true);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("theme");
-    const isDark = saved === "dark";
+    // Default to dark if no preference saved
+    const isDark = saved !== "light";
     setDark(isDark);
     if (isDark) applyDark();
+    else applyLight();
     setMounted(true);
   }, []);
 
@@ -56,7 +48,7 @@ export default function ThemeToggle() {
       aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
       style={{
         position: "fixed",
-        bottom: "1.5rem",
+        top: "1.5rem",
         right: "1.5rem",
         zIndex: 50,
         width: "32px",
@@ -77,7 +69,7 @@ export default function ThemeToggle() {
       onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
       onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.3")}
     >
-      {dark ? "\u2600" : "\u263E"}
+      {dark ? "\u2600\uFE0E" : "\u263E"}
     </button>
   );
 }
