@@ -660,6 +660,12 @@ const KONAMI_SEQUENCE = [
 
 // --- React components ---
 
+// NYC longitude offset: rotate globe so NYC (~74°W) faces camera
+const NYC_ROTATION_Y = -((90 - 74) * Math.PI) / 180; // ≈ -0.279 rad
+
+// Camera at equator level
+const CAMERA_Y = 0;
+
 // Theme color definitions
 const LIGHT_LAND = new THREE.Color(0.20, 0.29, 0.20);
 const LIGHT_OCEAN = new THREE.Color(0.30, 0.40, 0.30);
@@ -678,40 +684,36 @@ function smoothstep(t: number) {
 // --- 3-phase parametric camera path ---
 function getCameraState(
   progress: number,
-  startPos: THREE.Vector3 = new THREE.Vector3(0, 0, 5),
-  startTarget: THREE.Vector3 = new THREE.Vector3(0, 0, 0),
+  startPos: THREE.Vector3,
+  startTarget: THREE.Vector3,
 ): {
   position: [number, number, number];
   lookAt: [number, number, number];
 } {
   if (progress <= 0.4) {
-    // Phase 1: Zoom from captured camera position into globe center
+    // Phase 1: startPos → globe center
     const t = progress / 0.4;
     const eased = smoothstep(t);
 
-    const x = startPos.x * (1 - eased);
-    const y = startPos.y * (1 - eased) + eased * 0.1 * Math.sin(eased * Math.PI);
-    const z = startPos.z * (1 - eased) + 0.1 * eased;
-
-    const lx = startTarget.x * (1 - eased);
-    const ly = startTarget.y * (1 - eased);
-    const lz = startTarget.z * (1 - eased);
-
     return {
-      position: [x, y, z],
-      lookAt: [lx, ly, lz],
+      position: [
+        startPos.x * (1 - eased),
+        startPos.y * (1 - eased) + eased * 0.1 * Math.sin(eased * Math.PI),
+        startPos.z * (1 - eased) + 0.1 * eased,
+      ],
+      lookAt: [
+        startTarget.x * (1 - eased),
+        startTarget.y * (1 - eased),
+        startTarget.z * (1 - eased),
+      ],
     };
   } else if (progress <= 0.6) {
     // Phase 2: Through center, begin repositioning
     const t = (progress - 0.4) / 0.2;
     const eased = smoothstep(t);
 
-    const x = 0;
-    const y = eased * 0.5;
-    const z = 0.1 + eased * 2.9; // 0.1 -> 3.0
-
     return {
-      position: [x, y, z],
+      position: [0, eased * 0.5, 0.1 + eased * 2.9],
       lookAt: [eased * 1.5, eased * 0.8, 0],
     };
   } else {
@@ -739,42 +741,20 @@ function CameraController({
   controlsRef: React.RefObject<any>;
 }) {
   const { camera } = useThree();
-  const targetPos = useRef(new THREE.Vector3(0, 0, 5));
-  const targetLook = useRef(new THREE.Vector3(0, 0, 0));
-  const startPos = useRef(new THREE.Vector3(0, 0, 5));
+  const startPos = useRef(new THREE.Vector3(0, CAMERA_Y, 5));
   const startTarget = useRef(new THREE.Vector3(0, 0, 0));
   const wasIdle = useRef(true);
 
   useFrame(() => {
     const controls = controlsRef.current;
-    const defaultPos = new THREE.Vector3(0, 0, 5);
-    const defaultTarget = new THREE.Vector3(0, 0, 0);
 
+    // Below threshold: do nothing — OrbitControls has full control
     if (scrollProgress < 0.01) {
-      if (!wasIdle.current) {
-        // Continue guiding camera to default — startPos already blended close,
-        // so this is a smooth continuation, not a jump
-        const dist = camera.position.distanceTo(defaultPos);
-        if (dist > 0.1) {
-          camera.position.lerp(defaultPos, 0.08);
-          if (controls) {
-            controls.target.lerp(defaultTarget, 0.08);
-          }
-          camera.lookAt(controls?.target ?? defaultTarget);
-          camera.updateMatrixWorld();
-          return;
-        }
-        // Arrived — hand off to OrbitControls
-        camera.position.copy(defaultPos);
-        if (controls) {
-          controls.target.copy(defaultTarget);
-        }
-        wasIdle.current = true;
-      }
+      wasIdle.current = true;
       return;
     }
 
-    // Capture camera state on first scroll from idle
+    // Capture camera position on first scroll from idle
     if (wasIdle.current) {
       startPos.current.copy(camera.position);
       if (controls) {
@@ -785,27 +765,24 @@ function CameraController({
       wasIdle.current = false;
     }
 
-    // As user scrolls back toward 0, gradually blend startPos toward default.
-    // This ensures the Phase 1 endpoint smoothly becomes (0,0,5)
-    // so there's no jump when OrbitControls takes over.
-    if (scrollProgress < 0.3) {
-      const blendRate = 0.05 * (1 - scrollProgress / 0.3);
-      startPos.current.lerp(defaultPos, blendRate);
-      startTarget.current.lerp(defaultTarget, blendRate);
-    }
+    // Path from startPos → center → skyline (and back)
+    // Direct set — no lerp. scrollProgress is already smoothed by page.tsx RAF loop,
+    // so double-smoothing via lerp causes lag that prevents full zoom-out.
+    const { position: pos, lookAt: look } = getCameraState(
+      scrollProgress, startPos.current, startTarget.current
+    );
 
-    const { position: pos, lookAt: look } = getCameraState(scrollProgress, startPos.current, startTarget.current);
-    targetPos.current.set(pos[0], pos[1], pos[2]);
-    targetLook.current.set(look[0], look[1], look[2]);
-
-    // Scroll-driven camera: override OrbitControls
-    camera.position.lerp(targetPos.current, 0.08);
+    camera.position.set(pos[0], pos[1], pos[2]);
 
     if (controls) {
-      controls.target.lerp(targetLook.current, 0.08);
+      controls.target.set(look[0], look[1], look[2]);
     }
 
-    camera.lookAt(controls?.target ?? targetLook.current);
+    camera.lookAt(
+      controls?.target.x ?? look[0],
+      controls?.target.y ?? look[1],
+      controls?.target.z ?? look[2],
+    );
     camera.updateMatrixWorld();
   });
 
@@ -817,6 +794,9 @@ function GlobeParticles({ scrollProgress }: { scrollProgress: number }) {
   const mouseRef = useRef({ x: 10, y: 10 });
   const smoothMouse = useRef({ x: 10, y: 10 });
   const { gl, camera } = useThree();
+
+  // Initialize globe rotation to center NYC
+  const rotInitialized = useRef(false);
 
   // Easter egg state refs
   const explodeRef = useRef({ active: false, value: 0, startTime: -1 });
@@ -947,6 +927,12 @@ function GlobeParticles({ scrollProgress }: { scrollProgress: number }) {
   }, [camera]);
 
   useFrame((state, delta) => {
+    // Set initial NYC rotation on first frame
+    if (!rotInitialized.current && pointsRef.current) {
+      pointsRef.current.rotation.y = NYC_ROTATION_Y;
+      rotInitialized.current = true;
+    }
+
     const time = state.clock.getElapsedTime();
     const progress = scrollRef.current;
     material.uniforms.uTime.value = time;
@@ -964,10 +950,17 @@ function GlobeParticles({ scrollProgress }: { scrollProgress: number }) {
     );
     material.uniforms.uFlurry.value = flurryValue;
 
-    // Reset mesh rotation when morphing to skyline (skyline should be flat)
-    if (progress > 0.1 && pointsRef.current) {
-      pointsRef.current.rotation.y *= 0.95;
-      pointsRef.current.rotation.x *= 0.95;
+    // Manage mesh rotation: NYC-centered when viewing globe, flat for skyline
+    if (pointsRef.current) {
+      if (progress > 0.1) {
+        // Decay rotation to 0 for flat skyline view
+        pointsRef.current.rotation.y *= 0.95;
+        pointsRef.current.rotation.x *= 0.95;
+      } else {
+        // Globe view: restore/maintain NYC-centered rotation
+        pointsRef.current.rotation.y += (NYC_ROTATION_Y - pointsRef.current.rotation.y) * 0.05;
+        pointsRef.current.rotation.x *= 0.95;
+      }
     }
 
     // Smooth mouse
@@ -1047,7 +1040,7 @@ interface ParticleFieldProps {
 function SceneContents({ scrollProgress }: { scrollProgress: number }) {
   const controlsRef = useRef<any>(null);
 
-  const orbitEnabled = scrollProgress < 0.1;
+  const orbitEnabled = scrollProgress < 0.01;
 
   return (
     <>
@@ -1063,8 +1056,8 @@ function SceneContents({ scrollProgress }: { scrollProgress: number }) {
         rotateSpeed={0.5}
         minDistance={1.5}
         maxDistance={12}
-        autoRotate={scrollProgress < 0.05}
-        autoRotateSpeed={0.4}
+        autoRotate={orbitEnabled}
+        autoRotateSpeed={-0.4}
       />
       <CameraController scrollProgress={scrollProgress} controlsRef={controlsRef} />
     </>
@@ -1086,7 +1079,7 @@ export default function ParticleField({
       }}
     >
       <Canvas
-        camera={{ position: [0, 0, 5], fov: 50, near: 0.01 }}
+        camera={{ position: [0, CAMERA_Y, 5], fov: 50, near: 0.01 }}
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: true }}
         style={{ background: "transparent" }}

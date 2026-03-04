@@ -30,7 +30,7 @@ export default function Page() {
     const animate = () => {
       const current = scrollProgressRef.current;
       const target = targetProgressRef.current;
-      const newVal = current + (target - current) * 0.1;
+      const newVal = current + (target - current) * 0.18;
 
       if (Math.abs(newVal - target) < 0.001) {
         scrollProgressRef.current = target;
