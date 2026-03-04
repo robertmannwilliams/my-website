@@ -486,7 +486,6 @@ function generateSkylinePositions(count: number, mask: ImageData): Float32Array 
   const positions = new Float32Array(count * 3);
 
   // World-space bounds for skyline (right side of viewport)
-  // Camera at origin looking straight ahead, skyline on the right
   const worldMinX = 1.0;
   const worldMaxX = 4.5;
   const worldMinY = -0.4;
@@ -543,6 +542,7 @@ const vertexShader = `
   uniform float uScatter;
   uniform vec3 uScatterDir;
   uniform float uMorph;
+  uniform float uFlurry;
   varying float vOpacity;
   varying float vIsLand;
 
@@ -559,6 +559,27 @@ const vertexShader = `
 
     // Scale down effects as morph increases
     float interactionScale = 1.0 - uMorph;
+
+    // --- Flurry effect: chaotic scatter during zoom-through ---
+    if (uFlurry > 0.001) {
+      float r1 = hash(position);
+      float r2 = hash(position.zyx);
+      float r3 = hash(position.yxz);
+
+      // Random direction per particle
+      vec3 flurryDir = normalize(vec3(r1 - 0.5, r2 - 0.5, r3 - 0.5));
+
+      // Particles near globe center scatter more
+      float centerDist = length(position);
+      float distFactor = 1.0 - smoothstep(0.0, 2.0, centerDist);
+
+      // Swirl component (rotation around Y axis)
+      float angle = uTime * 2.0 + r1 * 6.28;
+      vec3 swirl = vec3(cos(angle), 0.0, sin(angle)) * 0.5;
+
+      vec3 flurryOffset = (flurryDir * 1.5 + swirl) * uFlurry * (0.3 + distFactor * 1.5);
+      pos += flurryOffset;
+    }
 
     // --- Easter egg 1: Konami explosion ---
     if (uExplode > 0.001 && interactionScale > 0.01) {
@@ -604,7 +625,9 @@ const vertexShader = `
     gl_PointSize = aSize * sizeMultiplier * uPixelRatio * (5.0 / -finalMv.z);
     gl_PointSize = max(gl_PointSize, 0.5);
 
-    vOpacity = aOpacity * (1.0 + shimmer * 0.05);
+    // Boost opacity slightly during flurry for visual drama
+    float flurryBoost = 1.0 + uFlurry * 0.3;
+    vOpacity = aOpacity * (1.0 + shimmer * 0.05) * flurryBoost;
     vIsLand = aIsLand;
   }
 `;
@@ -647,78 +670,149 @@ function isDarkMode() {
   return document.documentElement.classList.contains("dark");
 }
 
-// --- Camera controller for morph transition ---
-// Updates the OrbitControls target directly to avoid conflicts
+// --- Smoothstep helper ---
+function smoothstep(t: number) {
+  return t * t * (3 - 2 * t);
+}
+
+// --- 3-phase parametric camera path ---
+function getCameraState(
+  progress: number,
+  startPos: THREE.Vector3 = new THREE.Vector3(0, 0, 5),
+  startTarget: THREE.Vector3 = new THREE.Vector3(0, 0, 0),
+): {
+  position: [number, number, number];
+  lookAt: [number, number, number];
+} {
+  if (progress <= 0.4) {
+    // Phase 1: Zoom from captured camera position into globe center
+    const t = progress / 0.4;
+    const eased = smoothstep(t);
+
+    const x = startPos.x * (1 - eased);
+    const y = startPos.y * (1 - eased) + eased * 0.1 * Math.sin(eased * Math.PI);
+    const z = startPos.z * (1 - eased) + 0.1 * eased;
+
+    const lx = startTarget.x * (1 - eased);
+    const ly = startTarget.y * (1 - eased);
+    const lz = startTarget.z * (1 - eased);
+
+    return {
+      position: [x, y, z],
+      lookAt: [lx, ly, lz],
+    };
+  } else if (progress <= 0.6) {
+    // Phase 2: Through center, begin repositioning
+    const t = (progress - 0.4) / 0.2;
+    const eased = smoothstep(t);
+
+    const x = 0;
+    const y = eased * 0.5;
+    const z = 0.1 + eased * 2.9; // 0.1 -> 3.0
+
+    return {
+      position: [x, y, z],
+      lookAt: [eased * 1.5, eased * 0.8, 0],
+    };
+  } else {
+    // Phase 3: Move to final skyline viewing position
+    const t = (progress - 0.6) / 0.4;
+    const eased = smoothstep(t);
+
+    return {
+      position: [0, 0.5 + eased * 0.5, 3.0 + eased * 3.0],
+      lookAt: [
+        1.5 - eased * 1.5, // 1.5 -> 0
+        0.8 + eased * 0.2, // 0.8 -> 1.0
+        0,
+      ],
+    };
+  }
+}
+
+// --- Camera controller for scroll-driven transitions ---
 function CameraController({
-  morphing,
+  scrollProgress,
   controlsRef,
 }: {
-  morphing: boolean;
+  scrollProgress: number;
   controlsRef: React.RefObject<any>;
 }) {
   const { camera } = useThree();
-  const wasMorphing = useRef(false);
+  const targetPos = useRef(new THREE.Vector3(0, 0, 5));
+  const targetLook = useRef(new THREE.Vector3(0, 0, 0));
+  const startPos = useRef(new THREE.Vector3(0, 0, 5));
+  const startTarget = useRef(new THREE.Vector3(0, 0, 0));
+  const wasIdle = useRef(true);
 
   useFrame(() => {
     const controls = controlsRef.current;
+    const defaultPos = new THREE.Vector3(0, 0, 5);
+    const defaultTarget = new THREE.Vector3(0, 0, 0);
 
-    if (morphing) {
-      // Target camera position and lookAt
-      const tx = 0, ty = 1.0, tz = 6.0;
-      const lx = 0, ly = 1.0, lz = 0;
-
-      // Lerp camera position
-      camera.position.x += (tx - camera.position.x) * 0.04;
-      camera.position.y += (ty - camera.position.y) * 0.04;
-      camera.position.z += (tz - camera.position.z) * 0.04;
-
-      // Explicitly set camera lookAt (overrides OrbitControls)
-      camera.lookAt(
-        (controls?.target.x ?? 0) + (lx - (controls?.target.x ?? 0)) * 0.04,
-        (controls?.target.y ?? 0) + (ly - (controls?.target.y ?? 0)) * 0.04,
-        lz
-      );
-
-      // Update OrbitControls target to match
-      if (controls) {
-        controls.target.x += (lx - controls.target.x) * 0.04;
-        controls.target.y += (ly - controls.target.y) * 0.04;
-        controls.target.z += (lz - controls.target.z) * 0.04;
-      }
-
-      camera.updateMatrixWorld();
-      wasMorphing.current = true;
-    } else if (wasMorphing.current) {
-      // Smoothly return camera and target to globe view
-      camera.position.x += (0 - camera.position.x) * 0.04;
-      camera.position.y += (0 - camera.position.y) * 0.04;
-      camera.position.z += (5 - camera.position.z) * 0.04;
-
-      // Smoothly return lookAt to origin
-      camera.lookAt(
-        (controls?.target.x ?? 0) * 0.96,
-        (controls?.target.y ?? 0) * 0.96,
-        0
-      );
-      camera.updateMatrixWorld();
-
-      if (controls) {
-        controls.target.x *= 0.96;
-        controls.target.y *= 0.96;
-        controls.target.z *= 0.96;
-
-        if (controls.target.length() < 0.05 && Math.abs(camera.position.z - 5) < 0.1) {
-          controls.target.set(0, 0, 0);
-          wasMorphing.current = false;
+    if (scrollProgress < 0.01) {
+      if (!wasIdle.current) {
+        // Continue guiding camera to default — startPos already blended close,
+        // so this is a smooth continuation, not a jump
+        const dist = camera.position.distanceTo(defaultPos);
+        if (dist > 0.1) {
+          camera.position.lerp(defaultPos, 0.08);
+          if (controls) {
+            controls.target.lerp(defaultTarget, 0.08);
+          }
+          camera.lookAt(controls?.target ?? defaultTarget);
+          camera.updateMatrixWorld();
+          return;
         }
+        // Arrived — hand off to OrbitControls
+        camera.position.copy(defaultPos);
+        if (controls) {
+          controls.target.copy(defaultTarget);
+        }
+        wasIdle.current = true;
       }
+      return;
     }
+
+    // Capture camera state on first scroll from idle
+    if (wasIdle.current) {
+      startPos.current.copy(camera.position);
+      if (controls) {
+        startTarget.current.copy(controls.target);
+      } else {
+        startTarget.current.set(0, 0, 0);
+      }
+      wasIdle.current = false;
+    }
+
+    // As user scrolls back toward 0, gradually blend startPos toward default.
+    // This ensures the Phase 1 endpoint smoothly becomes (0,0,5)
+    // so there's no jump when OrbitControls takes over.
+    if (scrollProgress < 0.3) {
+      const blendRate = 0.05 * (1 - scrollProgress / 0.3);
+      startPos.current.lerp(defaultPos, blendRate);
+      startTarget.current.lerp(defaultTarget, blendRate);
+    }
+
+    const { position: pos, lookAt: look } = getCameraState(scrollProgress, startPos.current, startTarget.current);
+    targetPos.current.set(pos[0], pos[1], pos[2]);
+    targetLook.current.set(look[0], look[1], look[2]);
+
+    // Scroll-driven camera: override OrbitControls
+    camera.position.lerp(targetPos.current, 0.08);
+
+    if (controls) {
+      controls.target.lerp(targetLook.current, 0.08);
+    }
+
+    camera.lookAt(controls?.target ?? targetLook.current);
+    camera.updateMatrixWorld();
   });
 
   return null;
 }
 
-function GlobeParticles({ morphing }: { morphing: boolean }) {
+function GlobeParticles({ scrollProgress }: { scrollProgress: number }) {
   const pointsRef = useRef<THREE.Points>(null!);
   const mouseRef = useRef({ x: 10, y: 10 });
   const smoothMouse = useRef({ x: 10, y: 10 });
@@ -731,13 +825,9 @@ function GlobeParticles({ morphing }: { morphing: boolean }) {
   const prevCamAngle = useRef(0);
   const konamiIdx = useRef(0);
 
-  // Morph state
-  const morphRef = useRef({ value: 0, target: 0 });
-
-  // Update morph target when prop changes
-  useEffect(() => {
-    morphRef.current.target = morphing ? 1 : 0;
-  }, [morphing]);
+  // Store scrollProgress in a ref for use in useFrame
+  const scrollRef = useRef(scrollProgress);
+  scrollRef.current = scrollProgress;
 
   const { geometry, material } = useMemo(() => {
     const landMask = createLandMask(1024, 512);
@@ -771,6 +861,7 @@ function GlobeParticles({ morphing }: { morphing: boolean }) {
         uScatter: { value: 0 },
         uScatterDir: { value: new THREE.Vector3(0, 0, 0) },
         uMorph: { value: 0 },
+        uFlurry: { value: 0 },
       },
       vertexShader,
       fragmentShader,
@@ -799,8 +890,8 @@ function GlobeParticles({ morphing }: { morphing: boolean }) {
   // --- Easter egg 1: Konami code listener ---
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Disable during morph
-      if (morphRef.current.value > 0.1) return;
+      // Disable during scroll-driven morph
+      if (scrollRef.current > 0.1) return;
 
       const expected = KONAMI_SEQUENCE[konamiIdx.current];
       if (e.key.toLowerCase() === expected.toLowerCase()) {
@@ -857,19 +948,25 @@ function GlobeParticles({ morphing }: { morphing: boolean }) {
 
   useFrame((state, delta) => {
     const time = state.clock.getElapsedTime();
+    const progress = scrollRef.current;
     material.uniforms.uTime.value = time;
 
-    // --- Morph animation ---
-    const morph = morphRef.current;
-    const morphSpeed = 0.025; // smooth lerp toward target
-    morph.value += (morph.target - morph.value) * morphSpeed;
-    // Snap to target when very close
-    if (Math.abs(morph.value - morph.target) < 0.001) morph.value = morph.target;
-    material.uniforms.uMorph.value = morph.value;
+    // --- Derive morph and flurry from scrollProgress ---
+    // Morph: 0 until progress=0.4, then ramps 0->1 as progress goes 0.4->1.0
+    const morphValue = Math.max(0, Math.min(1, (progress - 0.4) / 0.6));
+    material.uniforms.uMorph.value = morphValue;
 
-    // Reset mesh rotation when morphing to skyline (skyline should be flat, not rotated)
-    if (morph.value > 0.01 && pointsRef.current) {
-      pointsRef.current.rotation.y *= 0.95; // smoothly unwind any rotation
+    // Flurry: Gaussian bell peaking at progress=0.5
+    const flurryCenter = 0.5;
+    const flurrySigma = 0.08;
+    const flurryValue = Math.exp(
+      -0.5 * Math.pow((progress - flurryCenter) / flurrySigma, 2)
+    );
+    material.uniforms.uFlurry.value = flurryValue;
+
+    // Reset mesh rotation when morphing to skyline (skyline should be flat)
+    if (progress > 0.1 && pointsRef.current) {
+      pointsRef.current.rotation.y *= 0.95;
       pointsRef.current.rotation.x *= 0.95;
     }
 
@@ -918,7 +1015,7 @@ function GlobeParticles({ morphing }: { morphing: boolean }) {
 
     const sc = scatterRef.current;
     const threshold = 1.5; // radians per second
-    if (angularSpeed > threshold && morph.value < 0.1) {
+    if (angularSpeed > threshold && progress < 0.1) {
       sc.targetValue = Math.min((angularSpeed - threshold) * 0.3, 1.5);
       // Compute scatter direction (tangent to rotation)
       const sign = angleDelta > 0 ? 1 : -1;
@@ -944,37 +1041,38 @@ function GlobeParticles({ morphing }: { morphing: boolean }) {
 }
 
 interface ParticleFieldProps {
-  morphing?: boolean;
+  scrollProgress?: number;
 }
 
-function SceneContents({ morphing }: { morphing: boolean }) {
+function SceneContents({ scrollProgress }: { scrollProgress: number }) {
   const controlsRef = useRef<any>(null);
+
+  const orbitEnabled = scrollProgress < 0.1;
 
   return (
     <>
-      <GlobeParticles morphing={morphing} />
+      <GlobeParticles scrollProgress={scrollProgress} />
       <OrbitControls
         ref={controlsRef}
-        enabled={!morphing}
+        enabled={orbitEnabled}
         enablePan={false}
-        enableZoom={!morphing}
-        enableRotate={!morphing}
+        enableZoom={false}
+        enableRotate={orbitEnabled}
         enableDamping={true}
         dampingFactor={0.05}
         rotateSpeed={0.5}
-        zoomSpeed={0.5}
         minDistance={1.5}
         maxDistance={12}
-        autoRotate={!morphing}
+        autoRotate={scrollProgress < 0.05}
         autoRotateSpeed={0.4}
       />
-      <CameraController morphing={morphing} controlsRef={controlsRef} />
+      <CameraController scrollProgress={scrollProgress} controlsRef={controlsRef} />
     </>
   );
 }
 
 export default function ParticleField({
-  morphing = false,
+  scrollProgress = 0,
 }: ParticleFieldProps) {
   return (
     <div
@@ -988,12 +1086,12 @@ export default function ParticleField({
       }}
     >
       <Canvas
-        camera={{ position: [0, 0, 5], fov: 50 }}
+        camera={{ position: [0, 0, 5], fov: 50, near: 0.01 }}
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: true }}
         style={{ background: "transparent" }}
       >
-        <SceneContents morphing={morphing} />
+        <SceneContents scrollProgress={scrollProgress} />
       </Canvas>
     </div>
   );
