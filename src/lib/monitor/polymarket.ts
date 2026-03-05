@@ -1,4 +1,4 @@
-import type { GdeltEvent } from './gdelt';
+import type { GdeltEvent } from './events';
 
 export interface PolymarketMarket {
   id: string;

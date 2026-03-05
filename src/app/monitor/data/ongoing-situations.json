@@ -1,0 +1,103 @@
+[
+  {
+    "id": "iran-war",
+    "title": "US-Israeli War on Iran",
+    "summary": "Joint US-Israeli military campaign (Operation Epic Fury / Operation Roaring Lion) launched Feb 28, 2026, targeting Iranian leadership, nuclear facilities, and military infrastructure. Supreme Leader Khamenei killed in opening strikes. Iran retaliating with missiles across Gulf states, threatening Strait of Hormuz closure. Over 1,000 killed in Iran. Nine countries now involved.",
+    "category": "conflicts",
+    "severity": "critical",
+    "locations": [
+      { "name": "Tehran, Iran", "lat": 35.6892, "lng": 51.389, "role": "Primary strike target" },
+      { "name": "Isfahan, Iran", "lat": 32.6546, "lng": 51.668, "role": "Nuclear facilities struck" },
+      { "name": "Strait of Hormuz", "lat": 26.5667, "lng": 56.25, "role": "Naval blockade / oil chokepoint" },
+      { "name": "Beirut, Lebanon", "lat": 33.8938, "lng": 35.5018, "role": "Israeli strikes on Hezbollah" },
+      { "name": "Persian Gulf", "lat": 26.0, "lng": 52.0, "role": "Iranian retaliation zone" }
+    ],
+    "startDate": "2026-02-28",
+    "status": "Active war — US/Israeli strikes ongoing, Iranian retaliation across Gulf",
+    "relatedAssets": ["Brent Crude", "WTI", "Gold", "USD/ILS", "Defense stocks", "Strait of Hormuz shipping", "EUR/USD"],
+    "lastUpdated": "2026-03-04"
+  },
+  {
+    "id": "russia-ukraine",
+    "title": "Russia–Ukraine War",
+    "summary": "Now in its fifth year. Russia occupies 20% of Ukraine but front-line gains have slowed sharply — just 49 sq mi in February 2026. Ukraine counterattacking in the south, reclaiming 400 sq km since January. Energy infrastructure under relentless drone attack. Estimated 1M+ Russian and 250K+ Ukrainian military casualties.",
+    "category": "conflicts",
+    "severity": "critical",
+    "locations": [
+      { "name": "Kyiv, Ukraine", "lat": 50.4501, "lng": 30.5234, "role": "Ukrainian capital" },
+      { "name": "Kostiantynivka, Ukraine", "lat": 48.5278, "lng": 37.7056, "role": "Active Donetsk front" },
+      { "name": "Kherson, Ukraine", "lat": 46.6354, "lng": 32.6169, "role": "Southern counteroffensive" },
+      { "name": "Crimea", "lat": 44.9521, "lng": 34.1024, "role": "Occupied peninsula" }
+    ],
+    "startDate": "2022-02-24",
+    "status": "Active — Russian gains slowing, Ukrainian southern counterattacks",
+    "relatedAssets": ["European Natural Gas", "USD/RUB", "Wheat Futures", "EUR/USD"],
+    "lastUpdated": "2026-03-04"
+  },
+  {
+    "id": "sudan-civil-war",
+    "title": "Sudan Civil War",
+    "summary": "Approaching third anniversary. SAF recaptured Khartoum; RSF controls most of Darfur and parts of Kordofan. Estimated 400,000+ dead, 11M+ displaced — world's worst displacement crisis. Drone warfare escalating on both sides with foreign-supplied UAVs.",
+    "category": "conflicts",
+    "severity": "watch",
+    "locations": [
+      { "name": "Khartoum, Sudan", "lat": 15.5007, "lng": 32.5599, "role": "Recaptured by SAF" },
+      { "name": "El Fasher, Darfur", "lat": 13.6301, "lng": 25.3494, "role": "RSF-besieged city" },
+      { "name": "North Kordofan", "lat": 13.0, "lng": 30.0, "role": "Active drone warfare zone" },
+      { "name": "Port Sudan", "lat": 19.6158, "lng": 37.2164, "role": "Temporary government seat" }
+    ],
+    "startDate": "2023-04-15",
+    "status": "Active — country split between SAF and RSF spheres of control",
+    "relatedAssets": ["Gold", "Gum Arabic Futures"],
+    "lastUpdated": "2026-03-04"
+  },
+  {
+    "id": "myanmar-civil-war",
+    "title": "Myanmar Civil War",
+    "summary": "Five years since the 2021 coup. Junta controls only 21-30% of territory; resistance forces hold 42-60%. Sham elections held Dec 2025–Jan 2026 in only 263 of 330 townships. Resistance advancing toward Mandalay. Nearly 4M internally displaced.",
+    "category": "conflicts",
+    "severity": "watch",
+    "locations": [
+      { "name": "Naypyidaw, Myanmar", "lat": 19.7633, "lng": 96.0785, "role": "Junta capital" },
+      { "name": "Mandalay, Myanmar", "lat": 21.9588, "lng": 96.0891, "role": "Resistance advancing" },
+      { "name": "Rakhine State", "lat": 20.15, "lng": 93.0, "role": "Arakan Army gains" },
+      { "name": "Shan State", "lat": 21.0, "lng": 98.0, "role": "Ethnic resistance front" }
+    ],
+    "startDate": "2021-02-01",
+    "status": "Active — junta controls <30% of territory, resistance gaining",
+    "relatedAssets": ["Rare Earth Metals", "Natural Gas (Myanmar)"],
+    "lastUpdated": "2026-03-04"
+  },
+  {
+    "id": "south-china-sea",
+    "title": "South China Sea Tensions",
+    "summary": "Persistent maritime friction between China and Philippines over disputed reefs. Philippines pushing Code of Conduct as 2026 ASEAN chair but experts say agreement unlikely this year. US holding 500+ military exercises with Philippines. Diplomatic talks resumed after year-long hiatus.",
+    "category": "conflicts",
+    "severity": "watch",
+    "locations": [
+      { "name": "Second Thomas Shoal", "lat": 9.75, "lng": 115.8667, "role": "Philippine outpost — flashpoint" },
+      { "name": "Scarborough Shoal", "lat": 15.15, "lng": 117.75, "role": "Disputed fishing grounds" },
+      { "name": "Spratly Islands", "lat": 8.6333, "lng": 111.9167, "role": "Militarized artificial islands" }
+    ],
+    "startDate": "2023-01-01",
+    "status": "Tense — diplomatic re-engagement alongside continued maritime friction",
+    "relatedAssets": ["USD/CNY", "Taiwan Semi (TSM)", "Shipping rates (Asia-Pacific)"],
+    "lastUpdated": "2026-03-04"
+  },
+  {
+    "id": "red-sea-crisis",
+    "title": "Red Sea / Houthi Shipping Threat",
+    "summary": "Houthis paused attacks in Nov 2025 following Gaza ceasefire, allowing tentative return of shipping to Suez Canal. Now threatening to resume operations in response to US-Israeli strikes on Iran. Container lines unlikely to return to Suez in 2026. 178 vessels attacked during 2024-2025 campaign.",
+    "category": "infrastructure",
+    "severity": "critical",
+    "locations": [
+      { "name": "Bab el-Mandeb Strait", "lat": 12.5833, "lng": 43.3333, "role": "Chokepoint — renewed threat" },
+      { "name": "Hodeidah, Yemen", "lat": 14.7979, "lng": 42.9544, "role": "Houthi-controlled port" },
+      { "name": "Suez Canal", "lat": 30.455, "lng": 32.35, "role": "Shipping route disrupted again" }
+    ],
+    "startDate": "2023-11-19",
+    "status": "Re-escalating — Houthis threatening renewed attacks due to Iran war",
+    "relatedAssets": ["Baltic Dry Index", "Container Shipping Rates", "Brent Crude", "Suez Canal Revenue", "Maersk (MAERSK-B)"],
+    "lastUpdated": "2026-03-04"
+  }
+]

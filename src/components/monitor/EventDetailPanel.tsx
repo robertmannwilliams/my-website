@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, memo } from 'react';
-import type { GdeltEvent } from '@/lib/monitor/gdelt';
+import type { GdeltEvent } from '@/lib/monitor/events';
 import type { PolymarketMarket } from '@/lib/monitor/polymarket';
 import type { UsgsEarthquake } from '@/lib/monitor/usgs';
-import type { MapItem } from '@/lib/monitor/types';
+import type { MapItem, OngoingSituation } from '@/lib/monitor/types';
+import { categoryColor, marketCategoryColor } from '@/lib/monitor/themes';
 
 interface EventDetailPanelProps {
   item: MapItem | null;
@@ -19,10 +20,14 @@ const SEVERITY_CONFIG = {
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
+  conflicts: 'Conflicts',
+  elections: 'Elections',
+  economy: 'Economy',
+  disasters: 'Disasters',
+  infrastructure: 'Infrastructure',
   conflict: 'Conflict',
   politics: 'Politics',
   disaster: 'Natural Disaster',
-  economy: 'Economy',
   protest: 'Protest',
   diplomacy: 'Diplomacy',
   climate: 'Climate',
@@ -62,7 +67,7 @@ function EventContent({
       <div
         style={{
           padding: '16px 16px 12px',
-          borderBottom: '1px solid #2A2A35',
+          borderBottom: '1px solid #334155',
         }}
       >
         <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
@@ -79,20 +84,25 @@ function EventContent({
           >
             {sev.label}
           </span>
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 600,
-              letterSpacing: '0.04em',
-              color: '#8888A0',
-              background: 'rgba(136,136,160,0.1)',
-              padding: '2px 8px',
-              borderRadius: 3,
-              textTransform: 'uppercase',
-            }}
-          >
-            {CATEGORY_LABELS[event.category] || event.category}
-          </span>
+          {(() => {
+            const catColor = categoryColor(event.category);
+            return (
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  letterSpacing: '0.04em',
+                  color: catColor,
+                  background: `${catColor}18`,
+                  padding: '2px 8px',
+                  borderRadius: 3,
+                  textTransform: 'uppercase',
+                }}
+              >
+                {CATEGORY_LABELS[event.category] || event.category}
+              </span>
+            );
+          })()}
         </div>
         <h3
           style={{
@@ -111,11 +121,11 @@ function EventContent({
       <div
         style={{
           padding: '12px 16px',
-          borderBottom: '1px solid #2A2A35',
+          borderBottom: '1px solid #334155',
           display: 'flex',
           gap: 16,
           fontSize: 11,
-          color: '#6B6B78',
+          color: '#64748B',
         }}
       >
         <span>{formatTimestamp(event.timestamp)}</span>
@@ -131,7 +141,7 @@ function EventContent({
       <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
         <p
           style={{
-            color: '#B0B0BE',
+            color: '#CBD5E1',
             fontSize: 13,
             lineHeight: 1.5,
             margin: '0 0 20px',
@@ -145,7 +155,7 @@ function EventContent({
           <span
             style={{
               fontSize: 11,
-              color: '#6B6B78',
+              color: '#64748B',
               textTransform: 'uppercase',
               letterSpacing: '0.04em',
               fontWeight: 600,
@@ -165,7 +175,7 @@ function EventContent({
               style={{
                 width: 120,
                 height: 4,
-                background: '#2A2A35',
+                background: '#334155',
                 borderRadius: 2,
                 position: 'relative',
               }}
@@ -212,7 +222,7 @@ function EventContent({
             <span
               style={{
                 fontSize: 11,
-                color: '#6B6B78',
+                color: '#64748B',
                 textTransform: 'uppercase',
                 letterSpacing: '0.04em',
                 fontWeight: 600,
@@ -244,7 +254,7 @@ function EventContent({
                     gap: 6,
                   }}
                 >
-                  <span style={{ color: '#6B6B78' }}>{src.name}</span>
+                  <span style={{ color: '#64748B' }}>{src.name}</span>
                   <span style={{ color: '#4A9EFF' }}>→</span>
                 </a>
               ))}
@@ -258,7 +268,7 @@ function EventContent({
             <span
               style={{
                 fontSize: 11,
-                color: '#6B6B78',
+                color: '#64748B',
                 textTransform: 'uppercase',
                 letterSpacing: '0.04em',
                 fontWeight: 600,
@@ -281,15 +291,15 @@ function EventContent({
                     gap: 8,
                     padding: '8px 10px',
                     borderRadius: 4,
-                    border: '1px solid rgba(170,102,255,0.2)',
-                    background: 'rgba(170,102,255,0.05)',
+                    border: `1px solid ${marketCategoryColor(m.category)}33`,
+                    background: `${marketCategoryColor(m.category)}0D`,
                     textDecoration: 'none',
                     cursor: 'pointer',
                   }}
                 >
                   <span
                     style={{
-                      color: '#AA66FF',
+                      color: marketCategoryColor(m.category),
                       fontSize: 12,
                       fontWeight: 700,
                       fontFamily: 'monospace',
@@ -301,7 +311,7 @@ function EventContent({
                   </span>
                   <span
                     style={{
-                      color: '#B0B0BE',
+                      color: '#CBD5E1',
                       fontSize: 12,
                       lineHeight: 1.35,
                     }}
@@ -323,6 +333,7 @@ function EventContent({
 function MarketContent({ market }: { market: PolymarketMarket }) {
   const yesPercent = Math.round(market.probability * 100);
   const noPercent = 100 - yesPercent;
+  const mColor = marketCategoryColor(market.category);
 
   return (
     <>
@@ -330,7 +341,7 @@ function MarketContent({ market }: { market: PolymarketMarket }) {
       <div
         style={{
           padding: '16px 16px 12px',
-          borderBottom: '1px solid #2A2A35',
+          borderBottom: '1px solid #334155',
         }}
       >
         <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
@@ -339,8 +350,8 @@ function MarketContent({ market }: { market: PolymarketMarket }) {
               fontSize: 10,
               fontWeight: 700,
               letterSpacing: '0.06em',
-              color: '#AA66FF',
-              background: 'rgba(170,102,255,0.12)',
+              color: mColor,
+              background: `${mColor}1F`,
               padding: '2px 8px',
               borderRadius: 3,
             }}
@@ -352,8 +363,8 @@ function MarketContent({ market }: { market: PolymarketMarket }) {
               fontSize: 10,
               fontWeight: 600,
               letterSpacing: '0.04em',
-              color: '#8888A0',
-              background: 'rgba(136,136,160,0.1)',
+              color: mColor,
+              background: `${mColor}18`,
               padding: '2px 8px',
               borderRadius: 3,
               textTransform: 'uppercase',
@@ -379,11 +390,11 @@ function MarketContent({ market }: { market: PolymarketMarket }) {
       <div
         style={{
           padding: '12px 16px',
-          borderBottom: '1px solid #2A2A35',
+          borderBottom: '1px solid #334155',
           display: 'flex',
           gap: 16,
           fontSize: 11,
-          color: '#6B6B78',
+          color: '#64748B',
         }}
       >
         <span>Vol: {market.volume}</span>
@@ -424,7 +435,7 @@ function MarketContent({ market }: { market: PolymarketMarket }) {
             style={{
               width: '100%',
               height: 8,
-              background: '#2A2A35',
+              background: '#334155',
               borderRadius: 4,
               overflow: 'hidden',
             }}
@@ -457,8 +468,8 @@ function MarketContent({ market }: { market: PolymarketMarket }) {
               fontSize: 12,
             }}
           >
-            <span style={{ color: '#6B6B78' }}>Volume</span>
-            <span style={{ color: '#B0B0BE', fontFamily: 'monospace' }}>
+            <span style={{ color: '#64748B' }}>Volume</span>
+            <span style={{ color: '#CBD5E1', fontFamily: 'monospace' }}>
               {market.volume}
             </span>
           </div>
@@ -469,8 +480,8 @@ function MarketContent({ market }: { market: PolymarketMarket }) {
               fontSize: 12,
             }}
           >
-            <span style={{ color: '#6B6B78' }}>Liquidity</span>
-            <span style={{ color: '#B0B0BE', fontFamily: 'monospace' }}>
+            <span style={{ color: '#64748B' }}>Liquidity</span>
+            <span style={{ color: '#CBD5E1', fontFamily: 'monospace' }}>
               ${market.liquidity >= 1000
                 ? `${(market.liquidity / 1000).toFixed(0)}K`
                 : market.liquidity.toFixed(0)}
@@ -483,8 +494,8 @@ function MarketContent({ market }: { market: PolymarketMarket }) {
               fontSize: 12,
             }}
           >
-            <span style={{ color: '#6B6B78' }}>End Date</span>
-            <span style={{ color: '#B0B0BE' }}>
+            <span style={{ color: '#64748B' }}>End Date</span>
+            <span style={{ color: '#CBD5E1' }}>
               {formatEndDate(market.endDate)}
             </span>
           </div>
@@ -502,9 +513,9 @@ function MarketContent({ market }: { market: PolymarketMarket }) {
             gap: 8,
             padding: '10px 16px',
             borderRadius: 6,
-            border: '1px solid rgba(170,102,255,0.3)',
-            background: 'rgba(170,102,255,0.08)',
-            color: '#AA66FF',
+            border: `1px solid ${mColor}4D`,
+            background: `${mColor}14`,
+            color: mColor,
             fontSize: 13,
             fontWeight: 600,
             textDecoration: 'none',
@@ -535,7 +546,7 @@ function EarthquakeContent({ eq }: { eq: UsgsEarthquake }) {
       <div
         style={{
           padding: '16px 16px 12px',
-          borderBottom: '1px solid #2A2A35',
+          borderBottom: '1px solid #334155',
         }}
       >
         <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
@@ -584,11 +595,11 @@ function EarthquakeContent({ eq }: { eq: UsgsEarthquake }) {
       <div
         style={{
           padding: '12px 16px',
-          borderBottom: '1px solid #2A2A35',
+          borderBottom: '1px solid #334155',
           display: 'flex',
           gap: 16,
           fontSize: 11,
-          color: '#6B6B78',
+          color: '#64748B',
         }}
       >
         <span>{formatTimestamp(eq.timestamp)}</span>
@@ -625,10 +636,10 @@ function EarthquakeContent({ eq }: { eq: UsgsEarthquake }) {
             {eq.magnitude.toFixed(1)}
           </div>
           <div>
-            <div style={{ color: '#B0B0BE', fontSize: 12, marginBottom: 2 }}>
+            <div style={{ color: '#CBD5E1', fontSize: 12, marginBottom: 2 }}>
               Magnitude ({eq.magType})
             </div>
-            <div style={{ color: '#6B6B78', fontSize: 11 }}>
+            <div style={{ color: '#64748B', fontSize: 11 }}>
               {eq.magnitude >= 7.0
                 ? 'Major earthquake'
                 : eq.magnitude >= 5.5
@@ -676,8 +687,8 @@ function EarthquakeContent({ eq }: { eq: UsgsEarthquake }) {
               fontSize: 12,
             }}
           >
-            <span style={{ color: '#6B6B78' }}>Depth</span>
-            <span style={{ color: '#B0B0BE', fontFamily: 'monospace' }}>
+            <span style={{ color: '#64748B' }}>Depth</span>
+            <span style={{ color: '#CBD5E1', fontFamily: 'monospace' }}>
               {eq.depth.toFixed(1)} km
             </span>
           </div>
@@ -689,8 +700,8 @@ function EarthquakeContent({ eq }: { eq: UsgsEarthquake }) {
                 fontSize: 12,
               }}
             >
-              <span style={{ color: '#6B6B78' }}>Felt Reports</span>
-              <span style={{ color: '#B0B0BE', fontFamily: 'monospace' }}>
+              <span style={{ color: '#64748B' }}>Felt Reports</span>
+              <span style={{ color: '#CBD5E1', fontFamily: 'monospace' }}>
                 {eq.felt.toLocaleString()}
               </span>
             </div>
@@ -702,8 +713,8 @@ function EarthquakeContent({ eq }: { eq: UsgsEarthquake }) {
               fontSize: 12,
             }}
           >
-            <span style={{ color: '#6B6B78' }}>Significance</span>
-            <span style={{ color: '#B0B0BE', fontFamily: 'monospace' }}>
+            <span style={{ color: '#64748B' }}>Significance</span>
+            <span style={{ color: '#CBD5E1', fontFamily: 'monospace' }}>
               {eq.significance}
             </span>
           </div>
@@ -715,7 +726,7 @@ function EarthquakeContent({ eq }: { eq: UsgsEarthquake }) {
                 fontSize: 12,
               }}
             >
-              <span style={{ color: '#6B6B78' }}>Alert Level</span>
+              <span style={{ color: '#64748B' }}>Alert Level</span>
               <span
                 style={{
                   color:
@@ -765,6 +776,203 @@ function EarthquakeContent({ eq }: { eq: UsgsEarthquake }) {
   );
 }
 
+// --- Situation content ---
+
+function SituationContent({ situation }: { situation: OngoingSituation }) {
+  const sev = SEVERITY_CONFIG[situation.severity];
+  const sitColor = categoryColor(situation.category);
+
+  return (
+    <>
+      {/* Header */}
+      <div
+        style={{
+          padding: '16px 16px 12px',
+          borderBottom: '1px solid #334155',
+        }}
+      >
+        <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: '0.06em',
+              color: sev.color,
+              background: sev.bg,
+              padding: '2px 8px',
+              borderRadius: 3,
+            }}
+          >
+            {sev.label}
+          </span>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: '0.04em',
+              color: sitColor,
+              background: `${sitColor}18`,
+              padding: '2px 8px',
+              borderRadius: 3,
+              textTransform: 'uppercase',
+            }}
+          >
+            {CATEGORY_LABELS[situation.category] || situation.category}
+          </span>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: '0.04em',
+              color: '#66AAFF',
+              background: 'rgba(102,170,255,0.1)',
+              padding: '2px 8px',
+              borderRadius: 3,
+            }}
+          >
+            ONGOING
+          </span>
+        </div>
+        <h3
+          style={{
+            color: '#E8E8ED',
+            fontSize: 15,
+            fontWeight: 600,
+            lineHeight: 1.35,
+            margin: 0,
+          }}
+        >
+          {situation.title}
+        </h3>
+      </div>
+
+      {/* Meta info */}
+      <div
+        style={{
+          padding: '12px 16px',
+          borderBottom: '1px solid #334155',
+          display: 'flex',
+          gap: 16,
+          fontSize: 11,
+          color: '#64748B',
+        }}
+      >
+        <span>Active since {situation.startDate}</span>
+        <span>Updated {situation.lastUpdated}</span>
+      </div>
+
+      {/* Content */}
+      <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
+        <p
+          style={{
+            color: '#CBD5E1',
+            fontSize: 13,
+            lineHeight: 1.5,
+            margin: '0 0 16px',
+          }}
+        >
+          {situation.summary}
+        </p>
+
+        {/* Status */}
+        <div
+          style={{
+            padding: '10px 12px',
+            borderRadius: 6,
+            background: 'rgba(102,170,255,0.06)',
+            border: '1px solid rgba(102,170,255,0.15)',
+            marginBottom: 20,
+            color: '#66AAFF',
+            fontSize: 12,
+            fontWeight: 500,
+          }}
+        >
+          {situation.status}
+        </div>
+
+        {/* Locations */}
+        <div style={{ marginBottom: 20 }}>
+          <span
+            style={{
+              fontSize: 11,
+              color: '#64748B',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              fontWeight: 600,
+              display: 'block',
+              marginBottom: 8,
+            }}
+          >
+            Key Locations
+          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {situation.locations.map((loc, i) => (
+              <div
+                key={i}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontSize: 12,
+                  padding: '6px 8px',
+                  borderRadius: 4,
+                  background: 'rgba(255,255,255,0.02)',
+                }}
+              >
+                <div>
+                  <span style={{ color: '#CBD5E1' }}>{loc.name}</span>
+                  <span style={{ color: '#64748B', marginLeft: 8, fontSize: 11 }}>
+                    {loc.role}
+                  </span>
+                </div>
+                <span style={{ color: '#475569', fontFamily: 'monospace', fontSize: 10 }}>
+                  {loc.lat.toFixed(1)}, {loc.lng.toFixed(1)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Related Assets */}
+        {situation.relatedAssets.length > 0 && (
+          <div>
+            <span
+              style={{
+                fontSize: 11,
+                color: '#64748B',
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                fontWeight: 600,
+                display: 'block',
+                marginBottom: 8,
+              }}
+            >
+              Related Assets
+            </span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {situation.relatedAssets.map((asset, i) => (
+                <span
+                  key={i}
+                  style={{
+                    fontSize: 11,
+                    color: '#94A3B8',
+                    background: 'rgba(148,163,184,0.08)',
+                    padding: '3px 10px',
+                    borderRadius: 12,
+                    border: '1px solid rgba(148,163,184,0.12)',
+                  }}
+                >
+                  {asset}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
 // --- Main panel ---
 
 function EventDetailPanel({
@@ -808,8 +1016,8 @@ function EventDetailPanel({
             right: 0,
             bottom: 0,
             maxHeight: '70vh',
-            background: '#1A1A25',
-            borderTop: '1px solid #2A2A35',
+            background: '#1E293B',
+            borderTop: '1px solid #334155',
             borderRadius: '12px 12px 0 0',
             transform: isOpen ? 'translateY(0)' : 'translateY(100%)',
             transition: 'transform 200ms ease-out',
@@ -836,7 +1044,7 @@ function EventDetailPanel({
                     width: 32,
                     height: 4,
                     borderRadius: 2,
-                    background: '#333345',
+                    background: '#334155',
                   }}
                 />
                 <button
@@ -847,7 +1055,7 @@ function EventDetailPanel({
                     top: 8,
                     background: 'none',
                     border: 'none',
-                    color: '#6B6B78',
+                    color: '#64748B',
                     cursor: 'pointer',
                     padding: 4,
                     fontSize: 18,
@@ -863,6 +1071,7 @@ function EventDetailPanel({
               )}
               {item.type === 'market' && <MarketContent market={item.data} />}
               {item.type === 'earthquake' && <EarthquakeContent eq={item.data} />}
+              {item.type === 'situation' && <SituationContent situation={item.data} />}
             </>
           )}
         </div>
@@ -879,8 +1088,8 @@ function EventDetailPanel({
         right: 0,
         bottom: 0,
         width: 380,
-        background: '#1A1A25',
-        borderLeft: '1px solid #2A2A35',
+        background: '#1E293B',
+        borderLeft: '1px solid #334155',
         transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
         transition: 'transform 150ms ease-out',
         zIndex: 10,
@@ -905,7 +1114,7 @@ function EventDetailPanel({
               style={{
                 background: 'none',
                 border: 'none',
-                color: '#6B6B78',
+                color: '#64748B',
                 cursor: 'pointer',
                 padding: 4,
                 fontSize: 18,
@@ -921,6 +1130,7 @@ function EventDetailPanel({
           )}
           {item.type === 'market' && <MarketContent market={item.data} />}
           {item.type === 'earthquake' && <EarthquakeContent eq={item.data} />}
+          {item.type === 'situation' && <SituationContent situation={item.data} />}
         </>
       )}
     </div>

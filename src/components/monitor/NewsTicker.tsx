@@ -41,8 +41,8 @@ function NewsTicker() {
       style={{
         height: 32,
         minHeight: 32,
-        background: '#12121A',
-        borderBottom: '1px solid #2A2A35',
+        background: '#111827',
+        borderBottom: '1px solid #334155',
         display: 'flex',
         alignItems: 'center',
         overflow: 'hidden',
@@ -58,7 +58,7 @@ function NewsTicker() {
           alignItems: 'center',
           gap: 6,
           zIndex: 1,
-          background: '#12121A',
+          background: '#111827',
           flexShrink: 0,
         }}
       >
@@ -113,7 +113,7 @@ function NewsTicker() {
                   style={{
                     width: 36,
                     height: 10,
-                    background: '#1A1A25',
+                    background: '#1E293B',
                     borderRadius: 2,
                     display: 'inline-block',
                     animation: 'newsPulse 1.5s ease-in-out infinite',
@@ -124,7 +124,7 @@ function NewsTicker() {
                   style={{
                     width: 100 + i * 20,
                     height: 10,
-                    background: '#1A1A25',
+                    background: '#1E293B',
                     borderRadius: 2,
                     display: 'inline-block',
                     animation: 'newsPulse 1.5s ease-in-out infinite',
@@ -143,7 +143,7 @@ function NewsTicker() {
               paddingLeft: 8,
             }}
           >
-            <span style={{ color: '#6B6B78', fontSize: 12 }}>
+            <span style={{ color: '#64748B', fontSize: 12 }}>
               No headlines available
             </span>
           </div>
@@ -186,7 +186,7 @@ function NewsTicker() {
                 )}
                 <span
                   style={{
-                    color: '#6B6B78',
+                    color: '#64748B',
                     fontSize: 11,
                     fontWeight: 600,
                   }}
@@ -202,7 +202,7 @@ function NewsTicker() {
                 >
                   {h.title}
                 </span>
-                <span style={{ color: '#2A2A35', padding: '0 8px' }}>
+                <span style={{ color: '#334155', padding: '0 8px' }}>
                   /
                 </span>
               </a>

@@ -65,8 +65,8 @@ function PriceTicker() {
       style={{
         height: 40,
         minHeight: 40,
-        background: '#12121A',
-        borderTop: '1px solid #2A2A35',
+        background: '#111827',
+        borderTop: '1px solid #334155',
         display: 'flex',
         alignItems: 'center',
         paddingLeft: 16,
@@ -101,7 +101,7 @@ function PriceTicker() {
                     style={{
                       width: 28,
                       height: 10,
-                      background: '#1A1A25',
+                      background: '#1E293B',
                       borderRadius: 2,
                       display: 'inline-block',
                       animation: 'tickerPulse 1.5s ease-in-out infinite',
@@ -111,7 +111,7 @@ function PriceTicker() {
                     style={{
                       width: 52,
                       height: 10,
-                      background: '#1A1A25',
+                      background: '#1E293B',
                       borderRadius: 2,
                       display: 'inline-block',
                       animation: 'tickerPulse 1.5s ease-in-out infinite',
@@ -120,7 +120,7 @@ function PriceTicker() {
                   />
                 </div>
                 {i < 6 && (
-                  <span style={{ color: '#2A2A35', fontSize: 11 }}>|</span>
+                  <span style={{ color: '#334155', fontSize: 11 }}>|</span>
                 )}
               </div>
             ))
@@ -136,7 +136,7 @@ function PriceTicker() {
                 >
                   <span
                     style={{
-                      color: '#6B6B78',
+                      color: '#64748B',
                       fontSize: 11,
                       fontWeight: 600,
                       letterSpacing: '0.03em',
@@ -159,7 +159,7 @@ function PriceTicker() {
                   )}
                 </div>
                 {i < prices.length - 1 && (
-                  <span style={{ color: '#2A2A35', fontSize: 11 }}>|</span>
+                  <span style={{ color: '#334155', fontSize: 11 }}>|</span>
                 )}
               </div>
             ))}
@@ -169,7 +169,7 @@ function PriceTicker() {
       {lastFetchedAt && (
         <span
           style={{
-            color: '#444458',
+            color: '#475569',
             fontSize: 10,
             whiteSpace: 'nowrap',
             flexShrink: 0,

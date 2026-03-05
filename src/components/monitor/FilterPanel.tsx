@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback, memo } from 'react';
+import { THEMES, THEME_KEYS, type ThemeKey } from '@/lib/monitor/themes';
 
 interface FilterPanelProps {
-  visibleLayers: Record<string, boolean>;
-  onToggleLayer: (key: string) => void;
+  visibleThemes: Record<ThemeKey, boolean>;
+  onToggleTheme: (key: ThemeKey) => void;
+  themeCounts: Record<ThemeKey, number>;
 }
 
-/* ── SVG Icons (16×16) ── */
+/* ── SVG Icons (16x16) ── */
 
 const IconCrosshair = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
@@ -16,6 +18,15 @@ const IconCrosshair = () => (
     <line x1="8" y1="12" x2="8" y2="15" />
     <line x1="1" y1="8" x2="4" y2="8" />
     <line x1="12" y1="8" x2="15" y2="8" />
+  </svg>
+);
+
+const IconBallot = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
+    <rect x="3" y="2" width="10" height="12" rx="1" />
+    <line x1="6" y1="5" x2="10" y2="5" />
+    <line x1="6" y1="8" x2="10" y2="8" />
+    <line x1="6" y1="11" x2="9" y2="11" />
   </svg>
 );
 
@@ -33,20 +44,6 @@ const IconWave = () => (
   </svg>
 );
 
-const IconPlane = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
-    <path d="M8,2 L10,7 L15,8 L10,9 L8,14 L6,9 L1,8 L6,7 Z" />
-  </svg>
-);
-
-const IconShip = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
-    <path d="M2,10 L4,5 L12,5 L14,10" />
-    <line x1="8" y1="5" x2="8" y2="2" />
-    <path d="M1,10 Q4,13 8,13 Q12,13 15,10" />
-  </svg>
-);
-
 const IconCable = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
     <circle cx="3" cy="8" r="2" />
@@ -54,33 +51,6 @@ const IconCable = () => (
     <line x1="5" y1="8" x2="11" y2="8" />
     <line x1="3" y1="3" x2="3" y2="6" />
     <line x1="13" y1="3" x2="13" y2="6" />
-  </svg>
-);
-
-const IconBallot = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
-    <rect x="3" y="2" width="10" height="12" rx="1" />
-    <line x1="6" y1="5" x2="10" y2="5" />
-    <line x1="6" y1="8" x2="10" y2="8" />
-    <line x1="6" y1="11" x2="9" y2="11" />
-  </svg>
-);
-
-const IconShield = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
-    <path d="M8,2 L13,4 L13,9 Q13,13 8,14 Q3,13 3,9 L3,4 Z" />
-    <line x1="5" y1="6" x2="11" y2="12" />
-    <line x1="11" y1="6" x2="5" y2="12" />
-  </svg>
-);
-
-const IconBarrel = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
-    <ellipse cx="8" cy="3" rx="5" ry="1.5" />
-    <ellipse cx="8" cy="13" rx="5" ry="1.5" />
-    <line x1="3" y1="3" x2="3" y2="13" />
-    <line x1="13" y1="3" x2="13" y2="13" />
-    <ellipse cx="8" cy="8" rx="5" ry="1.5" strokeDasharray="2 2" opacity="0.5" />
   </svg>
 );
 
@@ -99,44 +69,45 @@ const IconClose = () => (
   </svg>
 );
 
-/* ── Layer config ── */
+const IconChevron = ({ open }: { open: boolean }) => (
+  <svg
+    width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+    style={{ transition: 'transform 200ms ease', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}
+  >
+    <polyline points="4,2 8,6 4,10" />
+  </svg>
+);
 
-const ACTIVE_LAYERS = [
-  { key: 'events', label: 'Geopolitical Events', Icon: IconCrosshair },
-  { key: 'markets', label: 'Prediction Markets', Icon: IconTrending },
-  { key: 'earthquakes', label: 'Earthquakes', Icon: IconWave },
-] as const;
+const IconCheck = () => (
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#22C55E" strokeWidth="1.5" strokeLinecap="round">
+    <polyline points="2,6 5,9 10,3" />
+  </svg>
+);
 
-const FUTURE_LAYERS = [
-  { label: 'Airspace', Icon: IconPlane },
-  { label: 'Shipping', Icon: IconShip },
-  { label: 'Cables', Icon: IconCable },
-  { label: 'Elections', Icon: IconBallot },
-  { label: 'Sanctions', Icon: IconShield },
-  { label: 'Commodities', Icon: IconBarrel },
-] as const;
+/* ── Theme icon mapping ── */
 
-const SITUATION_ROOMS = [
-  { label: 'Ukraine', icon: '\u{1F1FA}\u{1F1E6}' },
-  { label: 'Middle East', icon: '\u{1F30D}' },
-  { label: 'South China Sea', icon: '\u{2693}' },
-  { label: 'Global Elections', icon: '\u{1F5F3}\u{FE0F}' },
-] as const;
+const THEME_ICONS: Record<ThemeKey, React.FC> = {
+  conflicts: IconCrosshair,
+  elections: IconBallot,
+  economy: IconTrending,
+  disasters: IconWave,
+  infrastructure: IconCable,
+};
 
 /* ── Toggle switch ── */
 
-function ToggleSwitch({ on, disabled }: { on: boolean; disabled?: boolean }) {
+function ToggleSwitch({ on, color }: { on: boolean; color: string }) {
   return (
     <div
       style={{
         width: 32,
         height: 16,
         borderRadius: 8,
-        background: disabled ? '#252530' : on ? '#4A9EFF' : '#333345',
+        background: on ? color : '#334155',
         position: 'relative',
         flexShrink: 0,
         transition: 'background 200ms ease',
-        cursor: disabled ? 'default' : 'pointer',
+        cursor: 'pointer',
       }}
     >
       <div
@@ -144,51 +115,13 @@ function ToggleSwitch({ on, disabled }: { on: boolean; disabled?: boolean }) {
           width: 12,
           height: 12,
           borderRadius: '50%',
-          background: disabled ? '#444458' : '#FFFFFF',
+          background: '#FFFFFF',
           position: 'absolute',
           top: 2,
-          left: on && !disabled ? 18 : 2,
+          left: on ? 18 : 2,
           transition: 'left 200ms ease',
         }}
       />
-    </div>
-  );
-}
-
-/* ── Tooltip wrapper ── */
-
-function WithTooltip({ text, children }: { text: string; children: React.ReactNode }) {
-  const [show, setShow] = useState(false);
-
-  return (
-    <div
-      style={{ position: 'relative' }}
-      onMouseEnter={() => setShow(true)}
-      onMouseLeave={() => setShow(false)}
-    >
-      {children}
-      {show && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '100%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            marginBottom: 6,
-            padding: '4px 8px',
-            borderRadius: 4,
-            background: '#1A1A25',
-            border: '1px solid #2A2A35',
-            color: '#8888A0',
-            fontSize: 10,
-            whiteSpace: 'nowrap',
-            pointerEvents: 'none',
-            zIndex: 20,
-          }}
-        >
-          {text}
-        </div>
-      )}
     </div>
   );
 }
@@ -199,7 +132,7 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
     <span
       style={{
-        color: '#6B6B78',
+        color: '#64748B',
         fontSize: 10,
         fontWeight: 600,
         letterSpacing: '0.08em',
@@ -213,11 +146,21 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
   );
 }
 
+/* ── Data sources section ── */
+
+const DATA_SOURCES = [
+  { label: 'RSS News Feeds', detail: '9 sources' },
+  { label: 'Polymarket', detail: 'Prediction markets' },
+  { label: 'USGS', detail: 'Earthquakes M4.5+' },
+  { label: 'Ongoing Situations', detail: '6 tracked' },
+];
+
 /* ── Main component ── */
 
-function FilterPanel({ visibleLayers, onToggleLayer }: FilterPanelProps) {
+function FilterPanel({ visibleThemes, onToggleTheme, themeCounts }: FilterPanelProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)');
@@ -239,8 +182,8 @@ function FilterPanel({ visibleLayers, onToggleLayer }: FilterPanelProps) {
         width: 240,
         minWidth: 240,
         height: '100%',
-        background: '#12121A',
-        borderRight: '1px solid #2A2A35',
+        background: '#111827',
+        borderRight: '1px solid #334155',
         display: 'flex',
         flexDirection: 'column',
         padding: '16px 14px',
@@ -248,9 +191,9 @@ function FilterPanel({ visibleLayers, onToggleLayer }: FilterPanelProps) {
         overflowX: 'hidden',
       }}
     >
-      {/* ── Layers header with close button on mobile ── */}
+      {/* Header with close button on mobile */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-        <SectionHeader>Layers</SectionHeader>
+        <SectionHeader>Themes</SectionHeader>
         {isMobile && (
           <button
             onClick={closePanel}
@@ -259,8 +202,8 @@ function FilterPanel({ visibleLayers, onToggleLayer }: FilterPanelProps) {
               height: 28,
               borderRadius: 6,
               background: 'transparent',
-              border: '1px solid #2A2A35',
-              color: '#6B6B78',
+              border: '1px solid #334155',
+              color: '#64748B',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -274,14 +217,18 @@ function FilterPanel({ visibleLayers, onToggleLayer }: FilterPanelProps) {
         )}
       </div>
 
+      {/* Theme toggles */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {/* Active layers */}
-        {ACTIVE_LAYERS.map(({ key, label, Icon }) => {
-          const isOn = visibleLayers[key] !== false;
+        {THEME_KEYS.map((key) => {
+          const theme = THEMES[key];
+          const Icon = THEME_ICONS[key];
+          const isOn = visibleThemes[key];
+          const count = themeCounts[key];
+
           return (
             <div
               key={key}
-              onClick={() => onToggleLayer(key)}
+              onClick={() => onToggleTheme(key)}
               style={{
                 padding: '7px 8px',
                 borderRadius: 6,
@@ -291,102 +238,132 @@ function FilterPanel({ visibleLayers, onToggleLayer }: FilterPanelProps) {
                 cursor: 'pointer',
                 userSelect: 'none',
                 transition: 'background 150ms ease',
-                color: isOn ? '#C0C0CC' : '#555568',
+                color: isOn ? '#CBD5E1' : '#64748B',
               }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#1A1A25'; }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#1E293B'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
             >
+              {/* Colored dot */}
+              <div
+                style={{
+                  width: 4,
+                  height: 4,
+                  borderRadius: '50%',
+                  background: isOn ? theme.color : '#475569',
+                  flexShrink: 0,
+                  transition: 'background 150ms ease',
+                }}
+              />
+              {/* Icon */}
               <span style={{ flexShrink: 0, opacity: isOn ? 0.9 : 0.4, transition: 'opacity 150ms ease' }}>
                 <Icon />
               </span>
-              <span style={{ flex: 1, fontSize: 12, lineHeight: '16px' }}>{label}</span>
-              <ToggleSwitch on={isOn} />
+              {/* Label */}
+              <span style={{ flex: 1, fontSize: 12, lineHeight: '16px' }}>{theme.label}</span>
+              {/* Count badge */}
+              {count > 0 && (
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: isOn ? theme.color : '#475569',
+                    background: isOn ? `${theme.color}15` : 'transparent',
+                    padding: '1px 5px',
+                    borderRadius: 3,
+                    minWidth: 20,
+                    textAlign: 'center',
+                    transition: 'color 150ms ease, background 150ms ease',
+                  }}
+                >
+                  {count}
+                </span>
+              )}
+              {/* Toggle */}
+              <ToggleSwitch on={isOn} color={theme.color} />
             </div>
           );
         })}
-
-        {/* Future layers */}
-        {FUTURE_LAYERS.map(({ label, Icon }) => (
-          <WithTooltip key={label} text="Coming Soon">
-            <div
-              style={{
-                padding: '7px 8px',
-                borderRadius: 6,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                opacity: 0.35,
-                cursor: 'default',
-                userSelect: 'none',
-                color: '#555568',
-              }}
-            >
-              <span style={{ flexShrink: 0 }}>
-                <Icon />
-              </span>
-              <span style={{ flex: 1, fontSize: 12, lineHeight: '16px' }}>{label}</span>
-              <ToggleSwitch on={false} disabled />
-            </div>
-          </WithTooltip>
-        ))}
       </div>
 
-      {/* ── Divider ── */}
-      <div style={{ borderTop: '1px solid #1E1E2A', margin: '14px 0' }} />
+      {/* Divider */}
+      <div style={{ borderTop: '1px solid #1E293B', margin: '14px 0' }} />
 
-      {/* ── Situation Rooms ── */}
-      <SectionHeader>Situation Rooms</SectionHeader>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {SITUATION_ROOMS.map(({ label, icon }) => (
-          <WithTooltip key={label} text="Coming Soon">
-            <div
-              style={{
-                padding: '6px 8px',
-                borderRadius: 6,
-                border: '1px solid #1E1E2A',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                opacity: 0.35,
-                cursor: 'default',
-                userSelect: 'none',
-              }}
-            >
-              <span style={{ fontSize: 14, lineHeight: 1 }}>{icon}</span>
-              <span style={{ fontSize: 12, color: '#555568' }}>{label}</span>
-            </div>
-          </WithTooltip>
-        ))}
+      {/* Data Sources (collapsible) */}
+      <div
+        onClick={() => setSourcesOpen((p) => !p)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          cursor: 'pointer',
+          userSelect: 'none',
+          marginBottom: sourcesOpen ? 10 : 0,
+        }}
+      >
+        <IconChevron open={sourcesOpen} />
+        <span
+          style={{
+            color: '#64748B',
+            fontSize: 10,
+            fontWeight: 600,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+          }}
+        >
+          Data Sources
+        </span>
       </div>
 
-      {/* ── Spacer ── */}
+      {sourcesOpen && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: 4 }}>
+          {DATA_SOURCES.map(({ label, detail }) => (
+            <div
+              key={label}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '4px 6px',
+                borderRadius: 4,
+              }}
+            >
+              <IconCheck />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, color: '#94A3B8', lineHeight: '14px' }}>{label}</div>
+                <div style={{ fontSize: 9, color: '#475569', lineHeight: '12px' }}>{detail}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Spacer */}
       <div style={{ flex: 1 }} />
 
-      {/* ── Footer ── */}
+      {/* Footer */}
       <div
         style={{
           paddingTop: 12,
-          borderTop: '1px solid #1E1E2A',
+          borderTop: '1px solid #1E293B',
           marginTop: 14,
           textAlign: 'center',
         }}
       >
-        <span style={{ fontSize: 10, color: '#333345' }}>
+        <span style={{ fontSize: 10, color: '#334155' }}>
           Built by{' '}
           <a
             href="/"
             style={{
-              color: '#444458',
+              color: '#475569',
               textDecoration: 'none',
               transition: 'color 150ms ease',
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.color = '#6B6B78';
+              (e.currentTarget as HTMLElement).style.color = '#64748B';
               (e.currentTarget as HTMLElement).style.textDecoration = 'underline';
             }}
             onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.color = '#444458';
+              (e.currentTarget as HTMLElement).style.color = '#475569';
               (e.currentTarget as HTMLElement).style.textDecoration = 'none';
             }}
           >
@@ -417,9 +394,9 @@ function FilterPanel({ visibleLayers, onToggleLayer }: FilterPanelProps) {
             width: 36,
             height: 36,
             borderRadius: 8,
-            background: 'rgba(18,18,26,0.85)',
-            border: '1px solid #2A2A35',
-            color: '#8888A0',
+            background: 'rgba(17,24,39,0.85)',
+            border: '1px solid #334155',
+            color: '#94A3B8',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
