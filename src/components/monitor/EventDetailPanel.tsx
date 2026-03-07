@@ -11,6 +11,8 @@ interface EventDetailPanelProps {
   item: MapItem | null;
   relatedMarkets?: PolymarketMarket[];
   onSelectCandidate: (candidate: MapSelectionCandidate) => void;
+  canBackToSelection: boolean;
+  onBackToSelection: () => void;
   onClose: () => void;
 }
 
@@ -451,6 +453,8 @@ function EventDetailPanel({
   item,
   relatedMarkets,
   onSelectCandidate,
+  canBackToSelection,
+  onBackToSelection,
   onClose,
 }: EventDetailPanelProps) {
   const isOpen = item !== null;
@@ -511,6 +515,26 @@ function EventDetailPanel({
             <>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 12px 0', position: 'relative' }}>
                 <div style={{ width: 32, height: 4, borderRadius: 2, background: '#334155' }} />
+                {canBackToSelection && item.type !== 'selection' && (
+                  <button
+                    onClick={onBackToSelection}
+                    style={{
+                      position: 'absolute',
+                      left: 12,
+                      top: 8,
+                      background: 'none',
+                      border: '1px solid #334155',
+                      color: '#9DB2CC',
+                      cursor: 'pointer',
+                      padding: '3px 8px',
+                      fontSize: 11,
+                      borderRadius: 4,
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    Back
+                  </button>
+                )}
                 <button
                   onClick={onClose}
                   style={{ position: 'absolute', right: 12, top: 8, background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: 4, fontSize: 18, lineHeight: 1 }}
@@ -546,6 +570,24 @@ function EventDetailPanel({
     >
       {item && (
         <>
+          {canBackToSelection && item.type !== 'selection' && (
+            <div style={{ position: 'absolute', top: 12, left: 12, zIndex: 11 }}>
+              <button
+                onClick={onBackToSelection}
+                style={{
+                  background: 'rgba(13,23,43,0.9)',
+                  border: '1px solid #334155',
+                  color: '#9DB2CC',
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  borderRadius: 4,
+                  fontSize: 11,
+                }}
+              >
+                Back to stack
+              </button>
+            </div>
+          )}
           <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 11 }}>
             <button
               onClick={onClose}

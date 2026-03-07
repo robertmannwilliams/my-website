@@ -180,6 +180,7 @@ export default function MonitorPage() {
   const [visibleWatchZones, setVisibleWatchZones] = useState<Record<string, boolean>>(
     () => (initialRoom ? roomWatchZoneVisibility(initialRoom) : makeDefaultWatchZoneVisibility()),
   );
+  const [selectionContext, setSelectionContext] = useState<{ title: string; candidates: MapSelectionCandidate[] } | null>(null);
 
   const globalSnapshotRef = useRef({
     themes: makeDefaultThemes(),
@@ -188,22 +189,29 @@ export default function MonitorPage() {
   });
 
   const handleEventClick = useCallback((event: GdeltEvent) => {
+    setSelectionContext(null);
     setSelectedItem({ type: 'event', data: event });
   }, []);
 
   const handleMarketClick = useCallback((market: PolymarketMarket) => {
+    setSelectionContext(null);
     setSelectedItem({ type: 'market', data: market });
   }, []);
 
   const handleEarthquakeClick = useCallback((eq: UsgsEarthquake) => {
+    setSelectionContext(null);
     setSelectedItem({ type: 'earthquake', data: eq });
   }, []);
 
   const handleWatchZoneClick = useCallback((watchZone: WatchZone) => {
+    setSelectionContext(null);
     setSelectedItem({ type: 'watch_zone', data: watchZone });
   }, []);
 
   const handleSelectionCandidates = useCallback((title: string, candidates: MapSelectionCandidate[]) => {
+    const context = { title, candidates };
+    setSelectionContext(context);
+
     if (candidates.length === 1) {
       const candidate = candidates[0];
       if (candidate.type === 'event') setSelectedItem({ type: 'event', data: candidate.data });
@@ -215,10 +223,7 @@ export default function MonitorPage() {
 
     setSelectedItem({
       type: 'selection',
-      data: {
-        title,
-        candidates,
-      },
+      data: context,
     });
   }, []);
 
@@ -228,6 +233,14 @@ export default function MonitorPage() {
     if (candidate.type === 'earthquake') setSelectedItem({ type: 'earthquake', data: candidate.data });
     if (candidate.type === 'watch_zone') setSelectedItem({ type: 'watch_zone', data: candidate.data });
   }, []);
+
+  const handleBackToSelection = useCallback(() => {
+    if (!selectionContext) return;
+    setSelectedItem({
+      type: 'selection',
+      data: selectionContext,
+    });
+  }, [selectionContext]);
 
   const handleClosePanel = useCallback(() => {
     setSelectedItem(null);
@@ -502,6 +515,8 @@ export default function MonitorPage() {
             item={selectedItem}
             relatedMarkets={relatedMarkets}
             onSelectCandidate={handleSelectCandidate}
+            canBackToSelection={Boolean(selectionContext && selectedItem?.type !== 'selection')}
+            onBackToSelection={handleBackToSelection}
             onClose={handleClosePanel}
           />
         </div>

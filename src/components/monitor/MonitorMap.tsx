@@ -45,6 +45,7 @@ interface MonitorMapProps {
 
 const MAX_EVENTS_ON_MAP = 140;
 const MARKET_CLUSTER_MAX_ZOOM = 10;
+const MARKET_CLUSTER_LEAF_LIMIT = 40;
 
 function inferRegion(lat: number, lng: number): string {
   if (lat > 25 && lat < 50 && lng > -10 && lng < 45) return 'europe';
@@ -64,6 +65,16 @@ function eventSignalScore(event: GdeltEvent): number {
   const ageHours = Math.max(0, (Date.now() - new Date(event.lastSeenAt || event.timestamp).getTime()) / 3_600_000);
   const recencyScore = Math.max(0, 4 - ageHours / 6);
   return severityScore + sourceScore + confidenceScore + recencyScore;
+}
+
+function haversineKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
+  const toRad = Math.PI / 180;
+  const dLat = (bLat - aLat) * toRad;
+  const dLng = (bLng - aLng) * toRad;
+  const aa =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(aLat * toRad) * Math.cos(bLat * toRad) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa));
 }
 
 function destinationPoint(
@@ -952,29 +963,19 @@ function MonitorMap({
 
     const center = (feature.geometry as GeoJSON.Point).coordinates as [number, number];
 
-    source.getClusterExpansionZoom(clusterId, (err, expansionZoom) => {
-      if (err || expansionZoom == null) return;
-
-      const currentZoom = m.getZoom();
-      const nextZoom = Math.min(currentZoom + 1.4, expansionZoom, MARKET_CLUSTER_MAX_ZOOM + 0.1);
-
-      if (nextZoom > currentZoom + 0.05) {
-        m.easeTo({ center, zoom: nextZoom, duration: 500 });
-        return;
-      }
-
-      source.getClusterLeaves(clusterId, 12, 0, (leafErr, leavesRaw) => {
+    const openClusterList = () => {
+      source.getClusterLeaves(clusterId, MARKET_CLUSTER_LEAF_LIMIT, 0, (leafErr, leavesRaw) => {
         if (leafErr) return;
         const leaves = Array.isArray(leavesRaw) ? leavesRaw : [];
 
-        const candidates: MapSelectionCandidate[] = [];
+        const marketCandidates: Array<Extract<MapSelectionCandidate, { type: 'market' }>> = [];
         const seen = new Set<string>();
         for (const leaf of leaves) {
           const id = String(leaf.properties?.id || '');
           const market = marketByIdRef.current.get(id);
           if (!market || seen.has(id)) continue;
           seen.add(id);
-          candidates.push({
+          marketCandidates.push({
             type: 'market',
             id,
             title: market.title,
@@ -983,9 +984,64 @@ function MonitorMap({
           });
         }
 
-        if (candidates.length > 0) {
-          onSelectionCandidatesRef.current?.('Market Stack', candidates);
+        marketCandidates.sort((a, b) => {
+          const marketA = a.data;
+          const marketB = b.data;
+          if (marketB.signalScore !== marketA.signalScore) return marketB.signalScore - marketA.signalScore;
+          return marketB.volumeRaw - marketA.volumeRaw;
+        });
+
+        if (marketCandidates.length > 0) {
+          onSelectionCandidatesRef.current?.(`Market Stack (${marketCandidates.length})`, marketCandidates);
         }
+      });
+    };
+
+    source.getClusterLeaves(clusterId, MARKET_CLUSTER_LEAF_LIMIT, 0, (leafErr, leavesRaw) => {
+      if (leafErr) return;
+      const leaves = Array.isArray(leavesRaw) ? leavesRaw : [];
+
+      if (leaves.length <= 1) {
+        openClusterList();
+        return;
+      }
+
+      const points = leaves
+        .map((leaf) => {
+          const geom = leaf.geometry as GeoJSON.Point | undefined;
+          if (!geom || !Array.isArray(geom.coordinates)) return null;
+          const [lng, lat] = geom.coordinates;
+          if (typeof lng !== 'number' || typeof lat !== 'number') return null;
+          return { lat, lng };
+        })
+        .filter((value): value is { lat: number; lng: number } => Boolean(value));
+
+      let maxSpreadKm = 0;
+      const sampleBase = points[0];
+      if (sampleBase) {
+        for (let i = 1; i < points.length; i++) {
+          const dist = haversineKm(sampleBase.lat, sampleBase.lng, points[i].lat, points[i].lng);
+          if (dist > maxSpreadKm) maxSpreadKm = dist;
+        }
+      }
+
+      source.getClusterExpansionZoom(clusterId, (zoomErr, expansionZoom) => {
+        if (zoomErr || expansionZoom == null) {
+          openClusterList();
+          return;
+        }
+
+        const currentZoom = m.getZoom();
+        const noRealSpatialSpread = maxSpreadKm < 3.5;
+        const alreadyNearExpansion = currentZoom >= expansionZoom - 0.35;
+
+        if (noRealSpatialSpread || alreadyNearExpansion || currentZoom >= MARKET_CLUSTER_MAX_ZOOM - 0.3) {
+          openClusterList();
+          return;
+        }
+
+        const targetZoom = Math.min(expansionZoom, currentZoom + 2.4, MARKET_CLUSTER_MAX_ZOOM + 0.05);
+        m.easeTo({ center, zoom: targetZoom, duration: 520 });
       });
     });
   }, []);

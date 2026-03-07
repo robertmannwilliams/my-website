@@ -56,9 +56,9 @@ const LOOKUP: Record<string, GeoEntry> = {
   india: { lat: 28.61, lng: 77.21, method: 'country' },
   pakistan: { lat: 33.69, lng: 73.04, method: 'country' },
   turkey: { lat: 39.93, lng: 32.86, method: 'country' },
-  us: { lat: 38.9, lng: -77.04, method: 'country' },
-  'united states': { lat: 38.9, lng: -77.04, method: 'country' },
-  america: { lat: 38.9, lng: -77.04, method: 'country' },
+  us: { lat: 39.83, lng: -98.58, method: 'country' },
+  'united states': { lat: 39.83, lng: -98.58, method: 'country' },
+  america: { lat: 39.83, lng: -98.58, method: 'country' },
 
   // Regions
   'south china sea': { lat: 14.5, lng: 114.0, method: 'region' },
