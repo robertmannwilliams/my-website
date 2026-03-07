@@ -82,16 +82,65 @@ export interface ElectionCalendarItem {
   daysUntil?: number;
 }
 
+export type MapInteractionMode = 'idle' | 'fanout' | 'selected';
+
+export type FanoutSignalType = 'events' | 'markets';
+
+export interface ActiveFanout {
+  clusterId: number | null;
+  signalType: FanoutSignalType;
+  center: [number, number];
+  candidateIds: string[];
+  openedAt: string;
+  itemCount: number;
+  locationLabel: string;
+  themeMix: Record<ThemeKey, number>;
+  freshestTimestamp: string | null;
+}
+
 export type MapSelectionCandidate =
-  | { type: 'event'; id: string; title: string; subtitle: string; data: GdeltEvent }
-  | { type: 'market'; id: string; title: string; subtitle: string; data: PolymarketMarket }
-  | { type: 'watch_zone'; id: string; title: string; subtitle: string; data: WatchZone }
-  | { type: 'earthquake'; id: string; title: string; subtitle: string; data: UsgsEarthquake };
+  | {
+    type: 'event';
+    id: string;
+    title: string;
+    subtitle: string;
+    signalType: 'events';
+    originClusterId: number | null;
+    data: GdeltEvent;
+  }
+  | {
+    type: 'market';
+    id: string;
+    title: string;
+    subtitle: string;
+    signalType: 'markets';
+    originClusterId: number | null;
+    data: PolymarketMarket;
+  }
+  | {
+    type: 'watch_zone';
+    id: string;
+    title: string;
+    subtitle: string;
+    signalType: 'watch_zones';
+    originClusterId: null;
+    data: WatchZone;
+  }
+  | {
+    type: 'earthquake';
+    id: string;
+    title: string;
+    subtitle: string;
+    signalType: 'disasters';
+    originClusterId: null;
+    data: UsgsEarthquake;
+  };
 
 export type MapItem =
   | { type: 'event'; data: GdeltEvent }
   | { type: 'market'; data: PolymarketMarket }
   | { type: 'earthquake'; data: UsgsEarthquake }
   | { type: 'watch_zone'; data: WatchZone }
+  | { type: 'fanout'; data: ActiveFanout }
   | { type: 'room'; data: SituationRoomConfig }
   | { type: 'selection'; data: { title: string; candidates: MapSelectionCandidate[] } };

@@ -33,6 +33,8 @@ export interface GdeltEvent {
   topicTags: string[];
   mapPriority: number;
   linkConfidence?: number;
+  geoValidity: 'valid' | 'ambiguous' | 'invalid';
+  geoReason: string;
 }
 
 export type EventCategory =
@@ -224,6 +226,8 @@ interface CachedClassifiedCluster {
   lng: number;
   classificationConfidence: number;
   classificationMethod: ClassificationMethod;
+  geoValidity: 'valid' | 'ambiguous' | 'invalid';
+  geoReason: string;
 }
 
 function inferRegion(lat: number, lng: number): string {
@@ -485,10 +489,15 @@ function firstAndLastSeen(cluster: EventCluster): { firstSeenAt: string; lastSee
 
 function chooseLocation(cluster: EventCluster): GeoMatch {
   const withGeo = cluster.candidates
-    .filter((c) => c.geo)
-    .sort((a, b) => (b.geo?.confidence || 0) - (a.geo?.confidence || 0));
+    .filter((c): c is EventCandidate & { geo: GeoMatch } => Boolean(c.geo))
+    .map((c) => c.geo)
+    .sort((a, b) => b.confidence - a.confidence);
 
-  if (withGeo[0]?.geo) return withGeo[0].geo;
+  const valid = withGeo.filter((geo) => geo.validity === 'valid');
+  if (valid[0]) return valid[0];
+
+  const ambiguous = withGeo.filter((geo) => geo.validity === 'ambiguous');
+  if (ambiguous[0]) return ambiguous[0];
 
   const category = chooseWeightedCategory(cluster);
   if (category === 'conflicts') return centroidForRegion('middle_east');
@@ -599,6 +608,8 @@ function eventFromRules(cluster: EventCluster): CachedClassifiedCluster {
     lng: loc.lng,
     classificationConfidence: confidence,
     classificationMethod: 'rules',
+    geoValidity: loc.validity,
+    geoReason: loc.reason,
   };
 }
 
@@ -643,6 +654,8 @@ async function classifyCluster(cluster: EventCluster, runCalls: { value: number 
         lng: llm.longitude || base.lng,
         classificationConfidence: Math.max(base.classificationConfidence, llm.confidence),
         classificationMethod: base.classificationMethod === 'rules' ? 'hybrid' : 'llm',
+        geoValidity: llm.latitude && llm.longitude ? 'valid' : base.geoValidity,
+        geoReason: llm.latitude && llm.longitude ? 'llm-provided coordinates' : base.geoReason,
       };
     }
   }
@@ -703,6 +716,8 @@ export async function fetchClassifiedEvents(): Promise<ClassifiedEventsResult> {
       signalScore: 0,
       topicTags: topicTagsForText(`${classified.title} ${classified.summary}`),
       mapPriority: 0,
+      geoValidity: classified.geoValidity,
+      geoReason: classified.geoReason,
     });
   }
 

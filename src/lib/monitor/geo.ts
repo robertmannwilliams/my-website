@@ -1,4 +1,5 @@
 export type GeoMatchMethod = 'city' | 'country' | 'region' | 'centroid' | 'none';
+export type GeoValidity = 'valid' | 'ambiguous' | 'invalid';
 
 export interface GeoMatch {
   lat: number;
@@ -6,6 +7,8 @@ export interface GeoMatch {
   confidence: number;
   method: GeoMatchMethod;
   key: string;
+  validity: GeoValidity;
+  reason: string;
 }
 
 interface GeoEntry {
@@ -91,8 +94,37 @@ function escapeRegex(raw: string): string {
 const LOOKUP_PATTERNS = SORTED_KEYS.map((key) => ({
   key,
   entry: LOOKUP[key],
-  pattern: new RegExp(`(^|[^a-z0-9])${escapeRegex(key).replace(/\s+/g, '\\s+')}(?=$|[^a-z0-9])`, 'i'),
+  pattern: new RegExp(`(^|[^a-z0-9])${escapeRegex(key).replace(/\s+/g, '\\s+')}(?=$|[^a-z0-9])`, 'gi'),
 }));
+
+const US_KEYS = new Set(['us', 'usa', 'u.s', 'u.s.', 'united states', 'america']);
+
+interface GeoHit {
+  key: string;
+  entry: GeoEntry;
+  index: number;
+}
+
+function baseConfidenceFor(method: GeoMatchMethod): number {
+  if (method === 'city') return 0.92;
+  if (method === 'country') return 0.8;
+  if (method === 'region') return 0.65;
+  if (method === 'centroid') return 0.35;
+  return 0;
+}
+
+function contextBonus(normalized: string, index: number): number {
+  const left = normalized.slice(Math.max(0, index - 28), index);
+  const right = normalized.slice(index, Math.min(normalized.length, index + 32));
+  let score = 0;
+
+  if (/\b(in|near|at|inside|around|from|across|off)\s*$/i.test(left)) score += 16;
+  if (/\b(on|against|toward|towards|to)\s*$/i.test(left)) score += 10;
+  if (/\b(election|elections|president|parliament)\b/i.test(right)) score += 6;
+  if (/\bstrike|attack|conflict|war\b/i.test(left + right)) score += 5;
+
+  return score;
+}
 
 export function geocodeText(text: string): GeoMatch | null {
   const normalized = text
@@ -100,20 +132,79 @@ export function geocodeText(text: string): GeoMatch | null {
     .replace(/[\u2018\u2019]/g, "'")
     .replace(/\s+/g, ' ');
 
+  const hits: GeoHit[] = [];
   for (const { key, entry, pattern } of LOOKUP_PATTERNS) {
-    if (!pattern.test(normalized)) continue;
-    const hit = entry;
-    const confidence = hit.method === 'city' ? 0.92 : hit.method === 'country' ? 0.8 : 0.65;
+    pattern.lastIndex = 0;
+    let match = pattern.exec(normalized);
+    while (match) {
+      const lead = match[1] ?? '';
+      const index = Math.max(0, match.index + lead.length);
+      hits.push({ key, entry, index });
+      if (pattern.lastIndex === match.index) pattern.lastIndex += 1;
+      match = pattern.exec(normalized);
+    }
+  }
+
+  if (hits.length === 0) return null;
+
+  const nonUsCountryHits = hits.filter((hit) => hit.entry.method === 'country' && !US_KEYS.has(hit.key)).length;
+
+  const scored = hits.map((hit) => {
+    const context = contextBonus(normalized, hit.index);
+    const base =
+      hit.entry.method === 'city'
+        ? 120
+        : hit.entry.method === 'country'
+          ? 92
+          : 66;
+    const positionBonus = Math.max(0, 24 - hit.index / 35);
+    const usPenalty = US_KEYS.has(hit.key) && nonUsCountryHits > 0 ? 28 : 0;
+    const regionPenalty =
+      hit.entry.method === 'region' &&
+      hits.some((other) => other.entry.method === 'city' || other.entry.method === 'country')
+        ? 10
+        : 0;
+    const score = base + context + positionBonus - usPenalty - regionPenalty;
+    return { ...hit, score, context };
+  });
+
+  scored.sort((a, b) => b.score - a.score || a.index - b.index);
+
+  const best = scored[0];
+  const second = scored[1];
+  const confidenceBase = baseConfidenceFor(best.entry.method);
+  const adjustedConfidence = Math.max(
+    0.35,
+    Math.min(0.95, confidenceBase + best.context / 120),
+  );
+
+  const ambiguous =
+    Boolean(second) &&
+    second.key !== best.key &&
+    Math.abs(best.score - second.score) < 8 &&
+    best.entry.method === second.entry.method;
+
+  if (ambiguous) {
     return {
-      lat: hit.lat,
-      lng: hit.lng,
-      confidence,
-      method: hit.method,
-      key,
+      lat: best.entry.lat,
+      lng: best.entry.lng,
+      confidence: Math.max(0.45, adjustedConfidence - 0.18),
+      method: best.entry.method,
+      key: best.key,
+      validity: 'ambiguous',
+      reason: `multiple plausible matches (${best.key} vs ${second?.key})`,
     };
   }
 
-  return null;
+  return {
+    lat: best.entry.lat,
+    lng: best.entry.lng,
+    confidence: adjustedConfidence,
+    method: best.entry.method,
+    key: best.key,
+    validity: 'valid',
+    reason: `matched ${best.key} (${best.entry.method})`,
+  };
 }
 
 export function centroidForRegion(region: keyof typeof REGION_CENTROIDS): GeoMatch {
@@ -124,5 +215,7 @@ export function centroidForRegion(region: keyof typeof REGION_CENTROIDS): GeoMat
     confidence: 0.35,
     method: 'centroid',
     key: region,
+    validity: 'invalid',
+    reason: `fallback centroid (${region})`,
   };
 }

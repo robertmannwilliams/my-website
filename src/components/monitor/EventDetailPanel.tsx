@@ -4,7 +4,14 @@ import { useState, useEffect, memo } from 'react';
 import type { GdeltEvent } from '@/lib/monitor/events';
 import type { PolymarketMarket } from '@/lib/monitor/polymarket';
 import type { UsgsEarthquake } from '@/lib/monitor/usgs';
-import type { MapItem, MapSelectionCandidate, SituationRoomConfig, WatchZone } from '@/lib/monitor/types';
+import type {
+  ActiveFanout,
+  MapInteractionMode,
+  MapItem,
+  MapSelectionCandidate,
+  SituationRoomConfig,
+  WatchZone,
+} from '@/lib/monitor/types';
 import { categoryColor, marketCategoryColor } from '@/lib/monitor/themes';
 
 interface EventDetailPanelProps {
@@ -13,6 +20,10 @@ interface EventDetailPanelProps {
   onSelectCandidate: (candidate: MapSelectionCandidate) => void;
   canBackToSelection: boolean;
   onBackToSelection: () => void;
+  canBackToFanout: boolean;
+  onBackToFanout: () => void;
+  onCollapseFanout: () => void;
+  interactionMode: MapInteractionMode;
   onClose: () => void;
 }
 
@@ -103,6 +114,9 @@ function EventContent({ event, relatedMarkets }: { event: GdeltEvent; relatedMar
           </div>
           <div style={{ fontSize: 10, color: '#475569', gridColumn: '1 / -1', fontFamily: 'monospace' }}>
             Canonical: {event.canonicalId} · {event.fingerprint}
+          </div>
+          <div style={{ fontSize: 11, color: '#64748B', gridColumn: '1 / -1' }}>
+            Geo: <span style={{ color: '#CBD5E1' }}>{event.geoValidity}</span> · <span style={{ color: '#94A3B8' }}>{event.geoReason}</span>
           </div>
         </div>
 
@@ -229,6 +243,11 @@ function MarketContent({ market }: { market: PolymarketMarket }) {
             <span style={{ color: '#64748B' }}>Geo Quality</span>
             <span style={{ color: '#CBD5E1' }}>{Math.round(market.geoConfidence * 100)}% ({market.geoMethod})</span>
           </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+            <span style={{ color: '#64748B' }}>Geo Validity</span>
+            <span style={{ color: '#CBD5E1' }}>{market.geoValidity}</span>
+          </div>
+          <div style={{ fontSize: 11, color: '#94A3B8' }}>{market.geoReason}</div>
         </div>
 
         <a
@@ -407,6 +426,63 @@ function RoomContent({ room }: { room: SituationRoomConfig }) {
   );
 }
 
+function FanoutContextContent({ fanout }: { fanout: ActiveFanout }) {
+  const signalLabel = fanout.signalType === 'markets' ? 'Markets' : 'Events';
+  const freshness = fanout.freshestTimestamp ? formatTimestamp(fanout.freshestTimestamp) : 'unknown';
+  const themeRows = Object.entries(fanout.themeMix)
+    .filter(([, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1]);
+
+  return (
+    <>
+      <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid #334155' }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', color: '#66AAFF', background: 'rgba(102,170,255,0.14)', padding: '2px 8px', borderRadius: 3, display: 'inline-block', marginBottom: 10 }}>
+          FAN-OUT
+        </div>
+        <h3 style={{ color: '#E8E8ED', fontSize: 15, fontWeight: 600, lineHeight: 1.35, margin: 0 }}>
+          {signalLabel} Cluster Context
+        </h3>
+      </div>
+
+      <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
+          <div style={{ fontSize: 12, color: '#64748B' }}>
+            Signal Type: <span style={{ color: '#CBD5E1' }}>{signalLabel}</span>
+          </div>
+          <div style={{ fontSize: 12, color: '#64748B' }}>
+            Item Count: <span style={{ color: '#CBD5E1' }}>{fanout.itemCount}</span>
+          </div>
+          <div style={{ fontSize: 12, color: '#64748B' }}>
+            Freshness: <span style={{ color: '#CBD5E1' }}>{freshness}</span>
+          </div>
+          <div style={{ fontSize: 12, color: '#64748B' }}>
+            Location: <span style={{ color: '#CBD5E1', fontFamily: 'monospace' }}>{fanout.locationLabel}</span>
+          </div>
+        </div>
+
+        <div>
+          <span style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, display: 'block', marginBottom: 8 }}>
+            Theme Mix
+          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {themeRows.map(([theme, count]) => (
+              <div key={theme} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                <span style={{ color: categoryColor(theme as keyof typeof fanout.themeMix), textTransform: 'capitalize' }}>
+                  {theme}
+                </span>
+                <span style={{ color: '#CBD5E1' }}>{count}</span>
+              </div>
+            ))}
+            {themeRows.length === 0 && (
+              <div style={{ fontSize: 12, color: '#94A3B8' }}>No theme mix data.</div>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function SelectionContent({
   title,
   candidates,
@@ -455,6 +531,10 @@ function EventDetailPanel({
   onSelectCandidate,
   canBackToSelection,
   onBackToSelection,
+  canBackToFanout,
+  onBackToFanout,
+  onCollapseFanout,
+  interactionMode,
   onClose,
 }: EventDetailPanelProps) {
   const isOpen = item !== null;
@@ -476,6 +556,7 @@ function EventDetailPanel({
       {item.type === 'market' && <MarketContent market={item.data} />}
       {item.type === 'earthquake' && <EarthquakeContent eq={item.data} />}
       {item.type === 'watch_zone' && <WatchZoneContent zone={item.data} />}
+      {item.type === 'fanout' && <FanoutContextContent fanout={item.data} />}
       {item.type === 'room' && <RoomContent room={item.data} />}
       {item.type === 'selection' && (
         <SelectionContent
@@ -515,7 +596,27 @@ function EventDetailPanel({
             <>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 12px 0', position: 'relative' }}>
                 <div style={{ width: 32, height: 4, borderRadius: 2, background: '#334155' }} />
-                {canBackToSelection && item.type !== 'selection' && (
+                {canBackToFanout && item.type !== 'fanout' && (
+                  <button
+                    onClick={onBackToFanout}
+                    style={{
+                      position: 'absolute',
+                      left: 12,
+                      top: 8,
+                      background: 'none',
+                      border: '1px solid #334155',
+                      color: '#9DB2CC',
+                      cursor: 'pointer',
+                      padding: '3px 8px',
+                      fontSize: 11,
+                      borderRadius: 4,
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    Back
+                  </button>
+                )}
+                {canBackToSelection && item.type !== 'selection' && !canBackToFanout && (
                   <button
                     onClick={onBackToSelection}
                     style={{
@@ -570,10 +671,10 @@ function EventDetailPanel({
     >
       {item && (
         <>
-          {canBackToSelection && item.type !== 'selection' && (
+          {canBackToFanout && item.type !== 'fanout' && (
             <div style={{ position: 'absolute', top: 12, left: 12, zIndex: 11 }}>
               <button
-                onClick={onBackToSelection}
+                onClick={onBackToFanout}
                 style={{
                   background: 'rgba(13,23,43,0.9)',
                   border: '1px solid #334155',
@@ -584,7 +685,25 @@ function EventDetailPanel({
                   fontSize: 11,
                 }}
               >
-                Back to stack
+                Back to fan-out
+              </button>
+            </div>
+          )}
+          {interactionMode !== 'idle' && (
+            <div style={{ position: 'absolute', top: 12, left: canBackToFanout ? 124 : 12, zIndex: 11 }}>
+              <button
+                onClick={onCollapseFanout}
+                style={{
+                  background: 'rgba(13,23,43,0.9)',
+                  border: '1px solid #334155',
+                  color: '#9DB2CC',
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  borderRadius: 4,
+                  fontSize: 11,
+                }}
+              >
+                Collapse
               </button>
             </div>
           )}

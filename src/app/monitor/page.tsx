@@ -7,7 +7,9 @@ import type { PolymarketMarket } from '@/lib/monitor/polymarket';
 import { findRelatedMarkets } from '@/lib/monitor/polymarket';
 import type { UsgsEarthquake } from '@/lib/monitor/usgs';
 import type {
+  ActiveFanout,
   ElectionCalendarItem,
+  MapInteractionMode,
   MapItem,
   MapSelectionCandidate,
   NotamZone,
@@ -130,6 +132,8 @@ function normalizeEventShape(event: GdeltEvent): GdeltEvent {
     topicTags,
     signalScore,
     mapPriority: Number(event.mapPriority) || signalScore,
+    geoValidity: event.geoValidity || 'invalid',
+    geoReason: event.geoReason || 'location unavailable',
   };
 }
 
@@ -142,6 +146,8 @@ function normalizeMarketShape(market: PolymarketMarket): PolymarketMarket {
     signalScore,
     mapPriority: Number(market.mapPriority) || signalScore,
     linkConfidence: market.linkConfidence != null ? Number(market.linkConfidence) : undefined,
+    geoValidity: market.geoValidity || 'invalid',
+    geoReason: market.geoReason || 'location unavailable',
   };
 }
 
@@ -181,6 +187,9 @@ export default function MonitorPage() {
     () => (initialRoom ? roomWatchZoneVisibility(initialRoom) : makeDefaultWatchZoneVisibility()),
   );
   const [selectionContext, setSelectionContext] = useState<{ title: string; candidates: MapSelectionCandidate[] } | null>(null);
+  const [activeFanout, setActiveFanout] = useState<ActiveFanout | null>(null);
+  const [interactionMode, setInteractionMode] = useState<MapInteractionMode>('idle');
+  const [forceClearFanoutKey, setForceClearFanoutKey] = useState(0);
 
   const globalSnapshotRef = useRef({
     themes: makeDefaultThemes(),
@@ -190,27 +199,32 @@ export default function MonitorPage() {
 
   const handleEventClick = useCallback((event: GdeltEvent) => {
     setSelectionContext(null);
+    setInteractionMode(activeFanout && activeFanout.candidateIds.includes(event.id) ? 'selected' : 'idle');
     setSelectedItem({ type: 'event', data: event });
-  }, []);
+  }, [activeFanout]);
 
   const handleMarketClick = useCallback((market: PolymarketMarket) => {
     setSelectionContext(null);
+    setInteractionMode(activeFanout && activeFanout.candidateIds.includes(market.id) ? 'selected' : 'idle');
     setSelectedItem({ type: 'market', data: market });
-  }, []);
+  }, [activeFanout]);
 
   const handleEarthquakeClick = useCallback((eq: UsgsEarthquake) => {
     setSelectionContext(null);
+    setInteractionMode('idle');
     setSelectedItem({ type: 'earthquake', data: eq });
   }, []);
 
   const handleWatchZoneClick = useCallback((watchZone: WatchZone) => {
     setSelectionContext(null);
+    setInteractionMode('idle');
     setSelectedItem({ type: 'watch_zone', data: watchZone });
   }, []);
 
   const handleSelectionCandidates = useCallback((title: string, candidates: MapSelectionCandidate[]) => {
     const context = { title, candidates };
     setSelectionContext(context);
+    setInteractionMode('idle');
 
     if (candidates.length === 1) {
       const candidate = candidates[0];
@@ -232,19 +246,91 @@ export default function MonitorPage() {
     if (candidate.type === 'market') setSelectedItem({ type: 'market', data: candidate.data });
     if (candidate.type === 'earthquake') setSelectedItem({ type: 'earthquake', data: candidate.data });
     if (candidate.type === 'watch_zone') setSelectedItem({ type: 'watch_zone', data: candidate.data });
-  }, []);
+    if (activeFanout && candidate.originClusterId === activeFanout.clusterId && candidate.signalType === activeFanout.signalType) {
+      setInteractionMode('selected');
+    } else {
+      setInteractionMode('idle');
+    }
+  }, [activeFanout]);
 
   const handleBackToSelection = useCallback(() => {
     if (!selectionContext) return;
+    setInteractionMode('idle');
     setSelectedItem({
       type: 'selection',
       data: selectionContext,
     });
   }, [selectionContext]);
 
-  const handleClosePanel = useCallback(() => {
+  const collapseFanoutAndPanel = useCallback(() => {
+    setForceClearFanoutKey((prev) => prev + 1);
+    setActiveFanout(null);
+    setInteractionMode('idle');
+    setSelectionContext(null);
     setSelectedItem(null);
   }, []);
+
+  const handleClosePanel = useCallback(() => {
+    if (activeFanout) {
+      collapseFanoutAndPanel();
+      return;
+    }
+    setInteractionMode('idle');
+    setSelectedItem(null);
+  }, [activeFanout, collapseFanoutAndPanel]);
+
+  const handleFanoutChange = useCallback((fanout: ActiveFanout | null) => {
+    setActiveFanout((previous) => {
+      if (!fanout && previous) {
+        const previousIds = new Set(previous.candidateIds);
+        setInteractionMode('idle');
+        setSelectedItem((current) => {
+          if (!current) return null;
+          if (current.type === 'fanout') return null;
+          if ((current.type === 'event' || current.type === 'market') && previousIds.has(current.data.id)) {
+            return null;
+          }
+          return current;
+        });
+      }
+
+      if (fanout) {
+        setSelectedItem((current) => {
+          if (!current) {
+            setInteractionMode('fanout');
+            return { type: 'fanout', data: fanout };
+          }
+
+          if (current.type === 'event' && fanout.candidateIds.includes(current.data.id)) {
+            setInteractionMode('selected');
+            return current;
+          }
+
+          if (current.type === 'market' && fanout.candidateIds.includes(current.data.id)) {
+            setInteractionMode('selected');
+            return current;
+          }
+
+          if (current.type === 'selection') {
+            setInteractionMode('idle');
+            return current;
+          }
+
+          setInteractionMode('fanout');
+          return { type: 'fanout', data: fanout };
+        });
+      }
+
+      return fanout;
+    });
+  }, []);
+
+  const handleBackToFanout = useCallback(() => {
+    if (!activeFanout) return;
+    setSelectionContext(null);
+    setInteractionMode('fanout');
+    setSelectedItem({ type: 'fanout', data: activeFanout });
+  }, [activeFanout]);
 
   const toggleTheme = useCallback((key: ThemeKey) => {
     setVisibleThemes((prev) => {
@@ -271,11 +357,14 @@ export default function MonitorPage() {
   }, [focusMode]);
 
   const handleSelectGlobalFocus = useCallback(() => {
+    setForceClearFanoutKey((prev) => prev + 1);
     setFocusMode('global');
     setActiveRoom(null);
     setVisibleThemes(globalSnapshotRef.current.themes);
     setVisibleSignals(globalSnapshotRef.current.signals);
     setVisibleWatchZones(globalSnapshotRef.current.watchZones);
+    setActiveFanout(null);
+    setInteractionMode('idle');
     setSelectedItem(null);
     window.localStorage.setItem('monitor:last-focus', 'global');
   }, []);
@@ -293,7 +382,10 @@ export default function MonitorPage() {
     }
 
     setFocusMode('room');
+    setForceClearFanoutKey((prev) => prev + 1);
     setActiveRoom(room);
+    setActiveFanout(null);
+    setInteractionMode('idle');
     setSelectedItem({ type: 'room', data: room });
 
     setVisibleThemes(roomThemeVisibility(room));
@@ -493,6 +585,8 @@ export default function MonitorPage() {
             onWatchZoneClick={handleWatchZoneClick}
             onSelectionCandidates={handleSelectionCandidates}
             onMapClick={handleClosePanel}
+            onFanoutChange={handleFanoutChange}
+            forceClearFanoutKey={forceClearFanoutKey}
             selectedEventCoords={
               selectedItem?.type === 'event'
                 ? { lat: selectedItem.data.lat, lng: selectedItem.data.lng }
@@ -517,6 +611,10 @@ export default function MonitorPage() {
             onSelectCandidate={handleSelectCandidate}
             canBackToSelection={Boolean(selectionContext && selectedItem?.type !== 'selection')}
             onBackToSelection={handleBackToSelection}
+            canBackToFanout={Boolean(activeFanout && selectedItem && selectedItem.type !== 'fanout' && selectedItem.type !== 'selection')}
+            onBackToFanout={handleBackToFanout}
+            onCollapseFanout={collapseFanoutAndPanel}
+            interactionMode={interactionMode}
             onClose={handleClosePanel}
           />
         </div>

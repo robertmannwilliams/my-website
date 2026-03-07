@@ -25,6 +25,8 @@ export interface PolymarketMarket {
   topicTags: string[];
   mapPriority: number;
   linkConfidence?: number;
+  geoValidity: 'valid' | 'ambiguous' | 'invalid';
+  geoReason: string;
 }
 
 export type MarketCategory =
@@ -183,16 +185,23 @@ function geocodeForMarket(title: string, category: MarketCategory): {
   geoConfidence: number;
   geoMethod: GeoMatchMethod;
   isMapPlottable: boolean;
+  geoValidity: 'valid' | 'ambiguous' | 'invalid';
+  geoReason: string;
 } {
   const precise = geocodeText(title);
   if (precise) {
-    const isMapPlottable = precise.method === 'city' || precise.method === 'country';
+    const isMapPlottable =
+      precise.validity === 'valid' &&
+      (precise.method === 'city' || precise.method === 'country') &&
+      precise.confidence >= 0.72;
     return {
       lat: precise.lat,
       lng: precise.lng,
       geoConfidence: precise.confidence,
       geoMethod: precise.method,
       isMapPlottable,
+      geoValidity: precise.validity,
+      geoReason: precise.reason,
     };
   }
 
@@ -204,6 +213,8 @@ function geocodeForMarket(title: string, category: MarketCategory): {
       geoConfidence: c.confidence,
       geoMethod: c.method,
       isMapPlottable: false,
+      geoValidity: c.validity,
+      geoReason: c.reason,
     };
   }
 
@@ -215,6 +226,8 @@ function geocodeForMarket(title: string, category: MarketCategory): {
       geoConfidence: c.confidence,
       geoMethod: c.method,
       isMapPlottable: false,
+      geoValidity: c.validity,
+      geoReason: c.reason,
     };
   }
 
@@ -226,6 +239,8 @@ function geocodeForMarket(title: string, category: MarketCategory): {
       geoConfidence: c.confidence,
       geoMethod: c.method,
       isMapPlottable: false,
+      geoValidity: c.validity,
+      geoReason: c.reason,
     };
   }
 
@@ -236,6 +251,8 @@ function geocodeForMarket(title: string, category: MarketCategory): {
     geoConfidence: c.confidence,
     geoMethod: c.method,
     isMapPlottable: false,
+    geoValidity: c.validity,
+    geoReason: c.reason,
   };
 }
 
@@ -261,6 +278,7 @@ function normalizedTokens(text: string): string[] {
 
 export function isHighSignalMapMarket(market: PolymarketMarket): boolean {
   if (!market.isMapPlottable) return false;
+  if (market.geoValidity !== 'valid') return false;
   if (market.geoConfidence < 0.62) return false;
 
   // Country-level geocoding is useful but noisier; require stronger market activity.
@@ -339,6 +357,8 @@ export async function fetchPolymarkets(): Promise<PolymarketMarket[]> {
       signalScore: 0,
       topicTags: normalizedTokens(m.question).slice(0, 8),
       mapPriority: 0,
+      geoValidity: geo.geoValidity,
+      geoReason: geo.geoReason,
     });
   }
 
