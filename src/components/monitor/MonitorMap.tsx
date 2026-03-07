@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, memo, useMemo } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { GdeltEvent } from '@/lib/monitor/events';
-import type { PolymarketMarket } from '@/lib/monitor/polymarket';
+import { isHighSignalMapMarket, marketSignalScore, type PolymarketMarket } from '@/lib/monitor/polymarket';
 import type { UsgsEarthquake } from '@/lib/monitor/usgs';
 import type {
   ElectionCalendarItem,
@@ -40,6 +40,9 @@ interface MonitorMapProps {
   elections: ElectionCalendarItem[];
 }
 
+const MAX_EVENTS_ON_MAP = 140;
+const MARKET_GROUP_RADIUS_KM = 45;
+
 function eventsToGeoJSON(events: GdeltEvent[]): GeoJSON.FeatureCollection {
   return {
     type: 'FeatureCollection',
@@ -69,10 +72,78 @@ function eventsToGeoJSON(events: GdeltEvent[]): GeoJSON.FeatureCollection {
   };
 }
 
-function marketsToGeoJSON(markets: PolymarketMarket[]): GeoJSON.FeatureCollection {
+function toRad(deg: number): number {
+  return (deg * Math.PI) / 180;
+}
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function eventSignalScore(event: GdeltEvent): number {
+  const severityScore =
+    event.severity === 'critical' ? 12 : event.severity === 'watch' ? 7 : 3;
+  const sourceScore = Math.min(6, event.sourceCount * 1.15);
+  const confidenceScore = event.classificationConfidence * 5;
+  const ageHours = Math.max(
+    0,
+    (Date.now() - new Date(event.lastSeenAt || event.timestamp).getTime()) / 3_600_000,
+  );
+  const recencyScore = Math.max(0, 4 - ageHours / 6);
+
+  return severityScore + sourceScore + confidenceScore + recencyScore;
+}
+
+interface MarketStack {
+  market: PolymarketMarket;
+  stackCount: number;
+}
+
+function collapseMarketsForMap(markets: PolymarketMarket[]): MarketStack[] {
+  const sorted = [...markets].sort((a, b) => {
+    const scoreDelta = marketSignalScore(b) - marketSignalScore(a);
+    if (scoreDelta !== 0) return scoreDelta;
+    return b.volumeRaw - a.volumeRaw;
+  });
+
+  const groups: PolymarketMarket[][] = [];
+
+  for (const market of sorted) {
+    let placed = false;
+    for (const group of groups) {
+      const representative = group[0];
+      if (representative.category !== market.category) continue;
+      const dist = haversineKm(
+        representative.lat,
+        representative.lng,
+        market.lat,
+        market.lng,
+      );
+      if (dist <= MARKET_GROUP_RADIUS_KM) {
+        group.push(market);
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) groups.push([market]);
+  }
+
+  return groups.map((group) => ({
+    market: group[0],
+    stackCount: group.length,
+  }));
+}
+
+function marketsToGeoJSON(stacks: MarketStack[]): GeoJSON.FeatureCollection {
   return {
     type: 'FeatureCollection',
-    features: markets.map((m) => ({
+    features: stacks.map(({ market: m, stackCount }) => ({
       type: 'Feature' as const,
       geometry: { type: 'Point' as const, coordinates: [m.lng, m.lat] },
       properties: {
@@ -80,7 +151,10 @@ function marketsToGeoJSON(markets: PolymarketMarket[]): GeoJSON.FeatureCollectio
         title: m.title,
         category: m.category,
         probability: m.probability,
-        probabilityLabel: `${Math.round(m.probability * 100)}%`,
+        probabilityLabel:
+          stackCount > 1
+            ? `${Math.round(m.probability * 100)}% · ${stackCount}`
+            : `${Math.round(m.probability * 100)}%`,
         volume: m.volume,
         volumeRaw: m.volumeRaw,
         url: m.url,
@@ -93,6 +167,7 @@ function marketsToGeoJSON(markets: PolymarketMarket[]): GeoJSON.FeatureCollectio
         geoConfidence: m.geoConfidence,
         geoMethod: m.geoMethod,
         isMapPlottable: m.isMapPlottable,
+        stackCount,
       },
     })),
   };
@@ -595,7 +670,8 @@ function addMarketLayers(m: mapboxgl.Map) {
         5, 0.75,
         10, 1.0,
       ],
-      'icon-allow-overlap': true,
+      'icon-allow-overlap': false,
+      'icon-ignore-placement': false,
     },
     paint: {
       'icon-color': MARKET_CATEGORY_COLOR,
@@ -617,8 +693,9 @@ function addMarketLayers(m: mapboxgl.Map) {
         10, 12,
       ],
       'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
-      'text-allow-overlap': true,
-      'icon-allow-overlap': true,
+      'text-allow-overlap': false,
+      'icon-allow-overlap': false,
+      'text-ignore-placement': false,
     },
     paint: {
       'text-color': '#FFFFFF',
@@ -876,12 +953,33 @@ function MonitorMap({
   // Compute filtered data based on active themes
   const filteredEvents = useMemo(() => {
     const activeCats = getActiveEventCategories(visibleThemes);
-    return events.filter((e) => activeCats.includes(e.category));
+    const candidates = events.filter((e) => activeCats.includes(e.category));
+
+    const highSignal = candidates.filter((event) => {
+      if (event.severity !== 'monitor') return true;
+      if (event.sourceCount >= 2) return true;
+      return event.classificationConfidence >= 0.72;
+    });
+
+    highSignal.sort((a, b) => {
+      const scoreDelta = eventSignalScore(b) - eventSignalScore(a);
+      if (scoreDelta !== 0) return scoreDelta;
+      return new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime();
+    });
+
+    const critical = highSignal.filter((event) => event.severity === 'critical');
+    const nonCritical = highSignal.filter((event) => event.severity !== 'critical');
+    const nonCriticalBudget = Math.max(0, MAX_EVENTS_ON_MAP - critical.length);
+
+    return [...critical, ...nonCritical.slice(0, nonCriticalBudget)];
   }, [events, visibleThemes]);
 
-  const filteredMarkets = useMemo(() => {
+  const displayMarketStacks = useMemo(() => {
     const activeCats = getActiveMarketCategories(visibleThemes);
-    return markets.filter((m) => activeCats.includes(m.category) && m.isMapPlottable);
+    const highSignal = markets.filter(
+      (market) => activeCats.includes(market.category) && isHighSignalMapMarket(market),
+    );
+    return collapseMarketsForMap(highSignal);
   }, [markets, visibleThemes]);
 
   const filteredSituations = useMemo(() => {
@@ -1053,21 +1151,22 @@ function MonitorMap({
       m.on('click', 'market-markers', (e) => {
         if (!e.features?.[0]) return;
         const props = e.features[0].properties!;
+        const stackCount = Number(props.stackCount) || 1;
         const market: PolymarketMarket = {
           id: props.id,
-          title: props.title,
+          title: stackCount > 1 ? `${props.title} (+${stackCount - 1} nearby)` : props.title,
           category: props.category,
           categoryNormalized: props.categoryNormalized || props.category,
-          probability: props.probability,
+          probability: Number(props.probability) || 0.5,
           volume: props.volume,
-          volumeRaw: props.volumeRaw,
+          volumeRaw: Number(props.volumeRaw) || 0,
           lat: (e.features[0].geometry as GeoJSON.Point).coordinates[1],
           lng: (e.features[0].geometry as GeoJSON.Point).coordinates[0],
           url: props.url,
           lastUpdated: props.lastUpdated,
           outcomes: JSON.parse(props.outcomes || '[]'),
           outcomePrices: JSON.parse(props.outcomePrices || '[]'),
-          liquidity: props.liquidity,
+          liquidity: Number(props.liquidity) || 0,
           endDate: props.endDate,
           geoConfidence: Number(props.geoConfidence) || 0.5,
           geoMethod: props.geoMethod || 'none',
@@ -1181,14 +1280,14 @@ function MonitorMap({
     }
   }, [filteredEvents, mapReady]);
 
-  // Update market source data when filtered markets change
+  // Update market source data when market stacks change
   useEffect(() => {
     if (!map.current || !layersReady.current) return;
     const source = map.current.getSource('markets') as mapboxgl.GeoJSONSource | undefined;
     if (source) {
-      source.setData(marketsToGeoJSON(filteredMarkets));
+      source.setData(marketsToGeoJSON(displayMarketStacks));
     }
-  }, [filteredMarkets, mapReady]);
+  }, [displayMarketStacks, mapReady]);
 
   // Update situation source data when filtered situations change
   useEffect(() => {

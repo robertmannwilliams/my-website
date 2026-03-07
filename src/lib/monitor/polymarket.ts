@@ -228,6 +228,38 @@ function geocodeForMarket(title: string, category: MarketCategory): {
   };
 }
 
+export function marketSignalScore(market: PolymarketMarket): number {
+  const volumeScore = Math.max(0, Math.log10(Math.max(100, market.volumeRaw)) - 2);
+  const liquidityScore = Math.max(0, Math.log10(Math.max(100, market.liquidity)) - 2);
+  const geoScore = market.geoConfidence * 3;
+  const geoBonus = market.geoMethod === 'city' ? 1.1 : market.geoMethod === 'country' ? 0.45 : -0.4;
+  const categoryBonus =
+    market.category === 'conflict' || market.category === 'diplomacy' ? 0.6 : 0.25;
+
+  return volumeScore + liquidityScore + geoScore + geoBonus + categoryBonus;
+}
+
+export function isHighSignalMapMarket(market: PolymarketMarket): boolean {
+  if (!market.isMapPlottable) return false;
+  if (market.geoConfidence < 0.62) return false;
+
+  // Country-level geocoding is useful but noisier; require stronger market activity.
+  if (
+    market.geoMethod === 'country' &&
+    market.volumeRaw < 50_000 &&
+    market.liquidity < 20_000
+  ) {
+    return false;
+  }
+
+  // Keep low-liquidity/low-volume contracts off-map unless confidence is very high.
+  if (market.volumeRaw < 5_000 && market.liquidity < 5_000 && market.geoConfidence < 0.8) {
+    return false;
+  }
+
+  return marketSignalScore(market) >= 3.9;
+}
+
 export async function fetchPolymarkets(): Promise<PolymarketMarket[]> {
   const queryResults = await Promise.all([
     fetchQuery({ volumeMin: 10_000, pages: 4, label: 'high' }),
@@ -315,7 +347,29 @@ export function findRelatedMarkets(
   markets: PolymarketMarket[],
   radiusKm: number = 500,
 ): PolymarketMarket[] {
-  return markets.filter(
-    (m) => m.isMapPlottable && haversineKm(event.lat, event.lng, m.lat, m.lng) <= radiusKm,
+  const nearby = markets.filter(
+    (m) =>
+      isHighSignalMapMarket(m) &&
+      haversineKm(event.lat, event.lng, m.lat, m.lng) <= radiusKm,
   );
+
+  nearby.sort((a, b) => {
+    const scoreDelta = marketSignalScore(b) - marketSignalScore(a);
+    if (scoreDelta !== 0) return scoreDelta;
+    return b.volumeRaw - a.volumeRaw;
+  });
+
+  const deduped: PolymarketMarket[] = [];
+  const seen = new Set<string>();
+
+  for (const market of nearby) {
+    const locationBucket = `${Math.round(market.lat * 2) / 2}|${Math.round(market.lng * 2) / 2}`;
+    const key = `${market.category}|${locationBucket}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(market);
+    if (deduped.length >= 6) break;
+  }
+
+  return deduped;
 }
