@@ -1,48 +1,65 @@
 import { NextResponse } from 'next/server';
-import { fetchClassifiedEvents, type GdeltEvent } from '@/lib/monitor/events';
+import { fetchClassifiedEvents } from '@/lib/monitor/events';
+import { envelopeFromPayload, readCachedPayload, writeCachedPayload } from '@/lib/monitor/cache';
+import { incrementMetric } from '@/lib/monitor/metrics';
 
-// In-memory cache
-let cachedData: { events: GdeltEvent[]; timestamp: number } | null = null;
-const CACHE_TTL_MS = 15 * 60_000; // 15 minutes
+const RESOURCE = 'events';
+const TTL_SECONDS = 10 * 60;
 
 export async function GET() {
-  const now = Date.now();
-
-  if (cachedData && cachedData.events.length > 0 && now - cachedData.timestamp < CACHE_TTL_MS) {
-    return NextResponse.json(cachedData.events, {
+  const cached = await readCachedPayload(RESOURCE, TTL_SECONDS);
+  if (cached.payload && cached.fresh) {
+    await incrementMetric('api_events_cache_hit');
+    const response = envelopeFromPayload(cached.payload, cached.ageSeconds, 'HIT');
+    return NextResponse.json(response, {
       headers: {
-        'Cache-Control': 'public, s-maxage=900, stale-while-revalidate=60',
+        'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=120',
         'X-Cache': 'HIT',
-        'X-Cache-Age': String(Math.round((now - cachedData.timestamp) / 1000)),
       },
     });
   }
 
   try {
-    const events = await fetchClassifiedEvents();
-    cachedData = { events, timestamp: now };
+    const result = await fetchClassifiedEvents();
+    const stored = await writeCachedPayload(RESOURCE, result.items, result.sourceCoverage, TTL_SECONDS);
+    await incrementMetric('api_events_cache_miss');
 
-    return NextResponse.json(events, {
+    const response = envelopeFromPayload(stored, 0, 'MISS');
+    return NextResponse.json(response, {
       headers: {
-        'Cache-Control': 'public, s-maxage=900, stale-while-revalidate=60',
+        'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=120',
         'X-Cache': 'MISS',
-        'X-Event-Count': String(events.length),
+        'X-Event-Count': String(result.items.length),
       },
     });
   } catch {
-    // Return stale cache if available, otherwise empty
-    if (cachedData) {
-      return NextResponse.json(cachedData.events, {
+    await incrementMetric('api_events_error');
+
+    if (cached.payload) {
+      const response = envelopeFromPayload(cached.payload, cached.ageSeconds, 'STALE');
+      return NextResponse.json(response, {
         headers: {
-          'Cache-Control': 'public, s-maxage=60',
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
           'X-Cache': 'STALE',
         },
       });
     }
 
-    return NextResponse.json([], {
-      status: 503,
-      headers: { 'Retry-After': '60' },
-    });
+    return NextResponse.json(
+      {
+        items: [],
+        meta: {
+          generatedAt: new Date().toISOString(),
+          freshnessSeconds: 0,
+          cacheState: 'BYPASS',
+          pipelineVersion: 'monitor-v1',
+          sourceCoverage: [],
+        },
+      },
+      {
+        status: 503,
+        headers: { 'Retry-After': '60' },
+      },
+    );
   }
 }

@@ -1,0 +1,52 @@
+[
+  {
+    "id": "hormuz",
+    "name": "Strait of Hormuz",
+    "lat": 26.56,
+    "lng": 56.25,
+    "vesselCount": 146,
+    "tankerCount": 58,
+    "containerCount": 31,
+    "riskLevel": "high"
+  },
+  {
+    "id": "bab-el-mandeb",
+    "name": "Bab el-Mandeb",
+    "lat": 12.58,
+    "lng": 43.33,
+    "vesselCount": 121,
+    "tankerCount": 35,
+    "containerCount": 28,
+    "riskLevel": "high"
+  },
+  {
+    "id": "suez",
+    "name": "Suez Canal",
+    "lat": 30.45,
+    "lng": 32.35,
+    "vesselCount": 173,
+    "tankerCount": 42,
+    "containerCount": 79,
+    "riskLevel": "watch"
+  },
+  {
+    "id": "malacca",
+    "name": "Strait of Malacca",
+    "lat": 3.3,
+    "lng": 100.0,
+    "vesselCount": 264,
+    "tankerCount": 39,
+    "containerCount": 122,
+    "riskLevel": "monitor"
+  },
+  {
+    "id": "taiwan-strait",
+    "name": "Taiwan Strait",
+    "lat": 24.1,
+    "lng": 119.8,
+    "vesselCount": 212,
+    "tankerCount": 41,
+    "containerCount": 106,
+    "riskLevel": "watch"
+  }
+]

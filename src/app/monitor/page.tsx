@@ -6,9 +6,18 @@ import type { GdeltEvent } from '@/lib/monitor/events';
 import type { PolymarketMarket } from '@/lib/monitor/polymarket';
 import { findRelatedMarkets } from '@/lib/monitor/polymarket';
 import type { UsgsEarthquake } from '@/lib/monitor/usgs';
-import type { MapItem, OngoingSituation } from '@/lib/monitor/types';
+import type {
+  ElectionCalendarItem,
+  MapItem,
+  NotamZone,
+  OngoingSituation,
+  ShippingChokepoint,
+  SituationRoomConfig,
+} from '@/lib/monitor/types';
 import { type ThemeKey, computeThemeCounts } from '@/lib/monitor/themes';
+import type { MonitorResponse, MonitorResponseMeta } from '@/lib/monitor/response';
 import ongoingSituationsData from '@/app/monitor/data/ongoing-situations.json';
+import roomsData from '@/app/monitor/data/situation-rooms.json';
 
 const MonitorMap = dynamic(() => import('@/components/monitor/MonitorMap'), {
   ssr: false,
@@ -33,18 +42,40 @@ const FilterPanel = dynamic(
 );
 
 const situations = ongoingSituationsData as OngoingSituation[];
+const situationRooms = roomsData as SituationRoomConfig[];
 
 export default function MonitorPage() {
   const [selectedItem, setSelectedItem] = useState<MapItem | null>(null);
+  const [activeRoom, setActiveRoom] = useState<SituationRoomConfig | null>(null);
   const [allEvents, setAllEvents] = useState<GdeltEvent[]>([]);
   const [allMarkets, setAllMarkets] = useState<PolymarketMarket[]>([]);
   const [allEarthquakes, setAllEarthquakes] = useState<UsgsEarthquake[]>([]);
+  const [notamZones, setNotamZones] = useState<NotamZone[]>([]);
+  const [shippingChokepoints, setShippingChokepoints] = useState<ShippingChokepoint[]>([]);
+  const [elections, setElections] = useState<ElectionCalendarItem[]>([]);
+  const [eventsMeta, setEventsMeta] = useState<MonitorResponseMeta | null>(null);
+  const [marketsMeta, setMarketsMeta] = useState<MonitorResponseMeta | null>(null);
+  const [disastersMeta, setDisastersMeta] = useState<MonitorResponseMeta | null>(null);
+  const [layersMeta, setLayersMeta] = useState<{
+    notams: MonitorResponseMeta | null;
+    shipping: MonitorResponseMeta | null;
+    elections: MonitorResponseMeta | null;
+  }>({
+    notams: null,
+    shipping: null,
+    elections: null,
+  });
   const [visibleThemes, setVisibleThemes] = useState<Record<ThemeKey, boolean>>({
     conflicts: true,
     elections: true,
     economy: true,
     disasters: true,
     infrastructure: true,
+  });
+  const [visibleLayers, setVisibleLayers] = useState<Record<'notams' | 'shipping' | 'elections', boolean>>({
+    notams: true,
+    shipping: true,
+    elections: true,
   });
 
   const handleEventClick = useCallback((event: GdeltEvent) => {
@@ -71,14 +102,45 @@ export default function MonitorPage() {
     setVisibleThemes((prev) => ({ ...prev, [key]: !prev[key] }));
   }, []);
 
+  const toggleLayer = useCallback((key: 'notams' | 'shipping' | 'elections') => {
+    setVisibleLayers((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+
+  const handleSituationRoomSelect = useCallback((roomId: string) => {
+    const room = situationRooms.find((r) => r.id === roomId);
+    if (!room) return;
+
+    setActiveRoom(room);
+    setSelectedItem({ type: 'room', data: room });
+
+    setVisibleThemes({
+      conflicts: room.activeThemes.includes('conflicts'),
+      elections: room.activeThemes.includes('elections'),
+      economy: room.activeThemes.includes('economy'),
+      disasters: room.activeThemes.includes('disasters'),
+      infrastructure: room.activeThemes.includes('infrastructure'),
+    });
+
+    setVisibleLayers({
+      notams: room.activeLayers.includes('notams'),
+      shipping: room.activeLayers.includes('shipping'),
+      elections: room.activeLayers.includes('elections'),
+    });
+  }, []);
+
   // Fetch events
   useEffect(() => {
     async function loadEvents() {
       try {
         const res = await fetch('/api/events/geopolitical');
         if (res.ok) {
-          const events: GdeltEvent[] = await res.json();
-          setAllEvents(events);
+          const payload = (await res.json()) as MonitorResponse<GdeltEvent[]> | GdeltEvent[];
+          if (Array.isArray(payload)) {
+            setAllEvents(payload);
+          } else {
+            setAllEvents(payload.items || []);
+            setEventsMeta(payload.meta || null);
+          }
         }
       } catch {
         // Silent fail
@@ -95,8 +157,13 @@ export default function MonitorPage() {
       try {
         const res = await fetch('/api/markets/polymarket');
         if (res.ok) {
-          const markets: PolymarketMarket[] = await res.json();
-          setAllMarkets(markets);
+          const payload = (await res.json()) as MonitorResponse<PolymarketMarket[]> | PolymarketMarket[];
+          if (Array.isArray(payload)) {
+            setAllMarkets(payload);
+          } else {
+            setAllMarkets(payload.items || []);
+            setMarketsMeta(payload.meta || null);
+          }
         }
       } catch {
         // Silent fail
@@ -113,8 +180,13 @@ export default function MonitorPage() {
       try {
         const res = await fetch('/api/events/disasters');
         if (res.ok) {
-          const quakes: UsgsEarthquake[] = await res.json();
-          setAllEarthquakes(quakes);
+          const payload = (await res.json()) as MonitorResponse<UsgsEarthquake[]> | UsgsEarthquake[];
+          if (Array.isArray(payload)) {
+            setAllEarthquakes(payload);
+          } else {
+            setAllEarthquakes(payload.items || []);
+            setDisastersMeta(payload.meta || null);
+          }
         }
       } catch {
         // Silent fail
@@ -122,6 +194,60 @@ export default function MonitorPage() {
     }
     loadEarthquakes();
     const interval = setInterval(loadEarthquakes, 10 * 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch NOTAM layer
+  useEffect(() => {
+    async function loadNotams() {
+      try {
+        const res = await fetch('/api/layers/notams');
+        if (!res.ok) return;
+        const payload = (await res.json()) as MonitorResponse<NotamZone[]>;
+        setNotamZones(payload.items || []);
+        setLayersMeta((prev) => ({ ...prev, notams: payload.meta || null }));
+      } catch {
+        // Silent fail
+      }
+    }
+    loadNotams();
+    const interval = setInterval(loadNotams, 15 * 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch shipping layer
+  useEffect(() => {
+    async function loadShipping() {
+      try {
+        const res = await fetch('/api/layers/shipping');
+        if (!res.ok) return;
+        const payload = (await res.json()) as MonitorResponse<ShippingChokepoint[]>;
+        setShippingChokepoints(payload.items || []);
+        setLayersMeta((prev) => ({ ...prev, shipping: payload.meta || null }));
+      } catch {
+        // Silent fail
+      }
+    }
+    loadShipping();
+    const interval = setInterval(loadShipping, 10 * 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch elections layer
+  useEffect(() => {
+    async function loadElections() {
+      try {
+        const res = await fetch('/api/layers/elections');
+        if (!res.ok) return;
+        const payload = (await res.json()) as MonitorResponse<ElectionCalendarItem[]>;
+        setElections(payload.items || []);
+        setLayersMeta((prev) => ({ ...prev, elections: payload.meta || null }));
+      } catch {
+        // Silent fail
+      }
+    }
+    loadElections();
+    const interval = setInterval(loadElections, 60 * 60_000);
     return () => clearInterval(interval);
   }, []);
 
@@ -158,7 +284,20 @@ export default function MonitorPage() {
         <FilterPanel
           visibleThemes={visibleThemes}
           onToggleTheme={toggleTheme}
+          visibleLayers={visibleLayers}
+          onToggleLayer={toggleLayer}
+          situationRooms={situationRooms}
+          activeSituationRoomId={activeRoom?.id || null}
+          onSelectSituationRoom={handleSituationRoomSelect}
           themeCounts={themeCounts}
+          sourceHealth={{
+            events: eventsMeta,
+            markets: marketsMeta,
+            disasters: disastersMeta,
+            notams: layersMeta.notams,
+            shipping: layersMeta.shipping,
+            elections: layersMeta.elections,
+          }}
         />
 
         {/* Map area + Event detail panel */}
@@ -176,9 +315,14 @@ export default function MonitorPage() {
             }
             relatedMarkets={relatedMarkets}
             visibleThemes={visibleThemes}
+            visibleLayers={visibleLayers}
+            activeRoom={activeRoom}
             events={allEvents}
             markets={allMarkets}
             earthquakes={allEarthquakes}
+            notamZones={notamZones}
+            shippingChokepoints={shippingChokepoints}
+            elections={elections}
           />
           <EventDetailPanel
             item={selectedItem}

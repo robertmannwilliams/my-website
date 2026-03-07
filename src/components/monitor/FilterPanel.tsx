@@ -1,12 +1,30 @@
 'use client';
 
 import { useState, useEffect, useCallback, memo } from 'react';
+import Link from 'next/link';
 import { THEMES, THEME_KEYS, type ThemeKey } from '@/lib/monitor/themes';
+import type { MonitorResponseMeta } from '@/lib/monitor/response';
+import type { SituationRoomConfig } from '@/lib/monitor/types';
+
+type LayerKey = 'notams' | 'shipping' | 'elections';
 
 interface FilterPanelProps {
   visibleThemes: Record<ThemeKey, boolean>;
   onToggleTheme: (key: ThemeKey) => void;
+  visibleLayers: Record<LayerKey, boolean>;
+  onToggleLayer: (key: LayerKey) => void;
+  situationRooms: SituationRoomConfig[];
+  activeSituationRoomId: string | null;
+  onSelectSituationRoom: (roomId: string) => void;
   themeCounts: Record<ThemeKey, number>;
+  sourceHealth?: {
+    events?: MonitorResponseMeta | null;
+    markets?: MonitorResponseMeta | null;
+    disasters?: MonitorResponseMeta | null;
+    notams?: MonitorResponseMeta | null;
+    shipping?: MonitorResponseMeta | null;
+    elections?: MonitorResponseMeta | null;
+  };
 }
 
 /* ── SVG Icons (16x16) ── */
@@ -94,6 +112,12 @@ const THEME_ICONS: Record<ThemeKey, React.FC> = {
   infrastructure: IconCable,
 };
 
+const LAYER_CONFIGS: Record<LayerKey, { label: string; color: string }> = {
+  notams: { label: 'NOTAM Airspace', color: '#FF6B3D' },
+  shipping: { label: 'Shipping Chokepoints', color: '#00DDCC' },
+  elections: { label: 'Election Calendar', color: '#66AAFF' },
+};
+
 /* ── Toggle switch ── */
 
 function ToggleSwitch({ on, color }: { on: boolean; color: string }) {
@@ -148,19 +172,64 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
 
 /* ── Data sources section ── */
 
-const DATA_SOURCES = [
-  { label: 'RSS News Feeds', detail: '9 sources' },
-  { label: 'Polymarket', detail: 'Prediction markets' },
-  { label: 'USGS', detail: 'Earthquakes M4.5+' },
-  { label: 'Ongoing Situations', detail: '6 tracked' },
-];
+function formatSourceDetail(meta: MonitorResponseMeta | null | undefined, fallback: string): string {
+  if (!meta) return `Pending • ${fallback}`;
+  const coverage = meta.sourceCoverage || [];
+  const healthy = coverage.filter((s) => !s.failed).length;
+  const freshness = `${Math.max(0, Math.round(meta.freshnessSeconds))}s`;
+
+  if (coverage.length > 0) {
+    return `${healthy}/${coverage.length} healthy • ${freshness} • ${meta.cacheState}`;
+  }
+  return `${freshness} • ${meta.cacheState}`;
+}
 
 /* ── Main component ── */
 
-function FilterPanel({ visibleThemes, onToggleTheme, themeCounts }: FilterPanelProps) {
+function FilterPanel({
+  visibleThemes,
+  onToggleTheme,
+  visibleLayers,
+  onToggleLayer,
+  situationRooms,
+  activeSituationRoomId,
+  onSelectSituationRoom,
+  themeCounts,
+  sourceHealth,
+}: FilterPanelProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [sourcesOpen, setSourcesOpen] = useState(false);
+  const dataSources = [
+    {
+      label: 'Geopolitical Events',
+      detail: formatSourceDetail(sourceHealth?.events, 'RSS + rules/LLM'),
+    },
+    {
+      label: 'Polymarket',
+      detail: formatSourceDetail(sourceHealth?.markets, 'Prediction markets'),
+    },
+    {
+      label: 'USGS',
+      detail: formatSourceDetail(sourceHealth?.disasters, 'Earthquakes M4.5+'),
+    },
+    {
+      label: 'NOTAM Overlay',
+      detail: formatSourceDetail(sourceHealth?.notams, 'Airspace closures'),
+    },
+    {
+      label: 'Shipping Overlay',
+      detail: formatSourceDetail(sourceHealth?.shipping, 'Chokepoint traffic'),
+    },
+    {
+      label: 'Election Overlay',
+      detail: formatSourceDetail(sourceHealth?.elections, 'Global election calendar'),
+    },
+    {
+      label: 'Ongoing Situations',
+      detail: 'Curated static dataset',
+    },
+  ];
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)');
@@ -285,6 +354,76 @@ function FilterPanel({ visibleThemes, onToggleTheme, themeCounts }: FilterPanelP
         })}
       </div>
 
+      <div style={{ borderTop: '1px solid #1E293B', margin: '14px 0' }} />
+
+      <SectionHeader>Layers</SectionHeader>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {(Object.keys(LAYER_CONFIGS) as LayerKey[]).map((key) => {
+          const cfg = LAYER_CONFIGS[key];
+          const isOn = visibleLayers[key];
+          return (
+            <div
+              key={key}
+              onClick={() => onToggleLayer(key)}
+              style={{
+                padding: '7px 8px',
+                borderRadius: 6,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                cursor: 'pointer',
+                userSelect: 'none',
+                transition: 'background 150ms ease',
+                color: isOn ? '#CBD5E1' : '#64748B',
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#1E293B'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+            >
+              <div
+                style={{
+                  width: 4,
+                  height: 4,
+                  borderRadius: '50%',
+                  background: isOn ? cfg.color : '#475569',
+                }}
+              />
+              <span style={{ flex: 1, fontSize: 12, lineHeight: '16px' }}>{cfg.label}</span>
+              <ToggleSwitch on={isOn} color={cfg.color} />
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ borderTop: '1px solid #1E293B', margin: '14px 0' }} />
+
+      <SectionHeader>Situation Rooms</SectionHeader>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {situationRooms.map((room) => {
+          const active = activeSituationRoomId === room.id;
+          return (
+            <button
+              key={room.id}
+              onClick={() => onSelectSituationRoom(room.id)}
+              style={{
+                width: '100%',
+                textAlign: 'left',
+                background: active ? 'rgba(74,158,255,0.14)' : 'rgba(255,255,255,0.02)',
+                border: active ? '1px solid rgba(74,158,255,0.35)' : '1px solid #1E293B',
+                color: active ? '#CFE5FF' : '#94A3B8',
+                borderRadius: 6,
+                padding: '8px 10px',
+                cursor: 'pointer',
+              }}
+            >
+              <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 2 }}>{room.name}</div>
+              <div style={{ fontSize: 10, color: active ? '#9EC8FF' : '#64748B', lineHeight: 1.3 }}>
+                {room.summary}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Divider */}
       <div style={{ borderTop: '1px solid #1E293B', margin: '14px 0' }} />
 
@@ -316,7 +455,7 @@ function FilterPanel({ visibleThemes, onToggleTheme, themeCounts }: FilterPanelP
 
       {sourcesOpen && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: 4 }}>
-          {DATA_SOURCES.map(({ label, detail }) => (
+          {dataSources.map(({ label, detail }) => (
             <div
               key={label}
               style={{
@@ -351,7 +490,7 @@ function FilterPanel({ visibleThemes, onToggleTheme, themeCounts }: FilterPanelP
       >
         <span style={{ fontSize: 10, color: '#334155' }}>
           Built by{' '}
-          <a
+          <Link
             href="/"
             style={{
               color: '#475569',
@@ -368,7 +507,7 @@ function FilterPanel({ visibleThemes, onToggleTheme, themeCounts }: FilterPanelP
             }}
           >
             Robert Williams
-          </a>
+          </Link>
         </span>
       </div>
     </div>

@@ -6,29 +6,22 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  try {
-    const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
+  const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
 
-    const res = await fetch(`${baseUrl}/api/events/geopolitical`, {
+  try {
+    const res = await fetch(`${baseUrl}/api/events/headlines`, {
       headers: { 'Cache-Control': 'no-cache' },
     });
-
-    if (!res.ok) {
-      return NextResponse.json({ error: 'Failed to refresh', status: res.status }, { status: 500 });
-    }
+    if (!res.ok) return NextResponse.json({ ok: false, status: res.status }, { status: 500 });
 
     const payload = await res.json();
-
     return NextResponse.json({
       ok: true,
-      eventCount: Array.isArray(payload?.items) ? payload.items.length : 0,
+      count: Array.isArray(payload?.items) ? payload.items.length : 0,
       cacheState: payload?.meta?.cacheState || 'unknown',
       refreshedAt: new Date().toISOString(),
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: 'Refresh failed', message: String(err) },
-      { status: 500 },
-    );
+    return NextResponse.json({ ok: false, error: String(err) }, { status: 500 });
   }
 }

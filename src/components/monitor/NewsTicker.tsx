@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, memo } from 'react';
+import type { MonitorResponse } from '@/lib/monitor/response';
 
 interface Headline {
   title: string;
@@ -8,6 +9,7 @@ interface Headline {
   url: string;
   timestamp: string;
   isBreaking: boolean;
+  signalScore?: number;
 }
 
 function NewsTicker() {
@@ -18,8 +20,12 @@ function NewsTicker() {
     try {
       const res = await fetch('/api/events/headlines');
       if (!res.ok) return;
-      const data: Headline[] = await res.json();
-      setHeadlines(data);
+      const payload = (await res.json()) as MonitorResponse<Headline[]> | Headline[];
+      if (Array.isArray(payload)) {
+        setHeadlines(payload);
+      } else {
+        setHeadlines(payload.items || []);
+      }
     } catch {
       // Keep existing data
     } finally {

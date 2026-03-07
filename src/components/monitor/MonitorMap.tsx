@@ -6,7 +6,13 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import type { GdeltEvent } from '@/lib/monitor/events';
 import type { PolymarketMarket } from '@/lib/monitor/polymarket';
 import type { UsgsEarthquake } from '@/lib/monitor/usgs';
-import type { OngoingSituation } from '@/lib/monitor/types';
+import type {
+  ElectionCalendarItem,
+  NotamZone,
+  OngoingSituation,
+  ShippingChokepoint,
+  SituationRoomConfig,
+} from '@/lib/monitor/types';
 import {
   type ThemeKey,
   getActiveEventCategories,
@@ -24,9 +30,14 @@ interface MonitorMapProps {
   selectedEventCoords?: { lat: number; lng: number } | null;
   relatedMarkets?: PolymarketMarket[];
   visibleThemes: Record<ThemeKey, boolean>;
+  visibleLayers: Record<'notams' | 'shipping' | 'elections', boolean>;
+  activeRoom: SituationRoomConfig | null;
   events: GdeltEvent[];
   markets: PolymarketMarket[];
   earthquakes: UsgsEarthquake[];
+  notamZones: NotamZone[];
+  shippingChokepoints: ShippingChokepoint[];
+  elections: ElectionCalendarItem[];
 }
 
 function eventsToGeoJSON(events: GdeltEvent[]): GeoJSON.FeatureCollection {
@@ -37,12 +48,19 @@ function eventsToGeoJSON(events: GdeltEvent[]): GeoJSON.FeatureCollection {
       geometry: { type: 'Point' as const, coordinates: [e.lng, e.lat] },
       properties: {
         id: e.id,
+        canonicalId: e.canonicalId,
         title: e.title,
         category: e.category,
         severity: e.severity,
         timestamp: e.timestamp,
         summary: e.summary,
         sources: JSON.stringify(e.sources),
+        sourceCount: e.sourceCount,
+        firstSeenAt: e.firstSeenAt,
+        lastSeenAt: e.lastSeenAt,
+        classificationConfidence: e.classificationConfidence,
+        classificationMethod: e.classificationMethod,
+        fingerprint: e.fingerprint,
         tone: e.tone,
         region: e.region,
         severityRank: e.severity === 'critical' ? 3 : e.severity === 'watch' ? 2 : 1,
@@ -71,6 +89,10 @@ function marketsToGeoJSON(markets: PolymarketMarket[]): GeoJSON.FeatureCollectio
         outcomePrices: JSON.stringify(m.outcomePrices),
         liquidity: m.liquidity,
         endDate: m.endDate,
+        categoryNormalized: m.categoryNormalized,
+        geoConfidence: m.geoConfidence,
+        geoMethod: m.geoMethod,
+        isMapPlottable: m.isMapPlottable,
       },
     })),
   };
@@ -122,6 +144,63 @@ function situationsToGeoJSON(situations: OngoingSituation[]): GeoJSON.FeatureCol
     }
   }
   return { type: 'FeatureCollection', features };
+}
+
+function notamsToGeoJSON(zones: NotamZone[]): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: zones.map((zone) => ({
+      type: 'Feature' as const,
+      geometry: {
+        type: 'Polygon' as const,
+        coordinates: [zone.coordinates],
+      },
+      properties: {
+        id: zone.id,
+        name: zone.name,
+        authority: zone.authority,
+        reason: zone.reason,
+        effectiveFrom: zone.effectiveFrom,
+        effectiveTo: zone.effectiveTo,
+      },
+    })),
+  };
+}
+
+function shippingToGeoJSON(points: ShippingChokepoint[]): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: points.map((p) => ({
+      type: 'Feature' as const,
+      geometry: { type: 'Point' as const, coordinates: [p.lng, p.lat] },
+      properties: {
+        id: p.id,
+        name: p.name,
+        vesselCount: p.vesselCount,
+        tankerCount: p.tankerCount,
+        containerCount: p.containerCount,
+        riskLevel: p.riskLevel,
+      },
+    })),
+  };
+}
+
+function electionsToGeoJSON(items: ElectionCalendarItem[]): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: items.map((e) => ({
+      type: 'Feature' as const,
+      geometry: { type: 'Point' as const, coordinates: [e.lng, e.lat] },
+      properties: {
+        id: e.id,
+        country: e.country,
+        electionType: e.electionType,
+        date: e.date,
+        importance: e.importance,
+        daysUntil: e.daysUntil ?? null,
+      },
+    })),
+  };
 }
 
 // --- Day/Night Terminator ---
@@ -547,6 +626,128 @@ function addMarketLayers(m: mapboxgl.Map) {
   });
 }
 
+function addNotamLayers(m: mapboxgl.Map) {
+  m.addSource('notams', {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: [] },
+  });
+
+  m.addLayer({
+    id: 'notam-fill',
+    type: 'fill',
+    source: 'notams',
+    paint: {
+      'fill-color': 'rgba(255,102,61,0.18)',
+      'fill-outline-color': 'rgba(255,102,61,0.5)',
+    },
+  });
+
+  m.addLayer({
+    id: 'notam-labels',
+    type: 'symbol',
+    source: 'notams',
+    layout: {
+      'text-field': ['get', 'name'],
+      'text-size': 10,
+      'text-font': ['DIN Pro Medium', 'Arial Unicode MS Regular'],
+    },
+    paint: {
+      'text-color': '#FF8A66',
+      'text-halo-color': '#0B1120',
+      'text-halo-width': 1,
+    },
+  });
+}
+
+function addShippingLayers(m: mapboxgl.Map) {
+  m.addSource('shipping', {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: [] },
+  });
+
+  m.addLayer({
+    id: 'shipping-points',
+    type: 'circle',
+    source: 'shipping',
+    paint: {
+      'circle-color': [
+        'match', ['get', 'riskLevel'],
+        'high', '#FF6B3D',
+        'watch', '#FFAA22',
+        '#00DDCC',
+      ],
+      'circle-radius': [
+        'interpolate', ['linear'], ['get', 'vesselCount'],
+        80, 6,
+        180, 10,
+        300, 14,
+      ],
+      'circle-opacity': 0.85,
+      'circle-stroke-width': 1,
+      'circle-stroke-color': 'rgba(255,255,255,0.2)',
+    },
+  });
+
+  m.addLayer({
+    id: 'shipping-labels',
+    type: 'symbol',
+    source: 'shipping',
+    layout: {
+      'text-field': ['concat', ['get', 'name'], ' · ', ['to-string', ['get', 'vesselCount']]],
+      'text-size': 10,
+      'text-font': ['DIN Pro Medium', 'Arial Unicode MS Regular'],
+      'text-offset': [0, 1.2],
+    },
+    paint: {
+      'text-color': '#7EEDE1',
+      'text-halo-color': '#0B1120',
+      'text-halo-width': 1,
+    },
+  });
+}
+
+function addElectionLayers(m: mapboxgl.Map) {
+  m.addSource('elections', {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: [] },
+  });
+
+  m.addLayer({
+    id: 'election-points',
+    type: 'circle',
+    source: 'elections',
+    paint: {
+      'circle-color': [
+        'match', ['get', 'importance'],
+        'critical', '#FF4444',
+        'watch', '#66AAFF',
+        '#89B8E6',
+      ],
+      'circle-radius': 5,
+      'circle-opacity': 0.9,
+      'circle-stroke-width': 1,
+      'circle-stroke-color': 'rgba(255,255,255,0.2)',
+    },
+  });
+
+  m.addLayer({
+    id: 'election-labels',
+    type: 'symbol',
+    source: 'elections',
+    layout: {
+      'text-field': ['concat', ['get', 'country'], ' ', ['coalesce', ['to-string', ['get', 'daysUntil']], '?'], 'd'],
+      'text-size': 10,
+      'text-font': ['DIN Pro Medium', 'Arial Unicode MS Regular'],
+      'text-offset': [0, 1.2],
+    },
+    paint: {
+      'text-color': '#9EC8FF',
+      'text-halo-color': '#0B1120',
+      'text-halo-width': 1,
+    },
+  });
+}
+
 function addEarthquakeLayers(m: mapboxgl.Map) {
   m.addSource('earthquakes', {
     type: 'geojson',
@@ -632,9 +833,9 @@ function addEarthquakeLayers(m: mapboxgl.Map) {
 
 // Earthquake layer IDs for wholesale visibility toggling
 const EARTHQUAKE_LAYERS = ['earthquake-circles', 'earthquake-pulse', 'earthquake-labels'];
-
-// Situation layer IDs
-const SITUATION_LAYERS = ['situation-circles', 'situation-pulse', 'situation-labels'];
+const NOTAM_LAYERS = ['notam-fill', 'notam-labels'];
+const SHIPPING_LAYERS = ['shipping-points', 'shipping-labels'];
+const ELECTION_LAYERS = ['election-points', 'election-labels'];
 
 function MonitorMap({
   onEventClick,
@@ -645,13 +846,18 @@ function MonitorMap({
   selectedEventCoords,
   relatedMarkets,
   visibleThemes,
+  visibleLayers,
+  activeRoom,
   events,
   markets,
   earthquakes,
+  notamZones,
+  shippingChokepoints,
+  elections,
 }: MonitorMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  const [missingToken, setMissingToken] = useState(false);
+  const missingToken = !process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
   const [mapReady, setMapReady] = useState(false);
   const layersReady = useRef(false);
 
@@ -675,7 +881,7 @@ function MonitorMap({
 
   const filteredMarkets = useMemo(() => {
     const activeCats = getActiveMarketCategories(visibleThemes);
-    return markets.filter((m) => activeCats.includes(m.category));
+    return markets.filter((m) => activeCats.includes(m.category) && m.isMapPlottable);
   }, [markets, visibleThemes]);
 
   const filteredSituations = useMemo(() => {
@@ -689,7 +895,6 @@ function MonitorMap({
 
     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
     if (!token) {
-      setMissingToken(true);
       return;
     }
 
@@ -787,6 +992,9 @@ function MonitorMap({
       addSituationLayers(m);
       addEventLayers(m);
       addMarketLayers(m);
+      addNotamLayers(m);
+      addShippingLayers(m);
+      addElectionLayers(m);
       addEarthquakeLayers(m);
       addTerminatorLayers(m);
       layersReady.current = true;
@@ -803,6 +1011,7 @@ function MonitorMap({
         const props = e.features[0].properties!;
         const event: GdeltEvent = {
           id: props.id,
+          canonicalId: props.canonicalId || props.id,
           title: props.title,
           category: props.category,
           severity: props.severity,
@@ -811,6 +1020,12 @@ function MonitorMap({
           timestamp: props.timestamp,
           summary: props.summary,
           sources: JSON.parse(props.sources || '[]'),
+          sourceCount: Number(props.sourceCount) || 0,
+          firstSeenAt: props.firstSeenAt || props.timestamp,
+          lastSeenAt: props.lastSeenAt || props.timestamp,
+          classificationConfidence: Number(props.classificationConfidence) || 0.6,
+          classificationMethod: props.classificationMethod || 'rules',
+          fingerprint: props.fingerprint || props.id,
           tone: props.tone,
           region: props.region,
         };
@@ -842,6 +1057,7 @@ function MonitorMap({
           id: props.id,
           title: props.title,
           category: props.category,
+          categoryNormalized: props.categoryNormalized || props.category,
           probability: props.probability,
           volume: props.volume,
           volumeRaw: props.volumeRaw,
@@ -853,6 +1069,9 @@ function MonitorMap({
           outcomePrices: JSON.parse(props.outcomePrices || '[]'),
           liquidity: props.liquidity,
           endDate: props.endDate,
+          geoConfidence: Number(props.geoConfidence) || 0.5,
+          geoMethod: props.geoMethod || 'none',
+          isMapPlottable: props.isMapPlottable === true || props.isMapPlottable === 'true',
         };
         onMarketClickRef.current?.(market);
       });
@@ -921,7 +1140,6 @@ function MonitorMap({
       map.current?.remove();
       map.current = null;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Resize map when container dimensions change
@@ -933,6 +1151,17 @@ function MonitorMap({
     ro.observe(mapContainer.current);
     return () => ro.disconnect();
   }, []);
+
+  // Fly to selected situation room viewport
+  useEffect(() => {
+    if (!map.current || !activeRoom) return;
+    map.current.flyTo({
+      center: activeRoom.center,
+      zoom: activeRoom.zoom,
+      duration: 1200,
+      essential: true,
+    });
+  }, [activeRoom]);
 
   // Update terminator periodically
   useEffect(() => {
@@ -991,6 +1220,62 @@ function MonitorMap({
       }
     }
   }, [earthquakes, visibleThemes.disasters, mapReady]);
+
+  // Update NOTAM + shipping overlays and visibility
+  useEffect(() => {
+    if (!map.current || !layersReady.current) return;
+    const m = map.current;
+
+    const notamSource = m.getSource('notams') as mapboxgl.GeoJSONSource | undefined;
+    if (notamSource) {
+      notamSource.setData(notamsToGeoJSON(notamZones));
+    }
+
+    const shippingSource = m.getSource('shipping') as mapboxgl.GeoJSONSource | undefined;
+    if (shippingSource) {
+      shippingSource.setData(shippingToGeoJSON(shippingChokepoints));
+    }
+
+    const showInfra = visibleThemes.infrastructure;
+    const showNotams = showInfra && visibleLayers.notams;
+    const showShipping = showInfra && visibleLayers.shipping;
+
+    for (const layerId of NOTAM_LAYERS) {
+      try {
+        m.setLayoutProperty(layerId, 'visibility', showNotams ? 'visible' : 'none');
+      } catch {
+        // Layer may not exist yet.
+      }
+    }
+
+    for (const layerId of SHIPPING_LAYERS) {
+      try {
+        m.setLayoutProperty(layerId, 'visibility', showShipping ? 'visible' : 'none');
+      } catch {
+        // Layer may not exist yet.
+      }
+    }
+  }, [notamZones, shippingChokepoints, visibleThemes.infrastructure, visibleLayers.notams, visibleLayers.shipping, mapReady]);
+
+  // Update elections overlay and visibility
+  useEffect(() => {
+    if (!map.current || !layersReady.current) return;
+    const m = map.current;
+
+    const source = m.getSource('elections') as mapboxgl.GeoJSONSource | undefined;
+    if (source) {
+      source.setData(electionsToGeoJSON(elections));
+    }
+
+    const showElectionLayer = visibleThemes.elections && visibleLayers.elections;
+    for (const layerId of ELECTION_LAYERS) {
+      try {
+        m.setLayoutProperty(layerId, 'visibility', showElectionLayer ? 'visible' : 'none');
+      } catch {
+        // Layer may not exist yet.
+      }
+    }
+  }, [elections, visibleThemes.elections, visibleLayers.elections, mapReady]);
 
   // Update related lines when selection changes
   useEffect(() => {

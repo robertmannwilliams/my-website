@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, memo } from 'react';
+import type { MonitorResponse } from '@/lib/monitor/response';
 
 interface MarketPrice {
   symbol: string;
@@ -32,8 +33,12 @@ function PriceTicker() {
     try {
       const res = await fetch('/api/markets/prices');
       if (!res.ok) return;
-      const data: MarketPrice[] = await res.json();
-      setPrices(data);
+      const payload = (await res.json()) as MonitorResponse<MarketPrice[]> | MarketPrice[];
+      if (Array.isArray(payload)) {
+        setPrices(payload);
+      } else {
+        setPrices(payload.items || []);
+      }
       setLastFetchedAt(Date.now());
     } catch {
       // Keep existing data on error

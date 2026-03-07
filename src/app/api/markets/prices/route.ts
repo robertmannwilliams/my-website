@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { envelopeFromPayload, readCachedPayload, writeCachedPayload } from '@/lib/monitor/cache';
+import { incrementMetric } from '@/lib/monitor/metrics';
 
 interface MarketPrice {
   symbol: string;
@@ -8,9 +10,8 @@ interface MarketPrice {
   last_updated: string;
 }
 
-// In-memory cache
-let cachedData: { prices: MarketPrice[]; timestamp: number } | null = null;
-const CACHE_TTL_MS = 60_000;
+const RESOURCE = 'prices';
+const TTL_SECONDS = 60;
 
 const YAHOO_SYMBOLS: Record<string, { ticker: string; name: string }> = {
   SPX: { ticker: '%5EGSPC', name: 'S&P 500' },
@@ -104,25 +105,74 @@ async function fetchAllPrices(): Promise<MarketPrice[]> {
     ...yahooPromises,
   ]);
 
-  // Return in display order: SPX, DXY, 10Y, WTI, GOLD, VIX, BTC
   const order = ['SPX', 'DXY', '10Y', 'WTI', 'GOLD', 'VIX', 'BTC'];
   const all = [...yahoo, btc];
-  return order.map((s) => all.find((p) => p.symbol === s)!);
+  return order.map((s) => all.find((p) => p.symbol === s)!).filter(Boolean);
 }
 
 export async function GET() {
-  const now = Date.now();
-
-  if (cachedData && now - cachedData.timestamp < CACHE_TTL_MS) {
-    return NextResponse.json(cachedData.prices, {
+  const cached = await readCachedPayload<MarketPrice[]>(RESOURCE, TTL_SECONDS);
+  if (cached.payload && cached.fresh) {
+    await incrementMetric('api_prices_cache_hit');
+    const response = envelopeFromPayload(cached.payload, cached.ageSeconds, 'HIT');
+    return NextResponse.json(response, {
       headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30' },
     });
   }
 
-  const prices = await fetchAllPrices();
-  cachedData = { prices, timestamp: now };
+  try {
+    const prices = await fetchAllPrices();
+    const sourceCoverage = [
+      {
+        source: 'Yahoo Finance',
+        tier: 'tier1' as const,
+        weight: 1,
+        fetched: prices.filter((p) => p.symbol !== 'BTC').length,
+        accepted: prices.filter((p) => p.symbol !== 'BTC').length,
+        failed: false,
+      },
+      {
+        source: 'CoinGecko',
+        tier: 'tier1' as const,
+        weight: 1,
+        fetched: 1,
+        accepted: prices.some((p) => p.symbol === 'BTC') ? 1 : 0,
+        failed: false,
+      },
+    ];
 
-  return NextResponse.json(prices, {
-    headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30' },
-  });
+    const stored = await writeCachedPayload(RESOURCE, prices, sourceCoverage, TTL_SECONDS);
+    await incrementMetric('api_prices_cache_miss');
+
+    const response = envelopeFromPayload(stored, 0, 'MISS');
+    return NextResponse.json(response, {
+      headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30' },
+    });
+  } catch {
+    await incrementMetric('api_prices_error');
+
+    if (cached.payload) {
+      const response = envelopeFromPayload(cached.payload, cached.ageSeconds, 'STALE');
+      return NextResponse.json(response, {
+        headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30' },
+      });
+    }
+
+    return NextResponse.json(
+      {
+        items: [],
+        meta: {
+          generatedAt: new Date().toISOString(),
+          freshnessSeconds: 0,
+          cacheState: 'BYPASS',
+          pipelineVersion: 'monitor-v1',
+          sourceCoverage: [],
+        },
+      },
+      {
+        status: 503,
+        headers: { 'Retry-After': '60' },
+      },
+    );
+  }
 }

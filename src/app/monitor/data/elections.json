@@ -1,0 +1,47 @@
+[
+  {
+    "id": "romania-pres",
+    "country": "Romania",
+    "electionType": "Presidential",
+    "date": "2026-04-18",
+    "lat": 44.43,
+    "lng": 26.1,
+    "importance": "watch"
+  },
+  {
+    "id": "south-korea-local",
+    "country": "South Korea",
+    "electionType": "Local",
+    "date": "2026-06-03",
+    "lat": 37.57,
+    "lng": 126.98,
+    "importance": "monitor"
+  },
+  {
+    "id": "brazil-general",
+    "country": "Brazil",
+    "electionType": "General",
+    "date": "2026-10-04",
+    "lat": -15.79,
+    "lng": -47.88,
+    "importance": "watch"
+  },
+  {
+    "id": "ukraine-parliamentary",
+    "country": "Ukraine",
+    "electionType": "Parliamentary",
+    "date": "2026-11-01",
+    "lat": 50.45,
+    "lng": 30.52,
+    "importance": "critical"
+  },
+  {
+    "id": "philippines-midterm",
+    "country": "Philippines",
+    "electionType": "Midterm",
+    "date": "2026-05-11",
+    "lat": 14.6,
+    "lng": 120.98,
+    "importance": "watch"
+  }
+]

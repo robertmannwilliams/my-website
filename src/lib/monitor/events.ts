@@ -1,5 +1,18 @@
+import { centroidForRegion, geocodeText, type GeoMatch } from './geo';
+import {
+  fetchTieredHeadlines,
+  hashFingerprint,
+  headlineTextForClassification,
+  normalizeForSimilarity,
+  type IngestedHeadline,
+} from './headlines';
+import { monitorGetJson, monitorSetJson } from './cache';
+import { getMetric, incrementMetric } from './metrics';
+import type { SourceCoverageEntry } from './response';
+
 export interface GdeltEvent {
   id: string;
+  canonicalId: string;
   title: string;
   category: EventCategory;
   severity: EventSeverity;
@@ -8,6 +21,12 @@ export interface GdeltEvent {
   timestamp: string;
   summary: string;
   sources: { name: string; url: string }[];
+  sourceCount: number;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  classificationConfidence: number;
+  classificationMethod: ClassificationMethod;
+  fingerprint: string;
   tone: number;
   region: string;
 }
@@ -20,211 +39,188 @@ export type EventCategory =
   | 'infrastructure';
 
 export type EventSeverity = 'critical' | 'watch' | 'monitor';
+export type ClassificationMethod = 'rules' | 'llm' | 'hybrid';
 
-// ---------------------------------------------------------------------------
-// RSS Ingestion
-// ---------------------------------------------------------------------------
+const CLASSIFIED_CLUSTER_TTL = 72 * 60 * 60; // 72h
+const MAX_EVENTS = 200;
 
-import Parser from 'rss-parser';
+const DAILY_LLM_LIMIT = Number(process.env.MONITOR_LLM_DAILY_LIMIT || 220);
+const INTERVAL_LLM_LIMIT = Number(process.env.MONITOR_LLM_INTERVAL_LIMIT || 30);
 
-interface RawHeadline {
-  title: string;
-  description: string;
-  source: string;
-  url: string;
-  pubDate: string;
-}
-
-const RSS_FEEDS = [
-  { url: 'https://feeds.bbci.co.uk/news/world/rss.xml', source: 'BBC' },
-  { url: 'https://feeds.npr.org/1004/rss.xml', source: 'NPR' },
-  { url: 'https://www.theguardian.com/world/rss', source: 'The Guardian' },
-  { url: 'https://www.france24.com/en/rss', source: 'France24' },
-  { url: 'https://rss.dw.com/rdf/rss-en-all', source: 'DW' },
-  { url: 'https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRFp0Y1RjU0FtVnVHZ0pWVXlnQVAB?hl=en-US&gl=US&ceid=US:en', source: 'Google News (World)' },
-  { url: 'https://www.aljazeera.com/xml/rss/all.xml', source: 'Al Jazeera' },
-  { url: 'https://www.scmp.com/rss/91/feed', source: 'SCMP' },
-  { url: 'https://www.theafricareport.com/feed/', source: 'The Africa Report' },
+const IRRELEVANT_KEYWORDS = [
+  'celebrity',
+  'box office',
+  'football',
+  'nba',
+  'mlb',
+  'nfl',
+  'soccer',
+  'music awards',
+  'movie review',
+  'fashion week',
+  'recipe',
+  'health tips',
+  'lifestyle',
+  'iphone',
+  'android update',
+  'video game',
 ];
 
-async function fetchFeed(feedUrl: string, source: string): Promise<RawHeadline[]> {
-  try {
-    const parser = new Parser({
-      timeout: 10000,
-      headers: { 'User-Agent': 'Mozilla/5.0 (GlobalMonitor/1.0)' },
-    });
-    const feed = await parser.parseURL(feedUrl);
-    return (feed.items || []).slice(0, 50).map((item) => ({
-      title: (item.title || '').trim(),
-      description: (item.contentSnippet || item.content || '').trim().substring(0, 300),
-      source,
-      url: item.link || '',
-      pubDate: item.isoDate || item.pubDate || new Date().toISOString(),
-    }));
-  } catch (err) {
-    console.warn(`[events] Failed to fetch ${source} feed: ${err}`);
-    return [];
-  }
+const HIGH_IMPACT_KEYWORDS = [
+  'missile',
+  'airstrike',
+  'invasion',
+  'military',
+  'nuclear',
+  'sanction',
+  'ceasefire',
+  'default',
+  'rate decision',
+  'earthquake',
+  'hurricane',
+  'strait of hormuz',
+  'suez',
+  'shipping lane',
+];
+
+const CATEGORY_RULES: Record<EventCategory, string[]> = {
+  conflicts: [
+    'war',
+    'military',
+    'troops',
+    'missile',
+    'attack',
+    'airstrike',
+    'ceasefire',
+    'drone',
+    'clash',
+    'border',
+    'hostage',
+    'invasion',
+    'navy',
+    'artillery',
+    'frontline',
+  ],
+  elections: [
+    'election',
+    'vote',
+    'ballot',
+    'parliament',
+    'prime minister',
+    'president',
+    'poll',
+    'coalition',
+    'referendum',
+    'campaign',
+  ],
+  economy: [
+    'inflation',
+    'gdp',
+    'recession',
+    'interest rate',
+    'fed',
+    'ecb',
+    'tariff',
+    'trade',
+    'currency',
+    'bond',
+    'oil price',
+    'fiscal',
+    'debt',
+    'central bank',
+  ],
+  disasters: [
+    'earthquake',
+    'tsunami',
+    'hurricane',
+    'cyclone',
+    'wildfire',
+    'flood',
+    'volcano',
+    'drought',
+  ],
+  infrastructure: [
+    'pipeline',
+    'grid',
+    'power plant',
+    'port',
+    'shipping',
+    'strait',
+    'cable',
+    'airspace',
+    'notam',
+    'rail',
+    'canal',
+  ],
+};
+
+const CRITICAL_KEYWORDS = [
+  'invasion',
+  'missile',
+  'airstrike',
+  'coup',
+  'major earthquake',
+  'tsunami warning',
+  'nuclear',
+  'blockade',
+  'martial law',
+  'assassinated',
+];
+
+const WATCH_KEYWORDS = [
+  'sanction',
+  'escalation',
+  'troops',
+  'military drill',
+  'protest',
+  'warning',
+  'tension',
+  'strike',
+  'talks stalled',
+];
+
+interface RuleClassification {
+  category: EventCategory;
+  severity: EventSeverity;
+  confidence: number;
+  relevance: number;
+  highImpact: boolean;
 }
 
-async function fetchAllRssHeadlines(): Promise<RawHeadline[]> {
-  const results = await Promise.all(
-    RSS_FEEDS.map(({ url, source }) => fetchFeed(url, source)),
-  );
-  const all = results.flat();
-
-  // Deduplicate by URL
-  const seen = new Set<string>();
-  return all.filter((h) => {
-    if (!h.url || seen.has(h.url)) return false;
-    seen.add(h.url);
-    return h.title.length > 0;
-  });
+interface EventCandidate {
+  headline: IngestedHeadline;
+  normalized: string;
+  classification: RuleClassification;
+  geo: GeoMatch | null;
+  timestampMs: number;
+  fingerprintSeed: string;
 }
 
-// ---------------------------------------------------------------------------
-// Classification Cache (in-memory, 2-hour TTL)
-// ---------------------------------------------------------------------------
-
-interface CachedEvent {
-  event: GdeltEvent;
-  expiresAt: number;
+interface EventCluster {
+  fingerprint: string;
+  candidates: EventCandidate[];
 }
 
-const classifiedCache = new Map<string, CachedEvent>();
-const CACHE_TTL = 2 * 60 * 60_000; // 2 hours
-
-function headlineKey(h: RawHeadline): string {
-  // Simple hash: normalized title + date prefix
-  const norm = h.title.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 60);
-  const datePrefix = h.pubDate.substring(0, 10); // YYYY-MM-DD
-  return `${norm}:${datePrefix}`;
-}
-
-function purgeExpiredCache() {
-  const now = Date.now();
-  for (const [key, entry] of classifiedCache) {
-    if (entry.expiresAt < now) classifiedCache.delete(key);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Claude Classification
-// ---------------------------------------------------------------------------
-
-const SYSTEM_PROMPT = `You are a geopolitical intelligence analyst classifying news headlines for a global monitoring dashboard used by macro investors and geopolitical analysts. You will receive a batch of recent news headlines from multiple sources. Your job is to:
-
-1. FILTER: Remove anything irrelevant to geopolitical/macro monitoring. Exclude: science/health studies, celebrity news, sports, human interest stories, local crime, lifestyle content, entertainment, technology product launches.
-
-2. DEDUPLICATE AGGRESSIVELY: If two or more headlines describe the same event or situation, merge them into ONE event entry. Even if the wording differs significantly, if they are about the same thing happening in the same place, they are ONE event. Multiple sources reporting the same story = one event with all sources listed. Err on the side of merging — fewer high-quality events is better than duplicates. For example, "US launches anti-drug operation in Ecuador" and "Trump sends troops to Ecuador for drug raid" are the SAME event and must be merged.
-
-3. CLASSIFY each unique event with:
-   - title: A clean, concise event title (not a copy of any headline)
-   - summary: 1-2 sentence summary of the event
-   - category: One of: conflicts, elections, economy, disasters, infrastructure
-   - severity: One of: critical, watch, monitor
-     - critical: Active military operations, coups, major attacks, market-moving policy changes, major natural disasters with casualties
-     - watch: Escalating tensions, significant political events, sanctions announcements, meaningful protests, developing disasters
-     - monitor: Diplomatic meetings, routine elections, minor protests, policy discussions
-   - latitude: Best approximate latitude for this event
-   - longitude: Best approximate longitude for this event
-   - locationName: Human-readable location (e.g. 'Kherson, Ukraine' or 'Strait of Hormuz')
-   - country: ISO country code
-   - relevance: 1-10 score for how important this is for a geopolitical/macro monitoring dashboard
-   - sources: Array of {name, url} for each headline that reported this event
-
-Return ONLY valid JSON. No preamble, no markdown backticks. Return an array of event objects. Only include events with relevance >= 6.`;
-
-interface ClaudeEvent {
+interface LlmClassification {
   title: string;
   summary: string;
-  category: string;
-  severity: string;
+  category: EventCategory;
+  severity: EventSeverity;
   latitude: number;
   longitude: number;
-  locationName: string;
-  country: string;
-  relevance: number;
-  sources: { name: string; url: string }[];
+  confidence: number;
 }
 
-async function classifyWithClaude(headlines: RawHeadline[]): Promise<ClaudeEvent[]> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    console.error('[events] ANTHROPIC_API_KEY not set — skipping classification');
-    return [];
-  }
-
-  const formatted = headlines
-    .map((h) => `[${h.source}] ${h.title}${h.description ? ' - ' + h.description : ''}`)
-    .join('\n');
-
-  const userMessage = `Here are ${headlines.length} recent headlines from global news sources. Classify them.\n\n${formatted}`;
-
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-5-20250929',
-        max_tokens: 8192,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: userMessage }],
-      }),
-      signal: AbortSignal.timeout(120000),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      console.error(`[events] Claude API ${res.status}: ${text.substring(0, 200)}`);
-      return [];
-    }
-
-    const data = await res.json();
-    let content: string = data.content?.[0]?.text || '';
-    if (!content) return [];
-
-    // Strip markdown code fences if present
-    content = content.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-
-    const parsed: ClaudeEvent[] = JSON.parse(content);
-    if (!Array.isArray(parsed)) return [];
-    return parsed;
-  } catch (err) {
-    console.error('[events] Claude classification error:', err);
-    return [];
-  }
+interface CachedClassifiedCluster {
+  title: string;
+  summary: string;
+  category: EventCategory;
+  severity: EventSeverity;
+  lat: number;
+  lng: number;
+  classificationConfidence: number;
+  classificationMethod: ClassificationMethod;
 }
-
-// ---------------------------------------------------------------------------
-// Batching — split large headline sets into chunks for Claude API limits
-// ---------------------------------------------------------------------------
-
-const BATCH_SIZE = 150;
-
-async function classifyInBatches(headlines: RawHeadline[]): Promise<ClaudeEvent[]> {
-  if (headlines.length <= BATCH_SIZE) {
-    return classifyWithClaude(headlines);
-  }
-
-  const results: ClaudeEvent[] = [];
-  for (let i = 0; i < headlines.length; i += BATCH_SIZE) {
-    const chunk = headlines.slice(i, i + BATCH_SIZE);
-    console.log(`[events] Classifying batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(headlines.length / BATCH_SIZE)} (${chunk.length} headlines)`);
-    const batch = await classifyWithClaude(chunk);
-    results.push(...batch);
-  }
-
-  return results;
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function inferRegion(lat: number, lng: number): string {
   if (lat > 25 && lat < 50 && lng > -10 && lng < 45) return 'europe';
@@ -245,188 +241,457 @@ function severityRank(s: EventSeverity): number {
   return s === 'critical' ? 3 : s === 'watch' ? 2 : 1;
 }
 
-// Haversine distance in km between two lat/lng points
+function isIrrelevant(normalized: string): boolean {
+  return IRRELEVANT_KEYWORDS.some((kw) => normalized.includes(kw));
+}
+
+function containsAny(text: string, words: string[]): boolean {
+  return words.some((kw) => text.includes(kw));
+}
+
+function inferRuleClassification(normalized: string, sourceWeight: number): RuleClassification {
+  let bestCategory: EventCategory = 'conflicts';
+  let bestScore = -1;
+
+  for (const [category, keywords] of Object.entries(CATEGORY_RULES) as [EventCategory, string[]][]) {
+    const score = keywords.reduce((sum, kw) => sum + (normalized.includes(kw) ? 1 : 0), 0);
+    if (score > bestScore) {
+      bestScore = score;
+      bestCategory = category;
+    }
+  }
+
+  const critical = containsAny(normalized, CRITICAL_KEYWORDS);
+  const watch = critical ? false : containsAny(normalized, WATCH_KEYWORDS);
+  const severity: EventSeverity = critical ? 'critical' : watch ? 'watch' : 'monitor';
+
+  const highImpact = containsAny(normalized, HIGH_IMPACT_KEYWORDS) || severity !== 'monitor';
+
+  const baseConfidence = Math.min(0.95, 0.45 + bestScore * 0.1 + sourceWeight * 0.2 + (highImpact ? 0.08 : 0));
+  const relevance = Math.min(
+    10,
+    Math.max(
+      1,
+      Math.round(bestScore * 1.4 + sourceWeight * 3 + (highImpact ? 2 : 0) + (severity === 'critical' ? 2 : severity === 'watch' ? 1 : 0)),
+    ),
+  );
+
+  return {
+    category: bestCategory,
+    severity,
+    confidence: baseConfidence,
+    relevance,
+    highImpact,
+  };
+}
+
+function headlineFingerprintSeed(c: EventCandidate): string {
+  const timeBucket = new Date(c.headline.timestamp);
+  const day = `${timeBucket.getUTCFullYear()}-${String(timeBucket.getUTCMonth() + 1).padStart(2, '0')}-${String(timeBucket.getUTCDate()).padStart(2, '0')}`;
+  const loc = c.geo?.key || 'global';
+  const keyTerms = c.normalized
+    .split(' ')
+    .filter((t) => t.length >= 4)
+    .slice(0, 8)
+    .join('_');
+  return `${c.classification.category}|${loc}|${day}|${keyTerms}`;
+}
+
+function toCandidate(headline: IngestedHeadline): EventCandidate | null {
+  const normalized = normalizeForSimilarity(headlineTextForClassification(headline));
+  if (!normalized || isIrrelevant(normalized)) return null;
+
+  const classification = inferRuleClassification(normalized, headline.sourceWeight);
+  if (classification.relevance < 5) return null;
+
+  const geo = geocodeText(`${headline.title} ${headline.summary}`);
+
+  const candidate: EventCandidate = {
+    headline,
+    normalized,
+    classification,
+    geo,
+    timestampMs: new Date(headline.timestamp).getTime(),
+    fingerprintSeed: '',
+  };
+  candidate.fingerprintSeed = headlineFingerprintSeed(candidate);
+  return candidate;
+}
+
+function jaccardSimilarity(a: string, b: string): number {
+  const setA = new Set(a.split(' ').filter(Boolean));
+  const setB = new Set(b.split(' ').filter(Boolean));
+  if (setA.size === 0 || setB.size === 0) return 0;
+
+  let intersection = 0;
+  for (const token of setA) {
+    if (setB.has(token)) intersection++;
+  }
+  return intersection / (setA.size + setB.size - intersection);
+}
+
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const toRad = Math.PI / 180;
   const dLat = (lat2 - lat1) * toRad;
   const dLng = (lng2 - lng1) * toRad;
-  const a =
+  const aa =
     Math.sin(dLat / 2) ** 2 +
     Math.cos(lat1 * toRad) * Math.cos(lat2 * toRad) * Math.sin(dLng / 2) ** 2;
-  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return 6371 * 2 * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa));
 }
 
-// Post-classification dedup: merge events with same category, overlapping
-// sources, and coordinates within 200km of each other.
-function deduplicateClassifiedEvents(events: ClaudeEvent[]): ClaudeEvent[] {
-  const merged: ClaudeEvent[] = [];
-  const consumed = new Set<number>();
+function canMergeClusters(base: EventCluster, other: EventCluster): boolean {
+  const a = base.candidates[0];
+  const b = other.candidates[0];
 
-  for (let i = 0; i < events.length; i++) {
-    if (consumed.has(i)) continue;
-    const base = { ...events[i], sources: [...(events[i].sources || [])] };
+  if (a.classification.category !== b.classification.category) return false;
 
-    for (let j = i + 1; j < events.length; j++) {
-      if (consumed.has(j)) continue;
-      const other = events[j];
+  const titleSimilarity = jaccardSimilarity(a.normalized, b.normalized);
+  const timeDeltaHours = Math.abs(a.timestampMs - b.timestampMs) / 3_600_000;
 
-      // Must be same category
-      if (base.category !== other.category) continue;
+  if (timeDeltaHours > 48) return false;
 
-      // Must be within 200km
-      const dist = haversineKm(
-        base.latitude || 0, base.longitude || 0,
-        other.latitude || 0, other.longitude || 0,
-      );
-      if (dist > 200) continue;
-
-      // Check for overlapping sources OR very similar titles
-      const baseSourceNames = new Set(base.sources.map((s) => s.name));
-      const otherSources = other.sources || [];
-      const hasOverlap = otherSources.some((s) => baseSourceNames.has(s.name));
-
-      // Also check title similarity — normalize and compare first 30 chars
-      const normBase = base.title.toLowerCase().replace(/[^a-z0-9 ]/g, '').substring(0, 40);
-      const normOther = other.title.toLowerCase().replace(/[^a-z0-9 ]/g, '').substring(0, 40);
-      const titleSimilar = normBase === normOther ||
-        normBase.includes(normOther.substring(0, 20)) ||
-        normOther.includes(normBase.substring(0, 20));
-
-      if (!hasOverlap && !titleSimilar) continue;
-
-      // Merge: keep the event with higher relevance as base, combine sources
-      consumed.add(j);
-      if ((other.relevance || 0) > (base.relevance || 0)) {
-        base.title = other.title;
-        base.summary = other.summary;
-        base.relevance = other.relevance;
-      }
-      // Merge source lists, dedup by URL
-      const seenUrls = new Set(base.sources.map((s) => s.url));
-      for (const src of otherSources) {
-        if (!seenUrls.has(src.url)) {
-          base.sources.push(src);
-          seenUrls.add(src.url);
-        }
-      }
-    }
-
-    merged.push(base);
+  if (a.geo && b.geo) {
+    const dist = haversineKm(a.geo.lat, a.geo.lng, b.geo.lat, b.geo.lng);
+    if (dist > 500) return false;
   }
 
-  console.log(`[events] Post-dedup: ${events.length} → ${merged.length} events`);
+  return titleSimilarity >= 0.45;
+}
+
+function clusterCandidates(candidates: EventCandidate[]): EventCluster[] {
+  const grouped = new Map<string, EventCluster>();
+  for (const c of candidates) {
+    const fp = hashFingerprint(c.fingerprintSeed);
+    const existing = grouped.get(fp);
+    if (!existing) {
+      grouped.set(fp, { fingerprint: fp, candidates: [c] });
+    } else {
+      existing.candidates.push(c);
+    }
+  }
+
+  const initial = [...grouped.values()];
+  const consumed = new Set<number>();
+  const merged: EventCluster[] = [];
+
+  for (let i = 0; i < initial.length; i++) {
+    if (consumed.has(i)) continue;
+    const base = { ...initial[i], candidates: [...initial[i].candidates] };
+
+    for (let j = i + 1; j < initial.length; j++) {
+      if (consumed.has(j)) continue;
+      if (!canMergeClusters(base, initial[j])) continue;
+      consumed.add(j);
+      base.candidates.push(...initial[j].candidates);
+    }
+
+    const mergedSeed = base.candidates.map((c) => c.fingerprintSeed).sort().slice(0, 10).join('|');
+    merged.push({ fingerprint: hashFingerprint(mergedSeed), candidates: base.candidates });
+  }
+
   return merged;
 }
 
-function toGdeltEvent(ce: ClaudeEvent, index: number): GdeltEvent {
-  const severity = (['critical', 'watch', 'monitor'].includes(ce.severity)
-    ? ce.severity
-    : 'monitor') as EventSeverity;
-  const category = (['conflicts', 'elections', 'economy', 'disasters', 'infrastructure'].includes(ce.category)
-    ? ce.category
-    : 'conflicts') as EventCategory;
+function chooseWeightedCategory(cluster: EventCluster): EventCategory {
+  const weights = new Map<EventCategory, number>();
+  for (const c of cluster.candidates) {
+    const prev = weights.get(c.classification.category) || 0;
+    weights.set(c.classification.category, prev + c.headline.sourceWeight + c.classification.confidence);
+  }
+
+  let best: EventCategory = 'conflicts';
+  let score = -1;
+  for (const [cat, value] of weights.entries()) {
+    if (value > score) {
+      score = value;
+      best = cat;
+    }
+  }
+  return best;
+}
+
+function chooseSeverity(cluster: EventCluster): EventSeverity {
+  if (cluster.candidates.some((c) => c.classification.severity === 'critical')) return 'critical';
+  if (cluster.candidates.some((c) => c.classification.severity === 'watch')) return 'watch';
+  return 'monitor';
+}
+
+function summarizeCluster(cluster: EventCluster): string {
+  const titles = cluster.candidates
+    .map((c) => c.headline.title)
+    .slice(0, 3);
+  if (titles.length === 0) return 'No summary available.';
+  if (titles.length === 1) return titles[0];
+  return `${titles[0]} Additional reporting: ${titles.slice(1).join(' | ')}`;
+}
+
+function titleForCluster(cluster: EventCluster): string {
+  return cluster.candidates
+    .map((c) => c.headline.title)
+    .sort((a, b) => b.length - a.length)[0] || 'Global event';
+}
+
+function aggregateSources(cluster: EventCluster): { name: string; url: string }[] {
+  const seen = new Set<string>();
+  const out: { name: string; url: string }[] = [];
+
+  for (const c of cluster.candidates) {
+    const key = `${c.headline.source}|${c.headline.canonicalUrl}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ name: c.headline.source, url: c.headline.url });
+  }
+
+  return out.slice(0, 8);
+}
+
+function firstAndLastSeen(cluster: EventCluster): { firstSeenAt: string; lastSeenAt: string } {
+  const timestamps = cluster.candidates.map((c) => new Date(c.headline.timestamp).getTime()).filter(Number.isFinite);
+  if (timestamps.length === 0) {
+    const now = new Date().toISOString();
+    return { firstSeenAt: now, lastSeenAt: now };
+  }
+
+  const first = new Date(Math.min(...timestamps)).toISOString();
+  const last = new Date(Math.max(...timestamps)).toISOString();
+  return { firstSeenAt: first, lastSeenAt: last };
+}
+
+function chooseLocation(cluster: EventCluster): GeoMatch {
+  const withGeo = cluster.candidates
+    .filter((c) => c.geo)
+    .sort((a, b) => (b.geo?.confidence || 0) - (a.geo?.confidence || 0));
+
+  if (withGeo[0]?.geo) return withGeo[0].geo;
+
+  const category = chooseWeightedCategory(cluster);
+  if (category === 'conflicts') return centroidForRegion('middle_east');
+  if (category === 'elections') return centroidForRegion('global');
+  if (category === 'economy') return centroidForRegion('global');
+  if (category === 'disasters') return centroidForRegion('global');
+  return centroidForRegion('global');
+}
+
+function shouldEscalateToLlm(cluster: EventCluster, confidence: number, category: EventCategory, severity: EventSeverity): boolean {
+  if (cluster.candidates.length >= 4 && severity !== 'monitor') return true;
+  if (confidence < 0.68) return true;
+  if (severity === 'critical') return true;
+
+  // If category votes conflict heavily, escalate.
+  const categories = new Set(cluster.candidates.map((c) => c.classification.category));
+  if (categories.size >= 3) return true;
+
+  // Infrastructure/economy events are often noisier and benefit from semantic pass.
+  if (category === 'infrastructure' || category === 'economy') {
+    return cluster.candidates.some((c) => c.classification.highImpact);
+  }
+
+  return false;
+}
+
+async function classifyClusterWithClaude(cluster: EventCluster): Promise<LlmClassification | null> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return null;
+
+  const sample = cluster.candidates
+    .slice(0, 8)
+    .map((c) => `- [${c.headline.source}] ${c.headline.title}${c.headline.summary ? ` | ${c.headline.summary}` : ''}`)
+    .join('\n');
+
+  const system = `You classify one geopolitical event cluster for a monitoring dashboard. Return ONLY valid JSON with keys: title, summary, category, severity, latitude, longitude, confidence.\n\nAllowed category values: conflicts, elections, economy, disasters, infrastructure.\nAllowed severity values: critical, watch, monitor.`;
+
+  const user = `Classify this cluster of headlines into one canonical event:\n${sample}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5-20250929',
+        max_tokens: 1000,
+        system,
+        messages: [{ role: 'user', content: user }],
+      }),
+      signal: AbortSignal.timeout(35_000),
+    });
+
+    if (!res.ok) return null;
+    const data = await res.json();
+    let text: string = data.content?.[0]?.text || '';
+    if (!text) return null;
+
+    text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    const parsed = JSON.parse(text) as Partial<LlmClassification>;
+    if (!parsed.title || !parsed.summary || !parsed.category || !parsed.severity) return null;
+
+    const category = (['conflicts', 'elections', 'economy', 'disasters', 'infrastructure'].includes(parsed.category)
+      ? parsed.category
+      : 'conflicts') as EventCategory;
+    const severity = (['critical', 'watch', 'monitor'].includes(parsed.severity)
+      ? parsed.severity
+      : 'monitor') as EventSeverity;
+
+    return {
+      title: parsed.title,
+      summary: parsed.summary,
+      category,
+      severity,
+      latitude: Number(parsed.latitude) || 0,
+      longitude: Number(parsed.longitude) || 0,
+      confidence: Math.max(0, Math.min(1, Number(parsed.confidence) || 0.72)),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function eventFromRules(cluster: EventCluster): CachedClassifiedCluster {
+  const category = chooseWeightedCategory(cluster);
+  const severity = chooseSeverity(cluster);
+  const loc = chooseLocation(cluster);
+
+  const sourceWeightAvg =
+    cluster.candidates.reduce((sum, c) => sum + c.headline.sourceWeight, 0) / Math.max(1, cluster.candidates.length);
+  const confidence = Math.max(
+    0.45,
+    Math.min(
+      0.95,
+      0.5 + sourceWeightAvg * 0.2 + Math.log2(cluster.candidates.length + 1) * 0.1,
+    ),
+  );
 
   return {
-    id: `rss_${index}_${Date.now()}`,
-    title: ce.title,
+    title: titleForCluster(cluster),
+    summary: summarizeCluster(cluster),
     category,
     severity,
-    lat: ce.latitude || 0,
-    lng: ce.longitude || 0,
-    timestamp: new Date().toISOString(),
-    summary: ce.summary || ce.title,
-    sources: Array.isArray(ce.sources) ? ce.sources.slice(0, 5) : [],
-    tone: toneFromSeverity(severity),
-    region: inferRegion(ce.latitude || 0, ce.longitude || 0),
+    lat: loc.lat,
+    lng: loc.lng,
+    classificationConfidence: confidence,
+    classificationMethod: 'rules',
   };
 }
 
-// ---------------------------------------------------------------------------
-// Main Pipeline
-// ---------------------------------------------------------------------------
+async function canUseLlm(runCalls: number): Promise<boolean> {
+  if (!process.env.ANTHROPIC_API_KEY) return false;
+  if (runCalls >= INTERVAL_LLM_LIMIT) return false;
 
-export async function fetchClassifiedEvents(): Promise<GdeltEvent[]> {
-  // 1. Fetch all RSS
-  const headlines = await fetchAllRssHeadlines();
-  console.log(`[events] Fetched ${headlines.length} RSS headlines`);
+  const dailyCount = await getMetric('llm_calls');
+  return dailyCount < DAILY_LLM_LIMIT;
+}
 
-  // 2. Purge expired cache entries
-  purgeExpiredCache();
+async function classifyCluster(cluster: EventCluster, runCalls: { value: number }): Promise<CachedClassifiedCluster> {
+  const cached = await monitorGetJson<CachedClassifiedCluster>(`classified:${cluster.fingerprint}`);
+  if (cached) {
+    await incrementMetric('classified_cluster_cache_hit');
+    return cached;
+  }
 
-  // 3. Separate new vs cached headlines
-  const newHeadlines: RawHeadline[] = [];
-  const cachedKeys: string[] = [];
+  const base = eventFromRules(cluster);
+  const escalate = shouldEscalateToLlm(
+    cluster,
+    base.classificationConfidence,
+    base.category,
+    base.severity,
+  );
 
-  for (const h of headlines) {
-    const key = headlineKey(h);
-    if (classifiedCache.has(key)) {
-      cachedKeys.push(key);
-    } else {
-      newHeadlines.push(h);
+  let finalResult = base;
+
+  if (escalate && (await canUseLlm(runCalls.value))) {
+    const llm = await classifyClusterWithClaude(cluster);
+    if (llm) {
+      runCalls.value += 1;
+      await incrementMetric('llm_calls');
+      await incrementMetric('llm_cluster_classifications');
+
+      finalResult = {
+        title: llm.title || base.title,
+        summary: llm.summary || base.summary,
+        category: llm.category || base.category,
+        severity: llm.severity || base.severity,
+        lat: llm.latitude || base.lat,
+        lng: llm.longitude || base.lng,
+        classificationConfidence: Math.max(base.classificationConfidence, llm.confidence),
+        classificationMethod: base.classificationMethod === 'rules' ? 'hybrid' : 'llm',
+      };
     }
   }
 
-  console.log(`[events] ${cachedKeys.length} cached, ${newHeadlines.length} new headlines to classify`);
+  await monitorSetJson(`classified:${cluster.fingerprint}`, finalResult, CLASSIFIED_CLUSTER_TTL);
+  return finalResult;
+}
 
-  // 4. Classify new headlines with Claude (if any)
-  if (newHeadlines.length > 0) {
-    const rawClassified = await classifyInBatches(newHeadlines);
-    console.log(`[events] Claude returned ${rawClassified.length} classified events`);
-    const classified = deduplicateClassifiedEvents(rawClassified);
+export interface ClassifiedEventsResult {
+  items: GdeltEvent[];
+  sourceCoverage: SourceCoverageEntry[];
+}
 
-    const now = Date.now();
+export async function fetchClassifiedEvents(): Promise<ClassifiedEventsResult> {
+  const { items: headlines, sourceCoverage } = await fetchTieredHeadlines(160);
+  await incrementMetric('events_headlines_received', headlines.length);
 
-    // Map classified events back to headline keys for caching
-    // Each classified event may come from multiple headlines — cache each source headline
-    for (let i = 0; i < classified.length; i++) {
-      const event = toGdeltEvent(classified[i], i);
-      const cacheEntry: CachedEvent = { event, expiresAt: now + CACHE_TTL };
+  const candidates = headlines
+    .map(toCandidate)
+    .filter((x): x is EventCandidate => Boolean(x));
 
-      // Cache by event title as key (the event itself is what we cache)
-      const eventKey = `evt:${event.title.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 60)}`;
-      classifiedCache.set(eventKey, cacheEntry);
+  await incrementMetric('events_candidates_after_rules', candidates.length);
 
-      // Also mark each source headline as "classified" so we don't re-send it
-      for (const src of classified[i].sources || []) {
-        const matchingHeadline = newHeadlines.find((h) => h.url === src.url);
-        if (matchingHeadline) {
-          classifiedCache.set(headlineKey(matchingHeadline), cacheEntry);
-        }
-      }
-    }
+  const clusters = clusterCandidates(candidates);
+  await incrementMetric('events_clusters', clusters.length);
 
-    // Mark remaining new headlines as "classified" (even if Claude filtered them out)
-    // so we don't re-send them next time
-    for (const h of newHeadlines) {
-      const key = headlineKey(h);
-      if (!classifiedCache.has(key)) {
-        // Sentinel entry — headline was sent but Claude deemed it irrelevant
-        classifiedCache.set(key, {
-          event: null as unknown as GdeltEvent,
-          expiresAt: now + CACHE_TTL,
-        });
-      }
-    }
-  }
-
-  // 5. Collect all valid cached events
+  const runCalls = { value: 0 };
   const events: GdeltEvent[] = [];
-  const seenTitles = new Set<string>();
 
-  for (const entry of classifiedCache.values()) {
-    if (!entry.event) continue; // sentinel entries
-    const titleKey = entry.event.title.toLowerCase();
-    if (seenTitles.has(titleKey)) continue;
-    seenTitles.add(titleKey);
-    events.push(entry.event);
+  for (const cluster of clusters) {
+    const classified = await classifyCluster(cluster, runCalls);
+    const { firstSeenAt, lastSeenAt } = firstAndLastSeen(cluster);
+    const sources = aggregateSources(cluster);
+
+    const id = `evt_${cluster.fingerprint}`;
+    const canonicalId = id;
+    const timestamp = lastSeenAt;
+
+    events.push({
+      id,
+      canonicalId,
+      title: classified.title,
+      category: classified.category,
+      severity: classified.severity,
+      lat: classified.lat,
+      lng: classified.lng,
+      timestamp,
+      summary: classified.summary,
+      sources,
+      sourceCount: sources.length,
+      firstSeenAt,
+      lastSeenAt,
+      classificationConfidence: classified.classificationConfidence,
+      classificationMethod: classified.classificationMethod,
+      fingerprint: cluster.fingerprint,
+      tone: toneFromSeverity(classified.severity),
+      region: inferRegion(classified.lat, classified.lng),
+    });
   }
 
-  // 6. Sort by severity then recency
   events.sort((a, b) => {
-    const sevDiff = severityRank(b.severity) - severityRank(a.severity);
-    if (sevDiff !== 0) return sevDiff;
-    return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    const sev = severityRank(b.severity) - severityRank(a.severity);
+    if (sev !== 0) return sev;
+
+    if (b.sourceCount !== a.sourceCount) return b.sourceCount - a.sourceCount;
+    return new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime();
   });
 
-  return events.slice(0, 200);
+  const dedupRatio = headlines.length > 0 ? 1 - events.length / headlines.length : 0;
+  await incrementMetric('events_dedup_ratio_bp', Math.round(dedupRatio * 10_000));
+  await incrementMetric('events_final_count', events.length);
+
+  return {
+    items: events.slice(0, MAX_EVENTS),
+    sourceCoverage,
+  };
 }

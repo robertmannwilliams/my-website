@@ -1,0 +1,29 @@
+[
+  {
+    "id": "notam-tehran-fir",
+    "name": "Tehran FIR Restriction",
+    "authority": "CAA Iran",
+    "reason": "Conflict-zone closure",
+    "effectiveFrom": "2026-03-01T00:00:00Z",
+    "effectiveTo": "2026-03-20T00:00:00Z",
+    "coordinates": [[50.0, 34.0], [53.8, 34.0], [53.8, 37.4], [50.0, 37.4], [50.0, 34.0]]
+  },
+  {
+    "id": "notam-baghdad-fir",
+    "name": "Baghdad FIR Restriction",
+    "authority": "Iraqi CAA",
+    "reason": "Military activity",
+    "effectiveFrom": "2026-03-02T00:00:00Z",
+    "effectiveTo": "2026-03-18T00:00:00Z",
+    "coordinates": [[42.0, 32.0], [45.8, 32.0], [45.8, 35.8], [42.0, 35.8], [42.0, 32.0]]
+  },
+  {
+    "id": "notam-blacksea",
+    "name": "Black Sea Military Airspace Advisory",
+    "authority": "Regional FIR Notices",
+    "reason": "Active military air operations",
+    "effectiveFrom": "2026-03-03T00:00:00Z",
+    "effectiveTo": "2026-03-22T00:00:00Z",
+    "coordinates": [[30.0, 42.0], [36.8, 42.0], [36.8, 46.8], [30.0, 46.8], [30.0, 42.0]]
+  }
+]
