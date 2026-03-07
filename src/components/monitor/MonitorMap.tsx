@@ -56,6 +56,7 @@ type MarketSelectionCandidate = Extract<MapSelectionCandidate, { type: 'market' 
 
 interface MarketSpiderState {
   center: [number, number];
+  clusterId: number | null;
   candidates: MarketSelectionCandidate[];
 }
 
@@ -135,18 +136,6 @@ function buildSpiderfyGeoJSON(center: [number, number], candidates: MarketSelect
     const radiusPx = MARKET_SPIDERFY_BASE_RADIUS_PX + ring * MARKET_SPIDERFY_RING_STEP_PX;
     const [targetLng, targetLat] = pxOffsetToPoint(centerLng, centerLat, zoom, radiusPx, angleDeg);
     const candidate = candidates[i];
-
-    legs.push({
-      type: 'Feature',
-      geometry: {
-        type: 'LineString',
-        coordinates: [
-          [centerLng, centerLat],
-          [targetLng, targetLat],
-        ],
-      },
-      properties: { id: `leg_${candidate.id}` },
-    });
 
     markers.push({
       type: 'Feature',
@@ -979,6 +968,7 @@ function MonitorMap({
 
   const marketSpiderRef = useRef<MarketSpiderState | null>(null);
   const marketSpiderRequestRef = useRef(0);
+  const hiddenMarketClusterIdRef = useRef<number | null>(null);
 
   const openCandidate = useCallback((candidate: MapSelectionCandidate) => {
     if (candidate.type === 'event') onEventClickRef.current?.(candidate.data);
@@ -1063,6 +1053,24 @@ function MonitorMap({
     return out;
   }, [candidateFromFeature]);
 
+  const applyMarketClusterFilter = useCallback((hiddenClusterId: number | null) => {
+    const m = map.current;
+    if (!m) return;
+
+    hiddenMarketClusterIdRef.current = hiddenClusterId;
+    const filter: mapboxgl.FilterSpecification =
+      hiddenClusterId == null
+        ? ['has', 'point_count']
+        : ['all', ['has', 'point_count'], ['!=', ['get', 'cluster_id'], hiddenClusterId]];
+
+    try {
+      m.setFilter('market-clusters', filter);
+      m.setFilter('market-cluster-count', filter);
+    } catch {
+      // Layers may not exist yet.
+    }
+  }, []);
+
   const setMarketSpiderData = useCallback((legs: GeoJSON.FeatureCollection, markers: GeoJSON.FeatureCollection) => {
     const m = map.current;
     if (!m) return;
@@ -1077,16 +1085,18 @@ function MonitorMap({
   const clearMarketSpiderfy = useCallback(() => {
     marketSpiderRequestRef.current += 1;
     marketSpiderRef.current = null;
+    applyMarketClusterFilter(null);
     setMarketSpiderData(emptyCollection(), emptyCollection());
-  }, [setMarketSpiderData]);
+  }, [applyMarketClusterFilter, setMarketSpiderData]);
 
   const renderMarketSpiderfy = useCallback((state: MarketSpiderState) => {
     const m = map.current;
     if (!m) return;
     marketSpiderRef.current = state;
+    applyMarketClusterFilter(state.clusterId);
     const geo = buildSpiderfyGeoJSON(state.center, state.candidates, m.getZoom());
     setMarketSpiderData(geo.legs, geo.markers);
-  }, [setMarketSpiderData]);
+  }, [applyMarketClusterFilter, setMarketSpiderData]);
 
   const toMarketCandidates = useCallback((leaves: Array<{ properties?: Record<string, unknown> | null }>): MarketSelectionCandidate[] => {
     const marketCandidates: MarketSelectionCandidate[] = [];
@@ -1115,7 +1125,11 @@ function MonitorMap({
     return marketCandidates;
   }, []);
 
-  const openMarketSpiderfy = useCallback((center: [number, number], candidates: MarketSelectionCandidate[]) => {
+  const openMarketSpiderfy = useCallback((
+    center: [number, number],
+    clusterId: number | null,
+    candidates: MarketSelectionCandidate[],
+  ) => {
     if (candidates.length === 0) {
       clearMarketSpiderfy();
       return;
@@ -1141,7 +1155,7 @@ function MonitorMap({
 
     const applySpider = () => {
       if (!map.current || marketSpiderRequestRef.current !== requestId) return;
-      renderMarketSpiderfy({ center, candidates });
+      renderMarketSpiderfy({ center, clusterId, candidates });
     };
 
     if (m.getZoom() < MARKET_SPIDERFY_MIN_ZOOM) {
@@ -1174,7 +1188,7 @@ function MonitorMap({
       if (leafErr) return;
       const leaves = Array.isArray(leavesRaw) ? leavesRaw : [];
       const marketCandidates = toMarketCandidates(leaves);
-      openMarketSpiderfy(center, marketCandidates);
+      openMarketSpiderfy(center, clusterId, marketCandidates);
     });
   }, [clearMarketSpiderfy, openMarketSpiderfy, toMarketCandidates]);
 
@@ -1365,6 +1379,7 @@ function MonitorMap({
     if (nextCandidates.length !== state.candidates.length) {
       renderMarketSpiderfy({
         center: state.center,
+        clusterId: state.clusterId,
         candidates: nextCandidates,
       });
     }

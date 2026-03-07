@@ -56,7 +56,15 @@ const LOOKUP: Record<string, GeoEntry> = {
   india: { lat: 28.61, lng: 77.21, method: 'country' },
   pakistan: { lat: 33.69, lng: 73.04, method: 'country' },
   turkey: { lat: 39.93, lng: 32.86, method: 'country' },
+  nepal: { lat: 28.39, lng: 84.12, method: 'country' },
+  colombia: { lat: 4.57, lng: -74.3, method: 'country' },
+  colombian: { lat: 4.57, lng: -74.3, method: 'country' },
+  cuba: { lat: 21.52, lng: -77.78, method: 'country' },
+  cuban: { lat: 21.52, lng: -77.78, method: 'country' },
   us: { lat: 39.83, lng: -98.58, method: 'country' },
+  usa: { lat: 39.83, lng: -98.58, method: 'country' },
+  'u.s': { lat: 39.83, lng: -98.58, method: 'country' },
+  'u.s.': { lat: 39.83, lng: -98.58, method: 'country' },
   'united states': { lat: 39.83, lng: -98.58, method: 'country' },
   america: { lat: 39.83, lng: -98.58, method: 'country' },
 
@@ -76,12 +84,25 @@ function sortedLookupKeys(): string[] {
 
 const SORTED_KEYS = sortedLookupKeys();
 
-export function geocodeText(text: string): GeoMatch | null {
-  const lower = text.toLowerCase();
+function escapeRegex(raw: string): string {
+  return raw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
-  for (const key of SORTED_KEYS) {
-    if (!lower.includes(key)) continue;
-    const hit = LOOKUP[key];
+const LOOKUP_PATTERNS = SORTED_KEYS.map((key) => ({
+  key,
+  entry: LOOKUP[key],
+  pattern: new RegExp(`(^|[^a-z0-9])${escapeRegex(key).replace(/\s+/g, '\\s+')}(?=$|[^a-z0-9])`, 'i'),
+}));
+
+export function geocodeText(text: string): GeoMatch | null {
+  const normalized = text
+    .toLowerCase()
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/\s+/g, ' ');
+
+  for (const { key, entry, pattern } of LOOKUP_PATTERNS) {
+    if (!pattern.test(normalized)) continue;
+    const hit = entry;
     const confidence = hit.method === 'city' ? 0.92 : hit.method === 'country' ? 0.8 : 0.65;
     return {
       lat: hit.lat,
