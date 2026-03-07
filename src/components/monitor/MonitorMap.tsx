@@ -46,6 +46,18 @@ interface MonitorMapProps {
 const MAX_EVENTS_ON_MAP = 140;
 const MARKET_CLUSTER_MAX_ZOOM = 10;
 const MARKET_CLUSTER_LEAF_LIMIT = 40;
+const MARKET_SPIDERFY_LIMIT = 24;
+const MARKET_SPIDERFY_MIN_ZOOM = 4.8;
+const MARKET_SPIDERFY_BASE_RADIUS_PX = 54;
+const MARKET_SPIDERFY_RING_STEP_PX = 26;
+const MARKET_SPIDERFY_RING_CAPACITY = 10;
+
+type MarketSelectionCandidate = Extract<MapSelectionCandidate, { type: 'market' }>;
+
+interface MarketSpiderState {
+  center: [number, number];
+  candidates: MarketSelectionCandidate[];
+}
 
 function inferRegion(lat: number, lng: number): string {
   if (lat > 25 && lat < 50 && lng > -10 && lng < 45) return 'europe';
@@ -67,14 +79,8 @@ function eventSignalScore(event: GdeltEvent): number {
   return severityScore + sourceScore + confidenceScore + recencyScore;
 }
 
-function haversineKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
-  const toRad = Math.PI / 180;
-  const dLat = (bLat - aLat) * toRad;
-  const dLng = (bLng - aLng) * toRad;
-  const aa =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(aLat * toRad) * Math.cos(bLat * toRad) * Math.sin(dLng / 2) ** 2;
-  return 6371 * 2 * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa));
+function emptyCollection(): GeoJSON.FeatureCollection {
+  return { type: 'FeatureCollection', features: [] };
 }
 
 function destinationPoint(
@@ -97,6 +103,69 @@ function destinationPoint(
   const lng2 = lng1 + Math.atan2(Math.sin(brng) * sinD * cosLat1, cosD - sinLat1 * Math.sin(lat2));
 
   return [((lng2 * (180 / Math.PI) + 540) % 360) - 180, lat2 * (180 / Math.PI)];
+}
+
+function pxOffsetToPoint(
+  centerLng: number,
+  centerLat: number,
+  zoom: number,
+  radiusPx: number,
+  angleDeg: number,
+): [number, number] {
+  const metersPerPixel = (156543.03392 * Math.cos((centerLat * Math.PI) / 180)) / (2 ** zoom);
+  const radiusKm = Math.max(8, Math.min(240, (radiusPx * metersPerPixel) / 1000));
+  const angularDistDeg = (radiusKm / 6371) * (180 / Math.PI);
+  return destinationPoint(centerLat, centerLng, angleDeg, angularDistDeg);
+}
+
+function buildSpiderfyGeoJSON(center: [number, number], candidates: MarketSelectionCandidate[], zoom: number): {
+  legs: GeoJSON.FeatureCollection;
+  markers: GeoJSON.FeatureCollection;
+} {
+  const [centerLng, centerLat] = center;
+  const legs: GeoJSON.Feature[] = [];
+  const markers: GeoJSON.Feature[] = [];
+
+  for (let i = 0; i < candidates.length; i++) {
+    const ring = Math.floor(i / MARKET_SPIDERFY_RING_CAPACITY);
+    const indexInRing = i % MARKET_SPIDERFY_RING_CAPACITY;
+    const ringStart = ring * MARKET_SPIDERFY_RING_CAPACITY;
+    const ringCount = Math.min(MARKET_SPIDERFY_RING_CAPACITY, candidates.length - ringStart);
+    const angleDeg = (360 * indexInRing) / Math.max(1, ringCount) + ring * 13;
+    const radiusPx = MARKET_SPIDERFY_BASE_RADIUS_PX + ring * MARKET_SPIDERFY_RING_STEP_PX;
+    const [targetLng, targetLat] = pxOffsetToPoint(centerLng, centerLat, zoom, radiusPx, angleDeg);
+    const candidate = candidates[i];
+
+    legs.push({
+      type: 'Feature',
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [centerLng, centerLat],
+          [targetLng, targetLat],
+        ],
+      },
+      properties: { id: `leg_${candidate.id}` },
+    });
+
+    markers.push({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [targetLng, targetLat] },
+      properties: {
+        id: candidate.id,
+        title: candidate.title,
+        probability: Math.round(candidate.data.probability * 100),
+        volume: candidate.data.volume,
+        category: candidate.data.category,
+        signalScore: candidate.data.signalScore,
+      },
+    });
+  }
+
+  return {
+    legs: { type: 'FeatureCollection', features: legs },
+    markers: { type: 'FeatureCollection', features: markers },
+  };
 }
 
 function circleToPolygon(centerLng: number, centerLat: number, radiusKm: number, steps: number = 48): [number, number][] {
@@ -546,7 +615,17 @@ function addMarketLayers(m: mapboxgl.Map) {
 
   m.addSource('related-lines', {
     type: 'geojson',
-    data: { type: 'FeatureCollection', features: [] },
+    data: emptyCollection(),
+  });
+
+  m.addSource('market-spider-legs', {
+    type: 'geojson',
+    data: emptyCollection(),
+  });
+
+  m.addSource('market-spider-markers', {
+    type: 'geojson',
+    data: emptyCollection(),
   });
 
   m.addLayer({
@@ -603,6 +682,30 @@ function addMarketLayers(m: mapboxgl.Map) {
     paint: {
       'icon-color': MARKET_CATEGORY_COLOR,
       'icon-opacity': ['case', ['==', ['get', 'dimmed'], true], 0.45, 0.9],
+    },
+  });
+
+  m.addLayer({
+    id: 'market-spider-legs',
+    type: 'line',
+    source: 'market-spider-legs',
+    paint: {
+      'line-color': 'rgba(139,161,208,0.45)',
+      'line-width': 1.2,
+      'line-opacity': 0.8,
+    },
+  });
+
+  m.addLayer({
+    id: 'market-spider-markers',
+    type: 'circle',
+    source: 'market-spider-markers',
+    paint: {
+      'circle-color': MARKET_CATEGORY_COLOR,
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, 7, 6, 8.5, 9, 10.5, 12, 12],
+      'circle-opacity': 0.95,
+      'circle-stroke-width': 1.5,
+      'circle-stroke-color': 'rgba(255,255,255,0.5)',
     },
   });
 }
@@ -750,7 +853,13 @@ function addEarthquakeLayers(m: mapboxgl.Map) {
 }
 
 const EVENT_LAYERS = ['event-clusters', 'event-cluster-count', 'event-points'];
-const MARKET_LAYERS = ['market-clusters', 'market-cluster-count', 'market-markers'];
+const MARKET_LAYERS = [
+  'market-clusters',
+  'market-cluster-count',
+  'market-markers',
+  'market-spider-legs',
+  'market-spider-markers',
+];
 const EARTHQUAKE_LAYERS = ['earthquake-circles', 'earthquake-labels'];
 const NOTAM_LAYERS = ['notam-fill', 'notam-labels'];
 const SHIPPING_LAYERS = ['shipping-points', 'shipping-labels'];
@@ -868,6 +977,9 @@ function MonitorMap({
     return watchZones.filter((zone) => visibleThemes[zone.theme] && visibleWatchZones[zone.id]);
   }, [watchZones, visibleSignals.watch_zones, visibleThemes, visibleWatchZones]);
 
+  const marketSpiderRef = useRef<MarketSpiderState | null>(null);
+  const marketSpiderRequestRef = useRef(0);
+
   const openCandidate = useCallback((candidate: MapSelectionCandidate) => {
     if (candidate.type === 'event') onEventClickRef.current?.(candidate.data);
     if (candidate.type === 'market') onMarketClickRef.current?.(candidate.data);
@@ -951,6 +1063,100 @@ function MonitorMap({
     return out;
   }, [candidateFromFeature]);
 
+  const setMarketSpiderData = useCallback((legs: GeoJSON.FeatureCollection, markers: GeoJSON.FeatureCollection) => {
+    const m = map.current;
+    if (!m) return;
+
+    const legsSource = m.getSource('market-spider-legs') as mapboxgl.GeoJSONSource | undefined;
+    if (legsSource) legsSource.setData(legs);
+
+    const markerSource = m.getSource('market-spider-markers') as mapboxgl.GeoJSONSource | undefined;
+    if (markerSource) markerSource.setData(markers);
+  }, []);
+
+  const clearMarketSpiderfy = useCallback(() => {
+    marketSpiderRequestRef.current += 1;
+    marketSpiderRef.current = null;
+    setMarketSpiderData(emptyCollection(), emptyCollection());
+  }, [setMarketSpiderData]);
+
+  const renderMarketSpiderfy = useCallback((state: MarketSpiderState) => {
+    const m = map.current;
+    if (!m) return;
+    marketSpiderRef.current = state;
+    const geo = buildSpiderfyGeoJSON(state.center, state.candidates, m.getZoom());
+    setMarketSpiderData(geo.legs, geo.markers);
+  }, [setMarketSpiderData]);
+
+  const toMarketCandidates = useCallback((leaves: Array<{ properties?: Record<string, unknown> | null }>): MarketSelectionCandidate[] => {
+    const marketCandidates: MarketSelectionCandidate[] = [];
+    const seen = new Set<string>();
+    for (const leaf of leaves) {
+      const id = String(leaf.properties?.id || '');
+      const market = marketByIdRef.current.get(id);
+      if (!market || seen.has(id)) continue;
+      seen.add(id);
+      marketCandidates.push({
+        type: 'market',
+        id,
+        title: market.title,
+        subtitle: `${Math.round(market.probability * 100)}% - ${market.volume}`,
+        data: market,
+      });
+    }
+
+    marketCandidates.sort((a, b) => {
+      const marketA = a.data;
+      const marketB = b.data;
+      if (marketB.signalScore !== marketA.signalScore) return marketB.signalScore - marketA.signalScore;
+      return marketB.volumeRaw - marketA.volumeRaw;
+    });
+
+    return marketCandidates;
+  }, []);
+
+  const openMarketSpiderfy = useCallback((center: [number, number], candidates: MarketSelectionCandidate[]) => {
+    if (candidates.length === 0) {
+      clearMarketSpiderfy();
+      return;
+    }
+
+    if (candidates.length === 1) {
+      clearMarketSpiderfy();
+      openCandidate(candidates[0]);
+      return;
+    }
+
+    if (candidates.length > MARKET_SPIDERFY_LIMIT) {
+      clearMarketSpiderfy();
+      onSelectionCandidatesRef.current?.(`Market Stack (${candidates.length})`, candidates);
+      return;
+    }
+
+    const m = map.current;
+    if (!m) return;
+
+    const requestId = marketSpiderRequestRef.current + 1;
+    marketSpiderRequestRef.current = requestId;
+
+    const applySpider = () => {
+      if (!map.current || marketSpiderRequestRef.current !== requestId) return;
+      renderMarketSpiderfy({ center, candidates });
+    };
+
+    if (m.getZoom() < MARKET_SPIDERFY_MIN_ZOOM) {
+      m.easeTo({
+        center,
+        zoom: MARKET_SPIDERFY_MIN_ZOOM,
+        duration: 500,
+      });
+      m.once('moveend', applySpider);
+      return;
+    }
+
+    applySpider();
+  }, [clearMarketSpiderfy, openCandidate, renderMarketSpiderfy]);
+
   const expandMarketClusterStep = useCallback((feature: mapboxgl.MapboxGeoJSONFeature) => {
     const m = map.current;
     if (!m) return;
@@ -963,88 +1169,14 @@ function MonitorMap({
 
     const center = (feature.geometry as GeoJSON.Point).coordinates as [number, number];
 
-    const openClusterList = () => {
-      source.getClusterLeaves(clusterId, MARKET_CLUSTER_LEAF_LIMIT, 0, (leafErr, leavesRaw) => {
-        if (leafErr) return;
-        const leaves = Array.isArray(leavesRaw) ? leavesRaw : [];
-
-        const marketCandidates: Array<Extract<MapSelectionCandidate, { type: 'market' }>> = [];
-        const seen = new Set<string>();
-        for (const leaf of leaves) {
-          const id = String(leaf.properties?.id || '');
-          const market = marketByIdRef.current.get(id);
-          if (!market || seen.has(id)) continue;
-          seen.add(id);
-          marketCandidates.push({
-            type: 'market',
-            id,
-            title: market.title,
-            subtitle: `${Math.round(market.probability * 100)}% - ${market.volume}`,
-            data: market,
-          });
-        }
-
-        marketCandidates.sort((a, b) => {
-          const marketA = a.data;
-          const marketB = b.data;
-          if (marketB.signalScore !== marketA.signalScore) return marketB.signalScore - marketA.signalScore;
-          return marketB.volumeRaw - marketA.volumeRaw;
-        });
-
-        if (marketCandidates.length > 0) {
-          onSelectionCandidatesRef.current?.(`Market Stack (${marketCandidates.length})`, marketCandidates);
-        }
-      });
-    };
-
+    clearMarketSpiderfy();
     source.getClusterLeaves(clusterId, MARKET_CLUSTER_LEAF_LIMIT, 0, (leafErr, leavesRaw) => {
       if (leafErr) return;
       const leaves = Array.isArray(leavesRaw) ? leavesRaw : [];
-
-      if (leaves.length <= 1) {
-        openClusterList();
-        return;
-      }
-
-      const points = leaves
-        .map((leaf) => {
-          const geom = leaf.geometry as GeoJSON.Point | undefined;
-          if (!geom || !Array.isArray(geom.coordinates)) return null;
-          const [lng, lat] = geom.coordinates;
-          if (typeof lng !== 'number' || typeof lat !== 'number') return null;
-          return { lat, lng };
-        })
-        .filter((value): value is { lat: number; lng: number } => Boolean(value));
-
-      let maxSpreadKm = 0;
-      const sampleBase = points[0];
-      if (sampleBase) {
-        for (let i = 1; i < points.length; i++) {
-          const dist = haversineKm(sampleBase.lat, sampleBase.lng, points[i].lat, points[i].lng);
-          if (dist > maxSpreadKm) maxSpreadKm = dist;
-        }
-      }
-
-      source.getClusterExpansionZoom(clusterId, (zoomErr, expansionZoom) => {
-        if (zoomErr || expansionZoom == null) {
-          openClusterList();
-          return;
-        }
-
-        const currentZoom = m.getZoom();
-        const noRealSpatialSpread = maxSpreadKm < 3.5;
-        const alreadyNearExpansion = currentZoom >= expansionZoom - 0.35;
-
-        if (noRealSpatialSpread || alreadyNearExpansion || currentZoom >= MARKET_CLUSTER_MAX_ZOOM - 0.3) {
-          openClusterList();
-          return;
-        }
-
-        const targetZoom = Math.min(expansionZoom, currentZoom + 2.4, MARKET_CLUSTER_MAX_ZOOM + 0.05);
-        m.easeTo({ center, zoom: targetZoom, duration: 520 });
-      });
+      const marketCandidates = toMarketCandidates(leaves);
+      openMarketSpiderfy(center, marketCandidates);
     });
-  }, []);
+  }, [clearMarketSpiderfy, openMarketSpiderfy, toMarketCandidates]);
 
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
@@ -1102,10 +1234,21 @@ function MonitorMap({
       layersReady.current = true;
 
       m.on('click', (e) => {
+        const spiderHits = m.queryRenderedFeatures(e.point, { layers: ['market-spider-markers'] });
+        if (spiderHits.length > 0) {
+          const id = String(spiderHits[0].properties?.id || '');
+          const market = marketByIdRef.current.get(id);
+          if (market) {
+            onMarketClickRef.current?.(market);
+            return;
+          }
+        }
+
         const clusterHits = m.queryRenderedFeatures(e.point, { layers: ['event-clusters', 'market-clusters'] });
         if (clusterHits.length > 0) {
-        const cluster = clusterHits[0];
+          const cluster = clusterHits[0];
           if (cluster.layer?.id === 'event-clusters') {
+            clearMarketSpiderfy();
             const source = m.getSource('events') as mapboxgl.GeoJSONSource;
             const clusterId = Number(cluster.properties?.cluster_id);
             source.getClusterExpansionZoom(clusterId, (err, zoom) => {
@@ -1129,14 +1272,20 @@ function MonitorMap({
         });
 
         if (hits.length === 0) {
+          clearMarketSpiderfy();
           onMapClickRef.current?.();
           return;
         }
 
         const candidates = buildCandidates(hits);
         if (candidates.length === 0) {
+          clearMarketSpiderfy();
           onMapClickRef.current?.();
           return;
+        }
+
+        if (candidates.every((candidate) => candidate.type !== 'market')) {
+          clearMarketSpiderfy();
         }
 
         if (candidates.length > 1) {
@@ -1147,7 +1296,7 @@ function MonitorMap({
         openCandidate(candidates[0]);
       });
 
-      for (const layerId of ['event-points', 'event-clusters', 'market-markers', 'market-clusters', 'earthquake-circles', 'watch-zone-fill', 'watch-zone-outline']) {
+      for (const layerId of ['event-points', 'event-clusters', 'market-markers', 'market-clusters', 'market-spider-markers', 'earthquake-circles', 'watch-zone-fill', 'watch-zone-outline']) {
         m.on('mouseenter', layerId, () => { m.getCanvas().style.cursor = 'pointer'; });
         m.on('mouseleave', layerId, () => { m.getCanvas().style.cursor = ''; });
       }
@@ -1159,7 +1308,7 @@ function MonitorMap({
       map.current?.remove();
       map.current = null;
     };
-  }, [buildCandidates, expandMarketClusterStep, openCandidate]);
+  }, [buildCandidates, clearMarketSpiderfy, expandMarketClusterStep, openCandidate]);
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -1179,6 +1328,47 @@ function MonitorMap({
       essential: true,
     });
   }, [activeRoom]);
+
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !layersReady.current) return;
+
+    const handleZoomEnd = () => {
+      const state = marketSpiderRef.current;
+      if (!state || !visibleSignals.markets) return;
+      renderMarketSpiderfy(state);
+    };
+
+    m.on('zoomend', handleZoomEnd);
+    return () => {
+      m.off('zoomend', handleZoomEnd);
+    };
+  }, [renderMarketSpiderfy, visibleSignals.markets]);
+
+  useEffect(() => {
+    if (visibleSignals.markets) return;
+    clearMarketSpiderfy();
+  }, [visibleSignals.markets, clearMarketSpiderfy]);
+
+  useEffect(() => {
+    const state = marketSpiderRef.current;
+    if (!state) return;
+
+    const allowedIds = new Set(filteredMarkets.map((market) => market.id));
+    const nextCandidates = state.candidates.filter((candidate) => allowedIds.has(candidate.id));
+
+    if (nextCandidates.length <= 1) {
+      clearMarketSpiderfy();
+      return;
+    }
+
+    if (nextCandidates.length !== state.candidates.length) {
+      renderMarketSpiderfy({
+        center: state.center,
+        candidates: nextCandidates,
+      });
+    }
+  }, [filteredMarkets, clearMarketSpiderfy, renderMarketSpiderfy]);
 
   useEffect(() => {
     if (!layersReady.current) return;
