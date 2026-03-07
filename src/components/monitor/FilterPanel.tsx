@@ -1,22 +1,26 @@
 'use client';
 
-import { useState, useEffect, useCallback, memo } from 'react';
+import { useState, useEffect, memo } from 'react';
 import Link from 'next/link';
 import { THEMES, THEME_KEYS, type ThemeKey } from '@/lib/monitor/themes';
 import type { MonitorResponseMeta } from '@/lib/monitor/response';
-import type { SituationRoomConfig } from '@/lib/monitor/types';
-
-type LayerKey = 'notams' | 'shipping' | 'elections';
+import type { SignalKey, SituationRoomConfig, WatchZone } from '@/lib/monitor/types';
 
 interface FilterPanelProps {
-  visibleThemes: Record<ThemeKey, boolean>;
-  onToggleTheme: (key: ThemeKey) => void;
-  visibleLayers: Record<LayerKey, boolean>;
-  onToggleLayer: (key: LayerKey) => void;
+  focusMode: 'global' | 'room';
   situationRooms: SituationRoomConfig[];
   activeSituationRoomId: string | null;
+  onSelectGlobalFocus: () => void;
   onSelectSituationRoom: (roomId: string) => void;
+  visibleThemes: Record<ThemeKey, boolean>;
+  onToggleTheme: (key: ThemeKey) => void;
   themeCounts: Record<ThemeKey, number>;
+  visibleSignals: Record<SignalKey, boolean>;
+  onToggleSignal: (key: SignalKey) => void;
+  signalCounts: Record<SignalKey, number>;
+  watchZones: WatchZone[];
+  visibleWatchZones: Record<string, boolean>;
+  onToggleWatchZone: (zoneId: string) => void;
   sourceHealth?: {
     events?: MonitorResponseMeta | null;
     markets?: MonitorResponseMeta | null;
@@ -27,98 +31,23 @@ interface FilterPanelProps {
   };
 }
 
-/* ── SVG Icons (16x16) ── */
-
-const IconCrosshair = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
-    <circle cx="8" cy="8" r="5" />
-    <line x1="8" y1="1" x2="8" y2="4" />
-    <line x1="8" y1="12" x2="8" y2="15" />
-    <line x1="1" y1="8" x2="4" y2="8" />
-    <line x1="12" y1="8" x2="15" y2="8" />
-  </svg>
-);
-
-const IconBallot = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
-    <rect x="3" y="2" width="10" height="12" rx="1" />
-    <line x1="6" y1="5" x2="10" y2="5" />
-    <line x1="6" y1="8" x2="10" y2="8" />
-    <line x1="6" y1="11" x2="9" y2="11" />
-  </svg>
-);
-
-const IconTrending = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
-    <polyline points="1,12 5,7 9,9 15,3" />
-    <polyline points="11,3 15,3 15,7" />
-  </svg>
-);
-
-const IconWave = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
-    <path d="M1,8 Q3,4 5,8 Q7,12 9,8 Q11,4 13,8 Q14,10 15,8" />
-    <line x1="1" y1="13" x2="15" y2="13" strokeWidth="0.8" opacity="0.5" />
-  </svg>
-);
-
-const IconCable = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
-    <circle cx="3" cy="8" r="2" />
-    <circle cx="13" cy="8" r="2" />
-    <line x1="5" y1="8" x2="11" y2="8" />
-    <line x1="3" y1="3" x2="3" y2="6" />
-    <line x1="13" y1="3" x2="13" y2="6" />
-  </svg>
-);
-
-const IconHamburger = () => (
-  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-    <line x1="3" y1="5" x2="15" y2="5" />
-    <line x1="3" y1="9" x2="15" y2="9" />
-    <line x1="3" y1="13" x2="15" y2="13" />
-  </svg>
-);
-
-const IconClose = () => (
-  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-    <line x1="4" y1="4" x2="14" y2="14" />
-    <line x1="14" y1="4" x2="4" y2="14" />
-  </svg>
-);
-
-const IconChevron = ({ open }: { open: boolean }) => (
-  <svg
-    width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
-    style={{ transition: 'transform 200ms ease', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}
-  >
-    <polyline points="4,2 8,6 4,10" />
-  </svg>
-);
-
-const IconCheck = () => (
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#22C55E" strokeWidth="1.5" strokeLinecap="round">
-    <polyline points="2,6 5,9 10,3" />
-  </svg>
-);
-
-/* ── Theme icon mapping ── */
-
-const THEME_ICONS: Record<ThemeKey, React.FC> = {
-  conflicts: IconCrosshair,
-  elections: IconBallot,
-  economy: IconTrending,
-  disasters: IconWave,
-  infrastructure: IconCable,
+const SIGNAL_CONFIG: Record<SignalKey, { label: string; color: string }> = {
+  events: { label: 'Events / News', color: '#FF6666' },
+  markets: { label: 'Prediction Markets', color: '#66AAFF' },
+  disasters: { label: 'Disaster Sensors', color: '#FFAA33' },
+  infrastructure_overlays: { label: 'Infrastructure Overlays', color: '#00DDCC' },
+  watch_zones: { label: 'Watch Zones', color: '#8B9BB5' },
 };
 
-const LAYER_CONFIGS: Record<LayerKey, { label: string; color: string }> = {
-  notams: { label: 'NOTAM Airspace', color: '#FF6B3D' },
-  shipping: { label: 'Shipping Chokepoints', color: '#00DDCC' },
-  elections: { label: 'Election Calendar', color: '#66AAFF' },
-};
+const SIGNAL_KEYS: SignalKey[] = [
+  'events',
+  'markets',
+  'disasters',
+  'infrastructure_overlays',
+  'watch_zones',
+];
 
-/* ── Toggle switch ── */
+const themeDot = (theme: ThemeKey): string => THEMES[theme].color;
 
 function ToggleSwitch({ on, color }: { on: boolean; color: string }) {
   return (
@@ -150,8 +79,6 @@ function ToggleSwitch({ on, color }: { on: boolean; color: string }) {
   );
 }
 
-/* ── Section header ── */
-
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
     <span
@@ -170,36 +97,50 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
   );
 }
 
-/* ── Data sources section ── */
-
 function formatSourceDetail(meta: MonitorResponseMeta | null | undefined, fallback: string): string {
-  if (!meta) return `Pending • ${fallback}`;
+  if (!meta) return `Pending - ${fallback}`;
   const coverage = meta.sourceCoverage || [];
-  const healthy = coverage.filter((s) => !s.failed).length;
+  const healthy = coverage.filter((source) => !source.failed).length;
   const freshness = `${Math.max(0, Math.round(meta.freshnessSeconds))}s`;
 
   if (coverage.length > 0) {
-    return `${healthy}/${coverage.length} healthy • ${freshness} • ${meta.cacheState}`;
+    return `${healthy}/${coverage.length} healthy - ${freshness} - ${meta.cacheState}`;
   }
-  return `${freshness} • ${meta.cacheState}`;
+  return `${freshness} - ${meta.cacheState}`;
 }
 
-/* ── Main component ── */
-
 function FilterPanel({
-  visibleThemes,
-  onToggleTheme,
-  visibleLayers,
-  onToggleLayer,
+  focusMode,
   situationRooms,
   activeSituationRoomId,
+  onSelectGlobalFocus,
   onSelectSituationRoom,
+  visibleThemes,
+  onToggleTheme,
   themeCounts,
+  visibleSignals,
+  onToggleSignal,
+  signalCounts,
+  watchZones,
+  visibleWatchZones,
+  onToggleWatchZone,
   sourceHealth,
 }: FilterPanelProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
-  const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [healthOpen, setHealthOpen] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const handler = (e: MediaQueryListEvent | MediaQueryList) => {
+      setIsMobile(e.matches);
+      if (!e.matches) setPanelOpen(false);
+    };
+    handler(mq);
+    mq.addEventListener('change', handler as (e: MediaQueryListEvent) => void);
+    return () => mq.removeEventListener('change', handler as (e: MediaQueryListEvent) => void);
+  }, []);
+
   const dataSources = [
     {
       label: 'Geopolitical Events',
@@ -215,41 +156,23 @@ function FilterPanel({
     },
     {
       label: 'NOTAM Overlay',
-      detail: formatSourceDetail(sourceHealth?.notams, 'Airspace closures'),
+      detail: formatSourceDetail(sourceHealth?.notams, 'Airspace restrictions'),
     },
     {
       label: 'Shipping Overlay',
-      detail: formatSourceDetail(sourceHealth?.shipping, 'Chokepoint traffic'),
+      detail: formatSourceDetail(sourceHealth?.shipping, 'Chokepoint activity'),
     },
     {
       label: 'Election Overlay',
       detail: formatSourceDetail(sourceHealth?.elections, 'Global election calendar'),
     },
-    {
-      label: 'Ongoing Situations',
-      detail: 'Curated static dataset',
-    },
   ];
 
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 768px)');
-    const handler = (e: MediaQueryListEvent | MediaQueryList) => {
-      setIsMobile(e.matches);
-      if (!e.matches) setPanelOpen(false);
-    };
-    handler(mq);
-    mq.addEventListener('change', handler as (e: MediaQueryListEvent) => void);
-    return () => mq.removeEventListener('change', handler as (e: MediaQueryListEvent) => void);
-  }, []);
-
-  const togglePanel = useCallback(() => setPanelOpen((p) => !p), []);
-  const closePanel = useCallback(() => setPanelOpen(false), []);
-
-  const panelContent = (
+  const panel = (
     <div
       style={{
-        width: 240,
-        minWidth: 240,
+        width: 260,
+        minWidth: 260,
         height: '100%',
         background: '#111827',
         borderRight: '1px solid #334155',
@@ -260,144 +183,25 @@ function FilterPanel({
         overflowX: 'hidden',
       }}
     >
-      {/* Header with close button on mobile */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-        <SectionHeader>Themes</SectionHeader>
-        {isMobile && (
-          <button
-            onClick={closePanel}
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 6,
-              background: 'transparent',
-              border: '1px solid #334155',
-              color: '#64748B',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              flexShrink: 0,
-              marginBottom: 10,
-            }}
-          >
-            <IconClose />
-          </button>
-        )}
-      </div>
-
-      {/* Theme toggles */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {THEME_KEYS.map((key) => {
-          const theme = THEMES[key];
-          const Icon = THEME_ICONS[key];
-          const isOn = visibleThemes[key];
-          const count = themeCounts[key];
-
-          return (
-            <div
-              key={key}
-              onClick={() => onToggleTheme(key)}
-              style={{
-                padding: '7px 8px',
-                borderRadius: 6,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                cursor: 'pointer',
-                userSelect: 'none',
-                transition: 'background 150ms ease',
-                color: isOn ? '#CBD5E1' : '#64748B',
-              }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#1E293B'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-            >
-              {/* Colored dot */}
-              <div
-                style={{
-                  width: 4,
-                  height: 4,
-                  borderRadius: '50%',
-                  background: isOn ? theme.color : '#475569',
-                  flexShrink: 0,
-                  transition: 'background 150ms ease',
-                }}
-              />
-              {/* Icon */}
-              <span style={{ flexShrink: 0, opacity: isOn ? 0.9 : 0.4, transition: 'opacity 150ms ease' }}>
-                <Icon />
-              </span>
-              {/* Label */}
-              <span style={{ flex: 1, fontSize: 12, lineHeight: '16px' }}>{theme.label}</span>
-              {/* Count badge */}
-              {count > 0 && (
-                <span
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 600,
-                    color: isOn ? theme.color : '#475569',
-                    background: isOn ? `${theme.color}15` : 'transparent',
-                    padding: '1px 5px',
-                    borderRadius: 3,
-                    minWidth: 20,
-                    textAlign: 'center',
-                    transition: 'color 150ms ease, background 150ms ease',
-                  }}
-                >
-                  {count}
-                </span>
-              )}
-              {/* Toggle */}
-              <ToggleSwitch on={isOn} color={theme.color} />
-            </div>
-          );
-        })}
-      </div>
-
-      <div style={{ borderTop: '1px solid #1E293B', margin: '14px 0' }} />
-
-      <SectionHeader>Layers</SectionHeader>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {(Object.keys(LAYER_CONFIGS) as LayerKey[]).map((key) => {
-          const cfg = LAYER_CONFIGS[key];
-          const isOn = visibleLayers[key];
-          return (
-            <div
-              key={key}
-              onClick={() => onToggleLayer(key)}
-              style={{
-                padding: '7px 8px',
-                borderRadius: 6,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                cursor: 'pointer',
-                userSelect: 'none',
-                transition: 'background 150ms ease',
-                color: isOn ? '#CBD5E1' : '#64748B',
-              }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#1E293B'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-            >
-              <div
-                style={{
-                  width: 4,
-                  height: 4,
-                  borderRadius: '50%',
-                  background: isOn ? cfg.color : '#475569',
-                }}
-              />
-              <span style={{ flex: 1, fontSize: 12, lineHeight: '16px' }}>{cfg.label}</span>
-              <ToggleSwitch on={isOn} color={cfg.color} />
-            </div>
-          );
-        })}
-      </div>
-
-      <div style={{ borderTop: '1px solid #1E293B', margin: '14px 0' }} />
-
-      <SectionHeader>Situation Rooms</SectionHeader>
+      <SectionHeader>Focus</SectionHeader>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <button
+          onClick={onSelectGlobalFocus}
+          style={{
+            width: '100%',
+            textAlign: 'left',
+            background: focusMode === 'global' ? 'rgba(74,158,255,0.14)' : 'rgba(255,255,255,0.02)',
+            border: focusMode === 'global' ? '1px solid rgba(74,158,255,0.35)' : '1px solid #1E293B',
+            color: focusMode === 'global' ? '#CFE5FF' : '#94A3B8',
+            borderRadius: 6,
+            padding: '8px 10px',
+            cursor: 'pointer',
+            fontSize: 12,
+            fontWeight: 600,
+          }}
+        >
+          Global
+        </button>
         {situationRooms.map((room) => {
           const active = activeSituationRoomId === room.id;
           return (
@@ -424,62 +228,157 @@ function FilterPanel({
         })}
       </div>
 
-      {/* Divider */}
       <div style={{ borderTop: '1px solid #1E293B', margin: '14px 0' }} />
 
-      {/* Data Sources (collapsible) */}
+      <SectionHeader>Themes</SectionHeader>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {THEME_KEYS.map((key) => {
+          const theme = THEMES[key];
+          const isOn = visibleThemes[key];
+          return (
+            <div
+              key={key}
+              onClick={() => onToggleTheme(key)}
+              style={{
+                padding: '7px 8px',
+                borderRadius: 6,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                cursor: 'pointer',
+                color: isOn ? '#CBD5E1' : '#64748B',
+              }}
+            >
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: isOn ? theme.color : '#475569' }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, lineHeight: '16px' }}>{theme.label}</div>
+                <div style={{ fontSize: 9, color: '#475569', lineHeight: '11px' }}>{theme.description}</div>
+              </div>
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: isOn ? theme.color : '#475569',
+                  background: isOn ? `${theme.color}15` : 'transparent',
+                  padding: '1px 5px',
+                  borderRadius: 3,
+                  minWidth: 20,
+                  textAlign: 'center',
+                }}
+              >
+                {themeCounts[key]}
+              </span>
+              <ToggleSwitch on={isOn} color={theme.color} />
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ borderTop: '1px solid #1E293B', margin: '14px 0' }} />
+
+      <SectionHeader>Signal Types</SectionHeader>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {SIGNAL_KEYS.map((key) => {
+          const cfg = SIGNAL_CONFIG[key];
+          const isOn = visibleSignals[key];
+          return (
+            <div
+              key={key}
+              onClick={() => onToggleSignal(key)}
+              style={{
+                padding: '7px 8px',
+                borderRadius: 6,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                cursor: 'pointer',
+                color: isOn ? '#CBD5E1' : '#64748B',
+              }}
+            >
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: isOn ? cfg.color : '#475569' }} />
+              <span style={{ flex: 1, fontSize: 12, lineHeight: '16px' }}>{cfg.label}</span>
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: isOn ? cfg.color : '#475569',
+                  background: isOn ? `${cfg.color}18` : 'transparent',
+                  padding: '1px 5px',
+                  borderRadius: 3,
+                  minWidth: 20,
+                  textAlign: 'center',
+                }}
+              >
+                {signalCounts[key]}
+              </span>
+              <ToggleSwitch on={isOn} color={cfg.color} />
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ borderTop: '1px solid #1E293B', margin: '14px 0' }} />
+
+      <SectionHeader>Watch Zones</SectionHeader>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {watchZones.map((zone) => {
+          const isOn = Boolean(visibleWatchZones[zone.id]);
+          return (
+            <div
+              key={zone.id}
+              onClick={() => onToggleWatchZone(zone.id)}
+              style={{
+                padding: '6px 8px',
+                borderRadius: 6,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                cursor: 'pointer',
+                color: isOn ? '#CBD5E1' : '#64748B',
+              }}
+            >
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: isOn ? themeDot(zone.theme) : '#475569' }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, lineHeight: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {zone.name}
+                </div>
+                <div style={{ fontSize: 9, color: '#475569', textTransform: 'uppercase' }}>{zone.severity}</div>
+              </div>
+              <ToggleSwitch on={isOn} color={themeDot(zone.theme)} />
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ borderTop: '1px solid #1E293B', margin: '14px 0' }} />
+
       <div
-        onClick={() => setSourcesOpen((p) => !p)}
+        onClick={() => setHealthOpen((prev) => !prev)}
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 6,
+          justifyContent: 'space-between',
           cursor: 'pointer',
-          userSelect: 'none',
-          marginBottom: sourcesOpen ? 10 : 0,
+          marginBottom: healthOpen ? 8 : 0,
         }}
       >
-        <IconChevron open={sourcesOpen} />
-        <span
-          style={{
-            color: '#64748B',
-            fontSize: 10,
-            fontWeight: 600,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-          }}
-        >
-          Data Sources
-        </span>
+        <SectionHeader>Data Health</SectionHeader>
+        <span style={{ color: '#64748B', fontSize: 11 }}>{healthOpen ? '−' : '+'}</span>
       </div>
 
-      {sourcesOpen && (
+      {healthOpen && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: 4 }}>
           {dataSources.map(({ label, detail }) => (
-            <div
-              key={label}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '4px 6px',
-                borderRadius: 4,
-              }}
-            >
-              <IconCheck />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, color: '#94A3B8', lineHeight: '14px' }}>{label}</div>
-                <div style={{ fontSize: 9, color: '#475569', lineHeight: '12px' }}>{detail}</div>
-              </div>
+            <div key={label} style={{ padding: '4px 6px', borderRadius: 4 }}>
+              <div style={{ fontSize: 11, color: '#94A3B8', lineHeight: '14px' }}>{label}</div>
+              <div style={{ fontSize: 9, color: '#475569', lineHeight: '12px' }}>{detail}</div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Spacer */}
       <div style={{ flex: 1 }} />
 
-      {/* Footer */}
       <div
         style={{
           paddingTop: 12,
@@ -490,22 +389,7 @@ function FilterPanel({
       >
         <span style={{ fontSize: 10, color: '#334155' }}>
           Built by{' '}
-          <Link
-            href="/"
-            style={{
-              color: '#475569',
-              textDecoration: 'none',
-              transition: 'color 150ms ease',
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.color = '#64748B';
-              (e.currentTarget as HTMLElement).style.textDecoration = 'underline';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.color = '#475569';
-              (e.currentTarget as HTMLElement).style.textDecoration = 'none';
-            }}
-          >
+          <Link href="/" style={{ color: '#475569', textDecoration: 'none' }}>
             Robert Williams
           </Link>
         </span>
@@ -513,18 +397,13 @@ function FilterPanel({
     </div>
   );
 
-  // Desktop: always visible
-  if (!isMobile) {
-    return panelContent;
-  }
+  if (!isMobile) return panel;
 
-  // Mobile: zero-width in flex flow, everything absolutely positioned
   return (
     <div style={{ width: 0, minWidth: 0, position: 'relative' }}>
-      {/* Hamburger button (only when panel closed) */}
       {!panelOpen && (
         <button
-          onClick={togglePanel}
+          onClick={() => setPanelOpen(true)}
           style={{
             position: 'fixed',
             top: 44,
@@ -536,22 +415,18 @@ function FilterPanel({
             background: 'rgba(17,24,39,0.85)',
             border: '1px solid #334155',
             color: '#94A3B8',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
             cursor: 'pointer',
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)',
           }}
         >
-          <IconHamburger />
+          ☰
         </button>
       )}
 
-      {/* Overlay */}
       {panelOpen && (
         <div
-          onClick={closePanel}
+          onClick={() => setPanelOpen(false)}
           style={{
             position: 'fixed',
             inset: 0,
@@ -561,7 +436,6 @@ function FilterPanel({
         />
       )}
 
-      {/* Sliding panel */}
       <div
         style={{
           position: 'fixed',
@@ -570,10 +444,10 @@ function FilterPanel({
           bottom: 0,
           zIndex: 22,
           transform: panelOpen ? 'translateX(0)' : 'translateX(-100%)',
-          transition: 'transform 300ms ease',
+          transition: 'transform 250ms ease',
         }}
       >
-        {panelContent}
+        {panel}
       </div>
     </div>
   );

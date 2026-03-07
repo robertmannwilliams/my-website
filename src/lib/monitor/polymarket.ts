@@ -21,6 +21,10 @@ export interface PolymarketMarket {
   geoConfidence: number;
   geoMethod: GeoMatchMethod;
   isMapPlottable: boolean;
+  signalScore: number;
+  topicTags: string[];
+  mapPriority: number;
+  linkConfidence?: number;
 }
 
 export type MarketCategory =
@@ -59,6 +63,13 @@ const GEOPOLITICAL_HINTS = [
   'sanction', 'treaty', 'ceasefire', 'missile', 'troops', 'nuclear',
   'ukraine', 'russia', 'iran', 'israel', 'china', 'taiwan', 'middle east',
 ];
+
+const STOPWORDS = new Set([
+  'the', 'and', 'for', 'with', 'that', 'this', 'from', 'into', 'will', 'would',
+  'could', 'should', 'after', 'before', 'about', 'over', 'under', 'near', 'amid',
+  'a', 'an', 'to', 'of', 'in', 'on', 'at', 'by', 'or', 'is', 'are', 'be', 'as',
+  'us', 'u.s', 'any', 'more', 'less', 'than', 'how', 'what', 'who', 'when', 'where',
+]);
 
 const CATEGORY_KEYWORDS: Record<MarketCategory, string[]> = {
   conflict: [
@@ -239,6 +250,15 @@ export function marketSignalScore(market: PolymarketMarket): number {
   return volumeScore + liquidityScore + geoScore + geoBonus + categoryBonus;
 }
 
+function normalizedTokens(text: string): string[] {
+  const tokens = text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((token) => token.length >= 3 && !STOPWORDS.has(token));
+  return [...new Set(tokens)];
+}
+
 export function isHighSignalMapMarket(market: PolymarketMarket): boolean {
   if (!market.isMapPlottable) return false;
   if (market.geoConfidence < 0.62) return false;
@@ -316,13 +336,18 @@ export async function fetchPolymarkets(): Promise<PolymarketMarket[]> {
       geoConfidence: geo.geoConfidence,
       geoMethod: geo.geoMethod,
       isMapPlottable: geo.isMapPlottable,
+      signalScore: 0,
+      topicTags: normalizedTokens(m.question).slice(0, 8),
+      mapPriority: 0,
     });
   }
 
-  results.sort((a, b) => {
-    if (b.volumeRaw !== a.volumeRaw) return b.volumeRaw - a.volumeRaw;
-    return b.liquidity - a.liquidity;
-  });
+  for (const market of results) {
+    market.signalScore = marketSignalScore(market);
+    market.mapPriority = market.signalScore;
+  }
+
+  results.sort((a, b) => b.signalScore - a.signalScore);
 
   await incrementMetric('markets_final_count', results.length);
   return results.slice(0, 120);
@@ -347,28 +372,67 @@ export function findRelatedMarkets(
   markets: PolymarketMarket[],
   radiusKm: number = 500,
 ): PolymarketMarket[] {
-  const nearby = markets.filter(
-    (m) =>
-      isHighSignalMapMarket(m) &&
-      haversineKm(event.lat, event.lng, m.lat, m.lng) <= radiusKm,
-  );
+  const eventText = `${event.title} ${event.summary || ''}`;
+  const eventTokens = normalizedTokens(eventText);
+  const eventTokenSet = new Set(eventTokens);
+  const eventTags = event.topicTags && event.topicTags.length > 0 ? event.topicTags : eventTokens.slice(0, 10);
+
+  const categoryRadius = event.category === 'conflicts'
+    ? 380
+    : event.category === 'economy'
+      ? 1200
+      : event.category === 'elections'
+        ? 700
+        : event.category === 'disasters'
+          ? 850
+          : radiusKm;
+
+  const nearby = markets
+    .filter((m) => isHighSignalMapMarket(m))
+    .map((m) => {
+      const dist = haversineKm(event.lat, event.lng, m.lat, m.lng);
+      const geoScore = Math.max(0, 1 - dist / categoryRadius);
+
+      const mTokens = m.topicTags.length > 0 ? m.topicTags : normalizedTokens(m.title);
+      let overlap = 0;
+      for (const token of mTokens) {
+        if (eventTokenSet.has(token)) overlap++;
+      }
+      const denom = Math.max(1, Math.min(12, eventTags.length + mTokens.length - overlap));
+      const topicScore = overlap / denom;
+
+      const linkConfidence = topicScore * 0.58 + geoScore * 0.42;
+      return {
+        market: m,
+        dist,
+        topicScore,
+        linkConfidence,
+        overlapTokens: mTokens.filter((token) => eventTokenSet.has(token)).slice(0, 3),
+      };
+    })
+    .filter((row) => row.dist <= categoryRadius && row.topicScore >= 0.08 && row.linkConfidence >= 0.2);
 
   nearby.sort((a, b) => {
-    const scoreDelta = marketSignalScore(b) - marketSignalScore(a);
+    const scoreDelta = b.linkConfidence - a.linkConfidence;
     if (scoreDelta !== 0) return scoreDelta;
-    return b.volumeRaw - a.volumeRaw;
+    return b.market.signalScore - a.market.signalScore;
   });
 
   const deduped: PolymarketMarket[] = [];
   const seen = new Set<string>();
 
-  for (const market of nearby) {
+  for (const row of nearby) {
+    const market = row.market;
     const locationBucket = `${Math.round(market.lat * 2) / 2}|${Math.round(market.lng * 2) / 2}`;
     const key = `${market.category}|${locationBucket}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    deduped.push(market);
-    if (deduped.length >= 6) break;
+    deduped.push({
+      ...market,
+      linkConfidence: row.linkConfidence,
+      topicTags: row.overlapTokens.length > 0 ? row.overlapTokens : market.topicTags.slice(0, 2),
+    });
+    if (deduped.length >= 5) break;
   }
 
   return deduped;

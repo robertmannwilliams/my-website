@@ -1,0 +1,80 @@
+[
+  {
+    "id": "iran-war",
+    "name": "US-Israel vs Iran Escalation",
+    "summary": "Active interstate conflict involving Iranian retaliation and Gulf-wide escalation risk.",
+    "theme": "conflicts",
+    "severity": "critical",
+    "geometry": { "type": "circle", "center": [51.389, 35.6892], "radiusKm": 900 },
+    "scope": "Iran, Gulf states, and adjacent maritime chokepoints",
+    "status": "Active war with cross-border strike/retaliation cycles",
+    "assets": ["Brent", "WTI", "Gold", "DXY", "Hormuz Shipping"],
+    "updatedAt": "2026-03-04",
+    "roomIds": ["middle-east"]
+  },
+  {
+    "id": "russia-ukraine",
+    "name": "Russia-Ukraine Frontline",
+    "summary": "Persistent high-intensity war with shifting frontlines and continued infrastructure strikes.",
+    "theme": "conflicts",
+    "severity": "critical",
+    "geometry": { "type": "circle", "center": [30.5234, 50.4501], "radiusKm": 700 },
+    "scope": "Ukraine frontline, border regions, and Black Sea interfaces",
+    "status": "Active attritional conflict with periodic escalatory spikes",
+    "assets": ["European Gas", "Wheat", "EUR/USD", "USD/RUB"],
+    "updatedAt": "2026-03-04",
+    "roomIds": ["ukraine"]
+  },
+  {
+    "id": "sudan-civil-war",
+    "name": "Sudan Civil War",
+    "summary": "Multi-front civil conflict with severe humanitarian and displacement impacts.",
+    "theme": "conflicts",
+    "severity": "watch",
+    "geometry": { "type": "circle", "center": [32.5599, 15.5007], "radiusKm": 500 },
+    "scope": "Khartoum-Darfur-Kordofan conflict corridor",
+    "status": "Active conflict with alternating territorial control",
+    "assets": ["Gold", "Regional Shipping", "Food Security Indicators"],
+    "updatedAt": "2026-03-04",
+    "roomIds": []
+  },
+  {
+    "id": "myanmar-civil-war",
+    "name": "Myanmar Internal Conflict",
+    "summary": "Persistent conflict with fragmented territorial control and displacement pressure.",
+    "theme": "conflicts",
+    "severity": "watch",
+    "geometry": { "type": "circle", "center": [96.0785, 19.7633], "radiusKm": 450 },
+    "scope": "Central Myanmar plus contested border-adjacent states",
+    "status": "Active conflict with periodic offensive phases",
+    "assets": ["Regional FX", "Rare Earth Supply", "Natural Gas Flows"],
+    "updatedAt": "2026-03-04",
+    "roomIds": []
+  },
+  {
+    "id": "south-china-sea",
+    "name": "South China Sea Friction",
+    "summary": "Recurring maritime coercion and military signaling around disputed features.",
+    "theme": "infrastructure",
+    "severity": "watch",
+    "geometry": { "type": "circle", "center": [114.5, 12.5], "radiusKm": 900 },
+    "scope": "Spratly/Scarborough/Second Thomas maritime zone",
+    "status": "Persistent tension with episodic incidents and diplomatic oscillation",
+    "assets": ["Shipping Rates", "USD/CNY", "Semiconductor Supply Risk"],
+    "updatedAt": "2026-03-04",
+    "roomIds": []
+  },
+  {
+    "id": "red-sea-crisis",
+    "name": "Red Sea Chokepoint Risk",
+    "summary": "Potential disruption risk to Bab el-Mandeb and Suez-linked shipping lanes.",
+    "theme": "infrastructure",
+    "severity": "critical",
+    "geometry": { "type": "circle", "center": [43.3333, 12.5833], "radiusKm": 500 },
+    "scope": "Bab el-Mandeb, Red Sea corridor, and Suez route dependencies",
+    "status": "Elevated disruption risk with asymmetric attack threat",
+    "assets": ["Brent", "Container Rates", "Baltic Dry Index", "Suez Throughput"],
+    "updatedAt": "2026-03-04",
+    "roomIds": ["middle-east"]
+  }
+]

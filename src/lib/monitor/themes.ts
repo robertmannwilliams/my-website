@@ -1,17 +1,16 @@
 import type { GdeltEvent } from './events';
 import type { PolymarketMarket } from './polymarket';
 import type { UsgsEarthquake } from './usgs';
-import type { OngoingSituation } from './types';
 
 export type ThemeKey = 'conflicts' | 'elections' | 'economy' | 'disasters' | 'infrastructure';
 
 export interface ThemeConfig {
   key: ThemeKey;
   label: string;
+  description: string;
   color: string;
   eventCategories: string[];
   marketCategories: string[];
-  situationCategories: string[];
   includesEarthquakes: boolean;
 }
 
@@ -19,46 +18,46 @@ export const THEMES: Record<ThemeKey, ThemeConfig> = {
   conflicts: {
     key: 'conflicts',
     label: 'Conflicts & Military',
+    description: 'Interstate/intrastate violence and coercive escalation.',
     color: '#FF4444',
     eventCategories: ['conflicts'],
     marketCategories: ['conflict'],
-    situationCategories: ['conflicts'],
     includesEarthquakes: false,
   },
   elections: {
     key: 'elections',
     label: 'Elections & Politics',
+    description: 'Governance, leadership transitions, institutional instability.',
     color: '#4A9EFF',
     eventCategories: ['elections'],
     marketCategories: ['politics'],
-    situationCategories: [],
     includesEarthquakes: false,
   },
   economy: {
     key: 'economy',
     label: 'Economy & Trade',
+    description: 'Macro policy, sanctions economics, trade and energy pricing context.',
     color: '#22C55E',
     eventCategories: ['economy'],
     marketCategories: ['economy', 'diplomacy'],
-    situationCategories: [],
     includesEarthquakes: false,
   },
   disasters: {
     key: 'disasters',
     label: 'Natural Disasters',
+    description: 'Geophysical and weather hazards with humanitarian impact.',
     color: '#FF8C22',
     eventCategories: ['disasters'],
     marketCategories: ['climate'],
-    situationCategories: [],
     includesEarthquakes: true,
   },
   infrastructure: {
     key: 'infrastructure',
-    label: 'Infrastructure',
+    label: 'Infrastructure & Logistics',
+    description: 'Chokepoints, airspace/nav notices, transport and grid disruptions.',
     color: '#06B6D4',
     eventCategories: ['infrastructure'],
     marketCategories: [],
-    situationCategories: ['infrastructure'],
     includesEarthquakes: false,
   },
 };
@@ -75,13 +74,6 @@ export function eventCategoryToTheme(cat: string): ThemeKey | null {
 export function marketCategoryToTheme(cat: string): ThemeKey | null {
   for (const theme of THEME_KEYS) {
     if (THEMES[theme].marketCategories.includes(cat)) return theme;
-  }
-  return null;
-}
-
-export function situationCategoryToTheme(cat: string): ThemeKey | null {
-  for (const theme of THEME_KEYS) {
-    if (THEMES[theme].situationCategories.includes(cat)) return theme;
   }
   return null;
 }
@@ -104,20 +96,10 @@ export function getActiveMarketCategories(visibleThemes: Record<ThemeKey, boolea
   return cats;
 }
 
-/** Returns active situation category strings for all enabled themes */
-export function getActiveSituationCategories(visibleThemes: Record<ThemeKey, boolean>): string[] {
-  const cats: string[] = [];
-  for (const key of THEME_KEYS) {
-    if (visibleThemes[key]) cats.push(...THEMES[key].situationCategories);
-  }
-  return cats;
-}
-
 /** Count items per theme from all data arrays */
 export function computeThemeCounts(
   events: GdeltEvent[],
   markets: PolymarketMarket[],
-  situations: OngoingSituation[],
   earthquakes: UsgsEarthquake[],
 ): Record<ThemeKey, number> {
   const counts: Record<ThemeKey, number> = {
@@ -134,10 +116,6 @@ export function computeThemeCounts(
   }
   for (const m of markets) {
     const t = marketCategoryToTheme(m.category);
-    if (t) counts[t]++;
-  }
-  for (const s of situations) {
-    const t = situationCategoryToTheme(s.category);
     if (t) counts[t]++;
   }
   counts.disasters += earthquakes.length;

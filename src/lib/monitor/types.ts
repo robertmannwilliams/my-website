@@ -3,17 +3,36 @@ import type { PolymarketMarket } from './polymarket';
 import type { UsgsEarthquake } from './usgs';
 import type { ThemeKey } from './themes';
 
-export interface OngoingSituation {
+export type SignalKey =
+  | 'events'
+  | 'markets'
+  | 'disasters'
+  | 'infrastructure_overlays'
+  | 'watch_zones';
+
+export type WatchZoneGeometry =
+  | {
+    type: 'circle';
+    center: [number, number]; // [lng, lat]
+    radiusKm: number;
+  }
+  | {
+    type: 'polygon';
+    coordinates: [number, number][];
+  };
+
+export interface WatchZone {
   id: string;
-  title: string;
+  name: string;
   summary: string;
-  category: string;
+  theme: ThemeKey;
   severity: 'critical' | 'watch' | 'monitor';
-  locations: { name: string; lat: number; lng: number; role: string }[];
-  startDate: string;
+  geometry: WatchZoneGeometry;
+  scope: string;
   status: string;
-  relatedAssets: string[];
-  lastUpdated: string;
+  assets: string[];
+  updatedAt: string;
+  roomIds: string[];
 }
 
 export interface SituationRoomConfig {
@@ -23,7 +42,10 @@ export interface SituationRoomConfig {
   center: [number, number];
   zoom: number;
   activeThemes: ThemeKey[];
-  activeLayers: ('notams' | 'shipping' | 'elections')[];
+  defaultSignalTypes: SignalKey[];
+  defaultWatchZoneIds: string[];
+  priorityRegions: string[];
+  contextModules: string[];
   highlightedAssets: string[];
   panelModule: string;
 }
@@ -60,9 +82,16 @@ export interface ElectionCalendarItem {
   daysUntil?: number;
 }
 
+export type MapSelectionCandidate =
+  | { type: 'event'; id: string; title: string; subtitle: string; data: GdeltEvent }
+  | { type: 'market'; id: string; title: string; subtitle: string; data: PolymarketMarket }
+  | { type: 'watch_zone'; id: string; title: string; subtitle: string; data: WatchZone }
+  | { type: 'earthquake'; id: string; title: string; subtitle: string; data: UsgsEarthquake };
+
 export type MapItem =
   | { type: 'event'; data: GdeltEvent }
   | { type: 'market'; data: PolymarketMarket }
   | { type: 'earthquake'; data: UsgsEarthquake }
-  | { type: 'situation'; data: OngoingSituation }
-  | { type: 'room'; data: SituationRoomConfig };
+  | { type: 'watch_zone'; data: WatchZone }
+  | { type: 'room'; data: SituationRoomConfig }
+  | { type: 'selection'; data: { title: string; candidates: MapSelectionCandidate[] } };

@@ -29,6 +29,10 @@ export interface GdeltEvent {
   fingerprint: string;
   tone: number;
   region: string;
+  signalScore: number;
+  topicTags: string[];
+  mapPriority: number;
+  linkConfidence?: number;
 }
 
 export type EventCategory =
@@ -235,6 +239,27 @@ function inferRegion(lat: number, lng: number): string {
 
 function toneFromSeverity(severity: EventSeverity): number {
   return severity === 'critical' ? -8 : severity === 'watch' ? -4 : 0;
+}
+
+function topicTagsForText(text: string): string[] {
+  return normalizeForSimilarity(text)
+    .split(' ')
+    .filter((token) => token.length >= 4)
+    .slice(0, 8);
+}
+
+function eventSignalScoreFromData(input: {
+  severity: EventSeverity;
+  sourceCount: number;
+  confidence: number;
+  lastSeenAt: string;
+}): number {
+  const severityScore = severityRank(input.severity) * 4;
+  const sourceScore = Math.min(6, input.sourceCount * 1.2);
+  const confidenceScore = input.confidence * 6;
+  const ageHours = Math.max(0, (Date.now() - new Date(input.lastSeenAt).getTime()) / 3_600_000);
+  const recencyScore = Math.max(0, 4 - ageHours / 6);
+  return severityScore + sourceScore + confidenceScore + recencyScore;
 }
 
 function severityRank(s: EventSeverity): number {
@@ -675,7 +700,20 @@ export async function fetchClassifiedEvents(): Promise<ClassifiedEventsResult> {
       fingerprint: cluster.fingerprint,
       tone: toneFromSeverity(classified.severity),
       region: inferRegion(classified.lat, classified.lng),
+      signalScore: 0,
+      topicTags: topicTagsForText(`${classified.title} ${classified.summary}`),
+      mapPriority: 0,
     });
+  }
+
+  for (const event of events) {
+    event.signalScore = eventSignalScoreFromData({
+      severity: event.severity,
+      sourceCount: event.sourceCount,
+      confidence: event.classificationConfidence,
+      lastSeenAt: event.lastSeenAt,
+    });
+    event.mapPriority = event.signalScore;
   }
 
   events.sort((a, b) => {

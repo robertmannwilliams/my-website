@@ -1,36 +1,38 @@
 'use client';
 
-import { useEffect, useRef, useState, memo, useMemo } from 'react';
+import { useEffect, useRef, useState, memo, useMemo, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { GdeltEvent } from '@/lib/monitor/events';
-import { isHighSignalMapMarket, marketSignalScore, type PolymarketMarket } from '@/lib/monitor/polymarket';
+import { isHighSignalMapMarket, type PolymarketMarket } from '@/lib/monitor/polymarket';
 import type { UsgsEarthquake } from '@/lib/monitor/usgs';
 import type {
   ElectionCalendarItem,
+  MapSelectionCandidate,
   NotamZone,
-  OngoingSituation,
   ShippingChokepoint,
+  SignalKey,
   SituationRoomConfig,
+  WatchZone,
 } from '@/lib/monitor/types';
 import {
   type ThemeKey,
   getActiveEventCategories,
   getActiveMarketCategories,
-  getActiveSituationCategories,
 } from '@/lib/monitor/themes';
-import ongoingSituationsData from '@/app/monitor/data/ongoing-situations.json';
 
 interface MonitorMapProps {
   onEventClick?: (event: GdeltEvent) => void;
   onMarketClick?: (market: PolymarketMarket) => void;
   onEarthquakeClick?: (eq: UsgsEarthquake) => void;
-  onSituationClick?: (situation: OngoingSituation) => void;
+  onWatchZoneClick?: (watchZone: WatchZone) => void;
+  onSelectionCandidates?: (title: string, candidates: MapSelectionCandidate[]) => void;
   onMapClick?: () => void;
   selectedEventCoords?: { lat: number; lng: number } | null;
   relatedMarkets?: PolymarketMarket[];
   visibleThemes: Record<ThemeKey, boolean>;
-  visibleLayers: Record<'notams' | 'shipping' | 'elections', boolean>;
+  visibleSignals: Record<SignalKey, boolean>;
+  visibleWatchZones: Record<string, boolean>;
   activeRoom: SituationRoomConfig | null;
   events: GdeltEvent[];
   markets: PolymarketMarket[];
@@ -38,187 +40,223 @@ interface MonitorMapProps {
   notamZones: NotamZone[];
   shippingChokepoints: ShippingChokepoint[];
   elections: ElectionCalendarItem[];
+  watchZones: WatchZone[];
 }
 
 const MAX_EVENTS_ON_MAP = 140;
-const MARKET_GROUP_RADIUS_KM = 45;
+const MARKET_CLUSTER_MAX_ZOOM = 10;
 
-function eventsToGeoJSON(events: GdeltEvent[]): GeoJSON.FeatureCollection {
-  return {
-    type: 'FeatureCollection',
-    features: events.map((e) => ({
-      type: 'Feature' as const,
-      geometry: { type: 'Point' as const, coordinates: [e.lng, e.lat] },
-      properties: {
-        id: e.id,
-        canonicalId: e.canonicalId,
-        title: e.title,
-        category: e.category,
-        severity: e.severity,
-        timestamp: e.timestamp,
-        summary: e.summary,
-        sources: JSON.stringify(e.sources),
-        sourceCount: e.sourceCount,
-        firstSeenAt: e.firstSeenAt,
-        lastSeenAt: e.lastSeenAt,
-        classificationConfidence: e.classificationConfidence,
-        classificationMethod: e.classificationMethod,
-        fingerprint: e.fingerprint,
-        tone: e.tone,
-        region: e.region,
-        severityRank: e.severity === 'critical' ? 3 : e.severity === 'watch' ? 2 : 1,
-      },
-    })),
-  };
-}
-
-function toRad(deg: number): number {
-  return (deg * Math.PI) / 180;
-}
-
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+function inferRegion(lat: number, lng: number): string {
+  if (lat > 25 && lat < 50 && lng > -10 && lng < 45) return 'europe';
+  if (lat > 10 && lat < 45 && lng > 25 && lng < 75) return 'middle_east';
+  if (lat > -35 && lat < 38 && lng > -20 && lng < 55) return 'africa';
+  if (lat > 5 && lat < 55 && lng > 60 && lng < 150) return 'asia';
+  if (lat > -50 && lat < 15 && lng > -85 && lng < -30) return 'south_america';
+  if (lat > 15 && lat < 75 && lng > -170 && lng < -50) return 'north_america';
+  if (lat > -50 && lat < 0 && lng > 100 && lng < 180) return 'oceania';
+  return 'global';
 }
 
 function eventSignalScore(event: GdeltEvent): number {
-  const severityScore =
-    event.severity === 'critical' ? 12 : event.severity === 'watch' ? 7 : 3;
+  const severityScore = event.severity === 'critical' ? 12 : event.severity === 'watch' ? 7 : 3;
   const sourceScore = Math.min(6, event.sourceCount * 1.15);
   const confidenceScore = event.classificationConfidence * 5;
-  const ageHours = Math.max(
-    0,
-    (Date.now() - new Date(event.lastSeenAt || event.timestamp).getTime()) / 3_600_000,
-  );
+  const ageHours = Math.max(0, (Date.now() - new Date(event.lastSeenAt || event.timestamp).getTime()) / 3_600_000);
   const recencyScore = Math.max(0, 4 - ageHours / 6);
-
   return severityScore + sourceScore + confidenceScore + recencyScore;
 }
 
-interface MarketStack {
-  market: PolymarketMarket;
-  stackCount: number;
+function destinationPoint(
+  latDeg: number,
+  lngDeg: number,
+  bearingDeg: number,
+  angularDistDeg: number,
+): [number, number] {
+  const lat1 = latDeg * (Math.PI / 180);
+  const lng1 = lngDeg * (Math.PI / 180);
+  const brng = bearingDeg * (Math.PI / 180);
+  const d = angularDistDeg * (Math.PI / 180);
+
+  const sinD = Math.sin(d);
+  const cosD = Math.cos(d);
+  const sinLat1 = Math.sin(lat1);
+  const cosLat1 = Math.cos(lat1);
+
+  const lat2 = Math.asin(sinLat1 * cosD + cosLat1 * sinD * Math.cos(brng));
+  const lng2 = lng1 + Math.atan2(Math.sin(brng) * sinD * cosLat1, cosD - sinLat1 * Math.sin(lat2));
+
+  return [((lng2 * (180 / Math.PI) + 540) % 360) - 180, lat2 * (180 / Math.PI)];
 }
 
-function collapseMarketsForMap(markets: PolymarketMarket[]): MarketStack[] {
-  const sorted = [...markets].sort((a, b) => {
-    const scoreDelta = marketSignalScore(b) - marketSignalScore(a);
-    if (scoreDelta !== 0) return scoreDelta;
-    return b.volumeRaw - a.volumeRaw;
-  });
-
-  const groups: PolymarketMarket[][] = [];
-
-  for (const market of sorted) {
-    let placed = false;
-    for (const group of groups) {
-      const representative = group[0];
-      if (representative.category !== market.category) continue;
-      const dist = haversineKm(
-        representative.lat,
-        representative.lng,
-        market.lat,
-        market.lng,
-      );
-      if (dist <= MARKET_GROUP_RADIUS_KM) {
-        group.push(market);
-        placed = true;
-        break;
-      }
-    }
-    if (!placed) groups.push([market]);
+function circleToPolygon(centerLng: number, centerLat: number, radiusKm: number, steps: number = 48): [number, number][] {
+  const angularDistDeg = (radiusKm / 6371) * (180 / Math.PI);
+  const coords: [number, number][] = [];
+  for (let i = 0; i <= steps; i++) {
+    const bearing = (360 * i) / steps;
+    coords.push(destinationPoint(centerLat, centerLng, bearing, angularDistDeg));
   }
-
-  return groups.map((group) => ({
-    market: group[0],
-    stackCount: group.length,
-  }));
+  return coords;
 }
 
-function marketsToGeoJSON(stacks: MarketStack[]): GeoJSON.FeatureCollection {
+function isDimmed(region: string, activeRoom: SituationRoomConfig | null): boolean {
+  if (!activeRoom || !activeRoom.priorityRegions || activeRoom.priorityRegions.length === 0) return false;
+  return !activeRoom.priorityRegions.includes(region);
+}
+
+function eventsToGeoJSON(events: GdeltEvent[], activeRoom: SituationRoomConfig | null): GeoJSON.FeatureCollection {
   return {
     type: 'FeatureCollection',
-    features: stacks.map(({ market: m, stackCount }) => ({
+    features: events.map((event) => ({
       type: 'Feature' as const,
-      geometry: { type: 'Point' as const, coordinates: [m.lng, m.lat] },
+      geometry: { type: 'Point' as const, coordinates: [event.lng, event.lat] },
       properties: {
-        id: m.id,
-        title: m.title,
-        category: m.category,
-        probability: m.probability,
-        probabilityLabel:
-          stackCount > 1
-            ? `${Math.round(m.probability * 100)}% · ${stackCount}`
-            : `${Math.round(m.probability * 100)}%`,
-        volume: m.volume,
-        volumeRaw: m.volumeRaw,
-        url: m.url,
-        lastUpdated: m.lastUpdated,
-        outcomes: JSON.stringify(m.outcomes),
-        outcomePrices: JSON.stringify(m.outcomePrices),
-        liquidity: m.liquidity,
-        endDate: m.endDate,
-        categoryNormalized: m.categoryNormalized,
-        geoConfidence: m.geoConfidence,
-        geoMethod: m.geoMethod,
-        isMapPlottable: m.isMapPlottable,
-        stackCount,
+        id: event.id,
+        canonicalId: event.canonicalId,
+        title: event.title,
+        category: event.category,
+        severity: event.severity,
+        timestamp: event.timestamp,
+        summary: event.summary,
+        sources: JSON.stringify(event.sources),
+        sourceCount: event.sourceCount,
+        firstSeenAt: event.firstSeenAt,
+        lastSeenAt: event.lastSeenAt,
+        classificationConfidence: event.classificationConfidence,
+        classificationMethod: event.classificationMethod,
+        fingerprint: event.fingerprint,
+        tone: event.tone,
+        region: event.region,
+        signalScore: event.signalScore,
+        topicTags: JSON.stringify(event.topicTags || []),
+        mapPriority: event.mapPriority,
+        severityRank: event.severity === 'critical' ? 3 : event.severity === 'watch' ? 2 : 1,
+        dimmed: isDimmed(event.region, activeRoom),
       },
     })),
   };
 }
 
-function earthquakesToGeoJSON(quakes: UsgsEarthquake[]): GeoJSON.FeatureCollection {
+function marketsToGeoJSON(markets: PolymarketMarket[], activeRoom: SituationRoomConfig | null): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: markets.map((market) => {
+      const region = inferRegion(market.lat, market.lng);
+      return {
+        type: 'Feature' as const,
+        geometry: { type: 'Point' as const, coordinates: [market.lng, market.lat] },
+        properties: {
+          id: market.id,
+          title: market.title,
+          category: market.category,
+          categoryNormalized: market.categoryNormalized,
+          probability: market.probability,
+          volume: market.volume,
+          volumeRaw: market.volumeRaw,
+          url: market.url,
+          lastUpdated: market.lastUpdated,
+          outcomes: JSON.stringify(market.outcomes),
+          outcomePrices: JSON.stringify(market.outcomePrices),
+          liquidity: market.liquidity,
+          endDate: market.endDate,
+          geoConfidence: market.geoConfidence,
+          geoMethod: market.geoMethod,
+          isMapPlottable: market.isMapPlottable,
+          signalScore: market.signalScore,
+          topicTags: JSON.stringify(market.topicTags || []),
+          mapPriority: market.mapPriority,
+          region,
+          dimmed: isDimmed(region, activeRoom),
+        },
+      };
+    }),
+  };
+}
+
+function earthquakesToGeoJSON(quakes: UsgsEarthquake[], activeRoom: SituationRoomConfig | null): GeoJSON.FeatureCollection {
   const twoHoursAgo = Date.now() - 2 * 60 * 60_000;
   return {
     type: 'FeatureCollection',
-    features: quakes.map((q) => ({
-      type: 'Feature' as const,
-      geometry: { type: 'Point' as const, coordinates: [q.lng, q.lat] },
-      properties: {
-        id: q.id,
-        title: q.title,
-        magnitude: q.magnitude,
-        magType: q.magType,
-        depth: q.depth,
-        place: q.place,
-        timestamp: q.timestamp,
-        tsunami: q.tsunami,
-        felt: q.felt,
-        significance: q.significance,
-        alert: q.alert,
-        url: q.url,
-        isRecent: new Date(q.timestamp).getTime() > twoHoursAgo,
-      },
-    })),
+    features: quakes.map((quake) => {
+      const region = inferRegion(quake.lat, quake.lng);
+      return {
+        type: 'Feature' as const,
+        geometry: { type: 'Point' as const, coordinates: [quake.lng, quake.lat] },
+        properties: {
+          id: quake.id,
+          title: quake.title,
+          magnitude: quake.magnitude,
+          magType: quake.magType,
+          depth: quake.depth,
+          place: quake.place,
+          timestamp: quake.timestamp,
+          tsunami: quake.tsunami,
+          felt: quake.felt,
+          significance: quake.significance,
+          alert: quake.alert,
+          url: quake.url,
+          region,
+          dimmed: isDimmed(region, activeRoom),
+          isRecent: new Date(quake.timestamp).getTime() > twoHoursAgo,
+        },
+      };
+    }),
   };
 }
 
-function situationsToGeoJSON(situations: OngoingSituation[]): GeoJSON.FeatureCollection {
-  const features: GeoJSON.Feature[] = [];
-  for (const s of situations) {
-    for (const loc of s.locations) {
-      features.push({
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [loc.lng, loc.lat] },
+function watchZonesToGeoJSON(zones: WatchZone[], activeRoom: SituationRoomConfig | null): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: zones.map((zone) => {
+      if (zone.geometry.type === 'circle') {
+        const [centerLng, centerLat] = zone.geometry.center;
+        const coords = circleToPolygon(centerLng, centerLat, zone.geometry.radiusKm);
+        const region = inferRegion(centerLat, centerLng);
+        return {
+          type: 'Feature' as const,
+          geometry: { type: 'Polygon' as const, coordinates: [coords] },
+          properties: {
+            id: zone.id,
+            name: zone.name,
+            summary: zone.summary,
+            theme: zone.theme,
+            severity: zone.severity,
+            status: zone.status,
+            scope: zone.scope,
+            assets: JSON.stringify(zone.assets),
+            updatedAt: zone.updatedAt,
+            roomIds: JSON.stringify(zone.roomIds || []),
+            centerLng,
+            centerLat,
+            region,
+            dimmed: isDimmed(region, activeRoom),
+          },
+        };
+      }
+
+      const first = zone.geometry.coordinates[0] || [0, 0];
+      const region = inferRegion(first[1], first[0]);
+      return {
+        type: 'Feature' as const,
+        geometry: { type: 'Polygon' as const, coordinates: [zone.geometry.coordinates] },
         properties: {
-          situationId: s.id,
-          situationTitle: s.title,
-          severity: s.severity,
-          category: s.category,
-          locationName: loc.name,
-          role: loc.role,
-          situationData: JSON.stringify(s),
+          id: zone.id,
+          name: zone.name,
+          summary: zone.summary,
+          theme: zone.theme,
+          severity: zone.severity,
+          status: zone.status,
+          scope: zone.scope,
+          assets: JSON.stringify(zone.assets),
+          updatedAt: zone.updatedAt,
+          roomIds: JSON.stringify(zone.roomIds || []),
+          centerLng: first[0],
+          centerLat: first[1],
+          region,
+          dimmed: isDimmed(region, activeRoom),
         },
-      });
-    }
-  }
-  return { type: 'FeatureCollection', features };
+      };
+    }),
+  };
 }
 
 function notamsToGeoJSON(zones: NotamZone[]): GeoJSON.FeatureCollection {
@@ -245,16 +283,16 @@ function notamsToGeoJSON(zones: NotamZone[]): GeoJSON.FeatureCollection {
 function shippingToGeoJSON(points: ShippingChokepoint[]): GeoJSON.FeatureCollection {
   return {
     type: 'FeatureCollection',
-    features: points.map((p) => ({
+    features: points.map((point) => ({
       type: 'Feature' as const,
-      geometry: { type: 'Point' as const, coordinates: [p.lng, p.lat] },
+      geometry: { type: 'Point' as const, coordinates: [point.lng, point.lat] },
       properties: {
-        id: p.id,
-        name: p.name,
-        vesselCount: p.vesselCount,
-        tankerCount: p.tankerCount,
-        containerCount: p.containerCount,
-        riskLevel: p.riskLevel,
+        id: point.id,
+        name: point.name,
+        vesselCount: point.vesselCount,
+        tankerCount: point.tankerCount,
+        containerCount: point.containerCount,
+        riskLevel: point.riskLevel,
       },
     })),
   };
@@ -263,81 +301,36 @@ function shippingToGeoJSON(points: ShippingChokepoint[]): GeoJSON.FeatureCollect
 function electionsToGeoJSON(items: ElectionCalendarItem[]): GeoJSON.FeatureCollection {
   return {
     type: 'FeatureCollection',
-    features: items.map((e) => ({
+    features: items.map((item) => ({
       type: 'Feature' as const,
-      geometry: { type: 'Point' as const, coordinates: [e.lng, e.lat] },
+      geometry: { type: 'Point' as const, coordinates: [item.lng, item.lat] },
       properties: {
-        id: e.id,
-        country: e.country,
-        electionType: e.electionType,
-        date: e.date,
-        importance: e.importance,
-        daysUntil: e.daysUntil ?? null,
+        id: item.id,
+        country: item.country,
+        electionType: item.electionType,
+        date: item.date,
+        importance: item.importance,
+        daysUntil: item.daysUntil ?? null,
       },
     })),
   };
 }
 
-// --- Day/Night Terminator ---
-
 function computeSubsolarPoint(date: Date): { lat: number; lng: number } {
-  const dayOfYear =
-    Math.floor(
-      (date.getTime() - new Date(date.getUTCFullYear(), 0, 0).getTime()) /
-        86400000,
-    );
-  const declination =
-    -23.4393 * Math.cos((2 * Math.PI * (dayOfYear + 10)) / 365.25);
-  const utcHours =
-    date.getUTCHours() +
-    date.getUTCMinutes() / 60 +
-    date.getUTCSeconds() / 3600;
+  const dayOfYear = Math.floor((date.getTime() - new Date(date.getUTCFullYear(), 0, 0).getTime()) / 86400000);
+  const declination = -23.4393 * Math.cos((2 * Math.PI * (dayOfYear + 10)) / 365.25);
+  const utcHours = date.getUTCHours() + date.getUTCMinutes() / 60 + date.getUTCSeconds() / 3600;
   const lng = 180 - utcHours * 15;
   return { lat: declination, lng: lng > 180 ? lng - 360 : lng };
 }
 
-function destinationPoint(
-  latDeg: number,
-  lngDeg: number,
-  bearingDeg: number,
-  angularDistDeg: number,
-): [number, number] {
-  const toRad = Math.PI / 180;
-  const toDeg = 180 / Math.PI;
-  const lat1 = latDeg * toRad;
-  const lng1 = lngDeg * toRad;
-  const brng = bearingDeg * toRad;
-  const d = angularDistDeg * toRad;
-
-  const sinD = Math.sin(d);
-  const cosD = Math.cos(d);
-  const sinLat1 = Math.sin(lat1);
-  const cosLat1 = Math.cos(lat1);
-
-  const lat2 = Math.asin(sinLat1 * cosD + cosLat1 * sinD * Math.cos(brng));
-  const lng2 =
-    lng1 +
-    Math.atan2(
-      Math.sin(brng) * sinD * cosLat1,
-      cosD - sinLat1 * Math.sin(lat2),
-    );
-
-  return [((lng2 * toDeg + 540) % 360) - 180, lat2 * toDeg];
-}
-
-function generateNightPolygon(
-  sunLatDeg: number,
-  sunLngDeg: number,
-  angularDistDeg: number,
-): GeoJSON.Feature {
+function generateNightPolygon(sunLatDeg: number, sunLngDeg: number, angularDistDeg: number): GeoJSON.Feature {
   const nightLat = -sunLatDeg;
   const nightLng = sunLngDeg > 0 ? sunLngDeg - 180 : sunLngDeg + 180;
-
   const coords: [number, number][] = [];
   for (let bearing = 0; bearing <= 360; bearing += 5) {
     coords.push(destinationPoint(nightLat, nightLng, bearing, angularDistDeg));
   }
-
   return {
     type: 'Feature',
     geometry: { type: 'Polygon', coordinates: [coords] },
@@ -352,57 +345,21 @@ function generateTerminatorGeoJSON(): {
 } {
   const sun = computeSubsolarPoint(new Date());
   return {
-    twilight: {
-      type: 'FeatureCollection',
-      features: [generateNightPolygon(sun.lat, sun.lng, 96)],
-    },
-    core: {
-      type: 'FeatureCollection',
-      features: [generateNightPolygon(sun.lat, sun.lng, 90)],
-    },
-    night: {
-      type: 'FeatureCollection',
-      features: [generateNightPolygon(sun.lat, sun.lng, 84)],
-    },
+    twilight: { type: 'FeatureCollection', features: [generateNightPolygon(sun.lat, sun.lng, 96)] },
+    core: { type: 'FeatureCollection', features: [generateNightPolygon(sun.lat, sun.lng, 90)] },
+    night: { type: 'FeatureCollection', features: [generateNightPolygon(sun.lat, sun.lng, 84)] },
   };
 }
 
 function addTerminatorLayers(m: mapboxgl.Map) {
   const data = generateTerminatorGeoJSON();
-
   m.addSource('terminator-twilight', { type: 'geojson', data: data.twilight });
   m.addSource('terminator-core', { type: 'geojson', data: data.core });
   m.addSource('terminator-night', { type: 'geojson', data: data.night });
 
-  m.addLayer(
-    {
-      id: 'terminator-twilight',
-      type: 'fill',
-      source: 'terminator-twilight',
-      paint: { 'fill-color': '#000000', 'fill-opacity': 0.05 },
-    },
-    'event-clusters',
-  );
-
-  m.addLayer(
-    {
-      id: 'terminator-core',
-      type: 'fill',
-      source: 'terminator-core',
-      paint: { 'fill-color': '#000000', 'fill-opacity': 0.08 },
-    },
-    'event-clusters',
-  );
-
-  m.addLayer(
-    {
-      id: 'terminator-night',
-      type: 'fill',
-      source: 'terminator-night',
-      paint: { 'fill-color': '#000000', 'fill-opacity': 0.10 },
-    },
-    'event-clusters',
-  );
+  m.addLayer({ id: 'terminator-twilight', type: 'fill', source: 'terminator-twilight', paint: { 'fill-color': '#000000', 'fill-opacity': 0.05 } }, 'event-clusters');
+  m.addLayer({ id: 'terminator-core', type: 'fill', source: 'terminator-core', paint: { 'fill-color': '#000000', 'fill-opacity': 0.08 } }, 'event-clusters');
+  m.addLayer({ id: 'terminator-night', type: 'fill', source: 'terminator-night', paint: { 'fill-color': '#000000', 'fill-opacity': 0.10 } }, 'event-clusters');
 }
 
 function updateTerminator(m: mapboxgl.Map) {
@@ -414,8 +371,6 @@ function updateTerminator(m: mapboxgl.Map) {
   if (co) co.setData(data.core);
   if (ni) ni.setData(data.night);
 }
-
-// --- Diamond SDF image for market markers ---
 
 function createDiamondImage(size: number = 32): ImageData {
   const canvas = document.createElement('canvas');
@@ -434,8 +389,6 @@ function createDiamondImage(size: number = 32): ImageData {
   return ctx.getImageData(0, 0, size, size);
 }
 
-// --- Theme-based color expressions ---
-
 const EVENT_CATEGORY_COLOR: mapboxgl.Expression = [
   'match', ['get', 'category'],
   'conflicts', '#FF4444',
@@ -446,14 +399,14 @@ const EVENT_CATEGORY_COLOR: mapboxgl.Expression = [
   '#666680',
 ];
 
-const EVENT_CATEGORY_COLOR_ALPHA = (alpha: number): mapboxgl.Expression => [
-  'match', ['get', 'category'],
-  'conflicts', `rgba(255,68,68,${alpha})`,
-  'elections', `rgba(74,158,255,${alpha})`,
-  'economy', `rgba(34,197,94,${alpha})`,
-  'disasters', `rgba(255,140,34,${alpha})`,
-  'infrastructure', `rgba(6,182,212,${alpha})`,
-  `rgba(102,102,128,${alpha})`,
+const WATCH_ZONE_THEME_COLOR: mapboxgl.Expression = [
+  'match', ['get', 'theme'],
+  'conflicts', '#FF4444',
+  'elections', '#4A9EFF',
+  'economy', '#22C55E',
+  'disasters', '#FF8C22',
+  'infrastructure', '#06B6D4',
+  '#8892A0',
 ];
 
 const MARKET_CATEGORY_COLOR: mapboxgl.Expression = [
@@ -466,73 +419,48 @@ const MARKET_CATEGORY_COLOR: mapboxgl.Expression = [
   '#AA66FF',
 ];
 
-const SITUATION_CATEGORY_COLOR_ALPHA = (alpha: number): mapboxgl.Expression => [
-  'match', ['get', 'category'],
-  'conflicts', `rgba(255,68,68,${alpha})`,
-  'infrastructure', `rgba(6,182,212,${alpha})`,
-  `rgba(102,170,255,${alpha})`,
-];
-
-function addSituationLayers(m: mapboxgl.Map) {
-  const geojson = situationsToGeoJSON(ongoingSituationsData as OngoingSituation[]);
-
-  m.addSource('situations', {
+function addWatchZoneLayers(m: mapboxgl.Map) {
+  m.addSource('watch-zones', {
     type: 'geojson',
-    data: geojson,
+    data: { type: 'FeatureCollection', features: [] },
   });
 
-  // Large semi-transparent circles
   m.addLayer({
-    id: 'situation-circles',
-    type: 'circle',
-    source: 'situations',
+    id: 'watch-zone-fill',
+    type: 'fill',
+    source: 'watch-zones',
     paint: {
-      'circle-color': SITUATION_CATEGORY_COLOR_ALPHA(0.15),
-      'circle-radius': [
-        'interpolate', ['linear'], ['zoom'],
-        0, 14,
-        3, 18,
-        6, 24,
-      ],
-      'circle-stroke-width': 1.5,
-      'circle-stroke-color': SITUATION_CATEGORY_COLOR_ALPHA(0.4),
+      'fill-color': WATCH_ZONE_THEME_COLOR,
+      'fill-opacity': ['case', ['==', ['get', 'dimmed'], true], 0.04, 0.08],
     },
   });
 
-  // Outer pulse ring
   m.addLayer({
-    id: 'situation-pulse',
-    type: 'circle',
-    source: 'situations',
+    id: 'watch-zone-outline',
+    type: 'line',
+    source: 'watch-zones',
     paint: {
-      'circle-color': 'transparent',
-      'circle-radius': [
-        'interpolate', ['linear'], ['zoom'],
-        0, 22,
-        3, 28,
-        6, 36,
-      ],
-      'circle-stroke-width': 1,
-      'circle-stroke-color': SITUATION_CATEGORY_COLOR_ALPHA(0.2),
+      'line-color': WATCH_ZONE_THEME_COLOR,
+      'line-width': ['case', ['==', ['get', 'severity'], 'critical'], 1.4, 1.0],
+      'line-opacity': ['case', ['==', ['get', 'dimmed'], true], 0.32, 0.55],
     },
   });
 
-  // Location role labels
   m.addLayer({
-    id: 'situation-labels',
+    id: 'watch-zone-labels',
     type: 'symbol',
-    source: 'situations',
+    source: 'watch-zones',
     layout: {
-      'text-field': ['get', 'role'],
-      'text-size': 9,
+      'text-field': ['get', 'name'],
+      'text-size': 10,
       'text-font': ['DIN Pro Medium', 'Arial Unicode MS Regular'],
-      'text-offset': [0, 2.2],
       'text-allow-overlap': false,
     },
     paint: {
-      'text-color': 'rgba(140,180,220,0.7)',
+      'text-color': '#9DB2CC',
       'text-halo-color': '#0B1120',
       'text-halo-width': 1,
+      'text-opacity': ['case', ['==', ['get', 'dimmed'], true], 0.5, 0.85],
     },
   });
 }
@@ -549,7 +477,6 @@ function addEventLayers(m: mapboxgl.Map) {
     },
   });
 
-  // Cluster circles — colored by severity (works well for mixed-theme clusters)
   m.addLayer({
     id: 'event-clusters',
     type: 'circle',
@@ -562,17 +489,13 @@ function addEventLayers(m: mapboxgl.Map) {
         ['>=', ['get', 'maxSeverity'], 2], '#FFAA22',
         '#666680',
       ],
-      'circle-radius': [
-        'step', ['get', 'point_count'],
-        16, 5, 20, 20, 26,
-      ],
+      'circle-radius': ['step', ['get', 'point_count'], 16, 5, 20, 20, 26],
       'circle-opacity': 0.85,
       'circle-stroke-width': 1,
       'circle-stroke-color': 'rgba(255,255,255,0.15)',
     },
   });
 
-  // Cluster count labels
   m.addLayer({
     id: 'event-cluster-count',
     type: 'symbol',
@@ -583,12 +506,9 @@ function addEventLayers(m: mapboxgl.Map) {
       'text-size': 11,
       'text-font': ['DIN Pro Medium', 'Arial Unicode MS Regular'],
     },
-    paint: {
-      'text-color': '#ffffff',
-    },
+    paint: { 'text-color': '#FFFFFF' },
   });
 
-  // Individual event circles — colored by THEME category
   m.addLayer({
     id: 'event-points',
     type: 'circle',
@@ -596,40 +516,10 @@ function addEventLayers(m: mapboxgl.Map) {
     filter: ['!', ['has', 'point_count']],
     paint: {
       'circle-color': EVENT_CATEGORY_COLOR,
-      'circle-radius': [
-        'match', ['get', 'severity'],
-        'critical', 7,
-        'watch', 5,
-        4,
-      ],
-      'circle-opacity': 0.9,
-      'circle-stroke-width': [
-        'match', ['get', 'severity'],
-        'critical', 2,
-        'watch', 1,
-        0.5,
-      ],
-      'circle-stroke-color': EVENT_CATEGORY_COLOR_ALPHA(0.35),
-    },
-  });
-
-  // Critical pulse ring — colored by theme
-  m.addLayer({
-    id: 'event-pulse',
-    type: 'circle',
-    source: 'events',
-    filter: ['all', ['!', ['has', 'point_count']], ['==', ['get', 'severity'], 'critical']],
-    paint: {
-      'circle-color': 'transparent',
-      'circle-radius': 14,
-      'circle-stroke-width': 2,
-      'circle-stroke-color': EVENT_CATEGORY_COLOR_ALPHA(0.3),
-      'circle-stroke-opacity': [
-        'interpolate', ['linear'], ['zoom'],
-        0, 0.6,
-        5, 0.4,
-        10, 0.2,
-      ],
+      'circle-radius': ['match', ['get', 'severity'], 'critical', 7, 'watch', 5, 4],
+      'circle-opacity': ['case', ['==', ['get', 'dimmed'], true], 0.45, 0.9],
+      'circle-stroke-width': ['match', ['get', 'severity'], 'critical', 2, 'watch', 1, 0.5],
+      'circle-stroke-color': 'rgba(255,255,255,0.2)',
     },
   });
 }
@@ -638,9 +528,11 @@ function addMarketLayers(m: mapboxgl.Map) {
   m.addSource('markets', {
     type: 'geojson',
     data: { type: 'FeatureCollection', features: [] },
+    cluster: true,
+    clusterMaxZoom: MARKET_CLUSTER_MAX_ZOOM,
+    clusterRadius: 44,
   });
 
-  // Related lines (rendered below market markers)
   m.addSource('related-lines', {
     type: 'geojson',
     data: { type: 'FeatureCollection', features: [] },
@@ -657,48 +549,49 @@ function addMarketLayers(m: mapboxgl.Map) {
     },
   });
 
-  // Diamond markers for markets — colored by theme
+  m.addLayer({
+    id: 'market-clusters',
+    type: 'circle',
+    source: 'markets',
+    filter: ['has', 'point_count'],
+    paint: {
+      'circle-color': '#5564D8',
+      'circle-radius': ['step', ['get', 'point_count'], 14, 8, 18, 20, 22],
+      'circle-opacity': 0.82,
+      'circle-stroke-width': 1,
+      'circle-stroke-color': 'rgba(255,255,255,0.15)',
+    },
+  });
+
+  m.addLayer({
+    id: 'market-cluster-count',
+    type: 'symbol',
+    source: 'markets',
+    filter: ['has', 'point_count'],
+    layout: {
+      'text-field': '{point_count_abbreviated}',
+      'text-size': 11,
+      'text-font': ['DIN Pro Medium', 'Arial Unicode MS Regular'],
+    },
+    paint: {
+      'text-color': '#FFFFFF',
+    },
+  });
+
   m.addLayer({
     id: 'market-markers',
     type: 'symbol',
     source: 'markets',
+    filter: ['!', ['has', 'point_count']],
     layout: {
       'icon-image': 'market-diamond',
-      'icon-size': [
-        'interpolate', ['linear'], ['zoom'],
-        0, 0.55,
-        5, 0.75,
-        10, 1.0,
-      ],
+      'icon-size': ['interpolate', ['linear'], ['zoom'], 0, 0.56, 5, 0.76, 10, 1.0],
       'icon-allow-overlap': false,
       'icon-ignore-placement': false,
     },
     paint: {
       'icon-color': MARKET_CATEGORY_COLOR,
-      'icon-opacity': 0.9,
-    },
-  });
-
-  // Probability % text inside diamond
-  m.addLayer({
-    id: 'market-labels',
-    type: 'symbol',
-    source: 'markets',
-    layout: {
-      'text-field': ['get', 'probabilityLabel'],
-      'text-size': [
-        'interpolate', ['linear'], ['zoom'],
-        0, 8,
-        5, 10,
-        10, 12,
-      ],
-      'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
-      'text-allow-overlap': false,
-      'icon-allow-overlap': false,
-      'text-ignore-placement': false,
-    },
-    paint: {
-      'text-color': '#FFFFFF',
+      'icon-opacity': ['case', ['==', ['get', 'dimmed'], true], 0.45, 0.9],
     },
   });
 }
@@ -747,18 +640,8 @@ function addShippingLayers(m: mapboxgl.Map) {
     type: 'circle',
     source: 'shipping',
     paint: {
-      'circle-color': [
-        'match', ['get', 'riskLevel'],
-        'high', '#FF6B3D',
-        'watch', '#FFAA22',
-        '#00DDCC',
-      ],
-      'circle-radius': [
-        'interpolate', ['linear'], ['get', 'vesselCount'],
-        80, 6,
-        180, 10,
-        300, 14,
-      ],
+      'circle-color': ['match', ['get', 'riskLevel'], 'high', '#FF6B3D', 'watch', '#FFAA22', '#00DDCC'],
+      'circle-radius': ['interpolate', ['linear'], ['get', 'vesselCount'], 80, 6, 180, 10, 300, 14],
       'circle-opacity': 0.85,
       'circle-stroke-width': 1,
       'circle-stroke-color': 'rgba(255,255,255,0.2)',
@@ -770,7 +653,7 @@ function addShippingLayers(m: mapboxgl.Map) {
     type: 'symbol',
     source: 'shipping',
     layout: {
-      'text-field': ['concat', ['get', 'name'], ' · ', ['to-string', ['get', 'vesselCount']]],
+      'text-field': ['concat', ['get', 'name'], ' - ', ['to-string', ['get', 'vesselCount']]],
       'text-size': 10,
       'text-font': ['DIN Pro Medium', 'Arial Unicode MS Regular'],
       'text-offset': [0, 1.2],
@@ -794,12 +677,7 @@ function addElectionLayers(m: mapboxgl.Map) {
     type: 'circle',
     source: 'elections',
     paint: {
-      'circle-color': [
-        'match', ['get', 'importance'],
-        'critical', '#FF4444',
-        'watch', '#66AAFF',
-        '#89B8E6',
-      ],
+      'circle-color': ['match', ['get', 'importance'], 'critical', '#FF4444', 'watch', '#66AAFF', '#89B8E6'],
       'circle-radius': 5,
       'circle-opacity': 0.9,
       'circle-stroke-width': 1,
@@ -836,57 +714,11 @@ function addEarthquakeLayers(m: mapboxgl.Map) {
     type: 'circle',
     source: 'earthquakes',
     paint: {
-      'circle-color': [
-        'interpolate', ['linear'], ['get', 'magnitude'],
-        4.5, '#FFAA22',
-        5.5, '#FF6622',
-        7.0, '#FF2222',
-      ],
-      'circle-radius': [
-        'interpolate', ['linear'], ['get', 'magnitude'],
-        4.5, 6,
-        5.5, 10,
-        7.0, 18,
-        8.0, 26,
-      ],
-      'circle-opacity': 0.85,
+      'circle-color': ['interpolate', ['linear'], ['get', 'magnitude'], 4.5, '#FFAA22', 5.5, '#FF6622', 7.0, '#FF2222'],
+      'circle-radius': ['interpolate', ['linear'], ['get', 'magnitude'], 4.5, 6, 5.5, 10, 7.0, 18, 8.0, 26],
+      'circle-opacity': ['case', ['==', ['get', 'dimmed'], true], 0.45, 0.85],
       'circle-stroke-width': 1.5,
-      'circle-stroke-color': [
-        'interpolate', ['linear'], ['get', 'magnitude'],
-        4.5, 'rgba(255,170,34,0.4)',
-        5.5, 'rgba(255,102,34,0.4)',
-        7.0, 'rgba(255,34,34,0.4)',
-      ],
-    },
-  });
-
-  m.addLayer({
-    id: 'earthquake-pulse',
-    type: 'circle',
-    source: 'earthquakes',
-    filter: ['==', ['get', 'isRecent'], true],
-    paint: {
-      'circle-color': 'transparent',
-      'circle-radius': [
-        'interpolate', ['linear'], ['get', 'magnitude'],
-        4.5, 12,
-        5.5, 18,
-        7.0, 28,
-        8.0, 36,
-      ],
-      'circle-stroke-width': 2,
-      'circle-stroke-color': [
-        'interpolate', ['linear'], ['get', 'magnitude'],
-        4.5, 'rgba(255,170,34,0.3)',
-        5.5, 'rgba(255,102,34,0.3)',
-        7.0, 'rgba(255,34,34,0.3)',
-      ],
-      'circle-stroke-opacity': [
-        'interpolate', ['linear'], ['zoom'],
-        0, 0.6,
-        5, 0.4,
-        10, 0.2,
-      ],
+      'circle-stroke-color': ['interpolate', ['linear'], ['get', 'magnitude'], 4.5, 'rgba(255,170,34,0.4)', 5.5, 'rgba(255,102,34,0.4)', 7.0, 'rgba(255,34,34,0.4)'],
     },
   });
 
@@ -902,28 +734,30 @@ function addEarthquakeLayers(m: mapboxgl.Map) {
       'text-allow-overlap': true,
       'icon-allow-overlap': true,
     },
-    paint: {
-      'text-color': '#FFFFFF',
-    },
+    paint: { 'text-color': '#FFFFFF' },
   });
 }
 
-// Earthquake layer IDs for wholesale visibility toggling
-const EARTHQUAKE_LAYERS = ['earthquake-circles', 'earthquake-pulse', 'earthquake-labels'];
+const EVENT_LAYERS = ['event-clusters', 'event-cluster-count', 'event-points'];
+const MARKET_LAYERS = ['market-clusters', 'market-cluster-count', 'market-markers'];
+const EARTHQUAKE_LAYERS = ['earthquake-circles', 'earthquake-labels'];
 const NOTAM_LAYERS = ['notam-fill', 'notam-labels'];
 const SHIPPING_LAYERS = ['shipping-points', 'shipping-labels'];
 const ELECTION_LAYERS = ['election-points', 'election-labels'];
+const WATCH_ZONE_LAYERS = ['watch-zone-fill', 'watch-zone-outline', 'watch-zone-labels'];
 
 function MonitorMap({
   onEventClick,
   onMarketClick,
   onEarthquakeClick,
-  onSituationClick,
+  onWatchZoneClick,
+  onSelectionCandidates,
   onMapClick,
   selectedEventCoords,
   relatedMarkets,
   visibleThemes,
-  visibleLayers,
+  visibleSignals,
+  visibleWatchZones,
   activeRoom,
   events,
   markets,
@@ -931,6 +765,7 @@ function MonitorMap({
   notamZones,
   shippingChokepoints,
   elections,
+  watchZones,
 }: MonitorMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -938,22 +773,59 @@ function MonitorMap({
   const [mapReady, setMapReady] = useState(false);
   const layersReady = useRef(false);
 
-  // Store callbacks in refs so map click handlers always have latest versions
   const onEventClickRef = useRef(onEventClick);
   const onMarketClickRef = useRef(onMarketClick);
   const onEarthquakeClickRef = useRef(onEarthquakeClick);
-  const onSituationClickRef = useRef(onSituationClick);
+  const onWatchZoneClickRef = useRef(onWatchZoneClick);
+  const onSelectionCandidatesRef = useRef(onSelectionCandidates);
   const onMapClickRef = useRef(onMapClick);
+
   useEffect(() => { onEventClickRef.current = onEventClick; }, [onEventClick]);
   useEffect(() => { onMarketClickRef.current = onMarketClick; }, [onMarketClick]);
   useEffect(() => { onEarthquakeClickRef.current = onEarthquakeClick; }, [onEarthquakeClick]);
-  useEffect(() => { onSituationClickRef.current = onSituationClick; }, [onSituationClick]);
+  useEffect(() => { onWatchZoneClickRef.current = onWatchZoneClick; }, [onWatchZoneClick]);
+  useEffect(() => { onSelectionCandidatesRef.current = onSelectionCandidates; }, [onSelectionCandidates]);
   useEffect(() => { onMapClickRef.current = onMapClick; }, [onMapClick]);
 
-  // Compute filtered data based on active themes
+  const eventById = useMemo(() => {
+    const out = new Map<string, GdeltEvent>();
+    for (const event of events) out.set(event.id, event);
+    return out;
+  }, [events]);
+
+  const marketById = useMemo(() => {
+    const out = new Map<string, PolymarketMarket>();
+    for (const market of markets) out.set(market.id, market);
+    return out;
+  }, [markets]);
+
+  const quakeById = useMemo(() => {
+    const out = new Map<string, UsgsEarthquake>();
+    for (const quake of earthquakes) out.set(quake.id, quake);
+    return out;
+  }, [earthquakes]);
+
+  const watchZoneById = useMemo(() => {
+    const out = new Map<string, WatchZone>();
+    for (const zone of watchZones) out.set(zone.id, zone);
+    return out;
+  }, [watchZones]);
+
+  const eventByIdRef = useRef(eventById);
+  const marketByIdRef = useRef(marketById);
+  const quakeByIdRef = useRef(quakeById);
+  const watchZoneByIdRef = useRef(watchZoneById);
+
+  useEffect(() => { eventByIdRef.current = eventById; }, [eventById]);
+  useEffect(() => { marketByIdRef.current = marketById; }, [marketById]);
+  useEffect(() => { quakeByIdRef.current = quakeById; }, [quakeById]);
+  useEffect(() => { watchZoneByIdRef.current = watchZoneById; }, [watchZoneById]);
+
   const filteredEvents = useMemo(() => {
+    if (!visibleSignals.events) return [];
     const activeCats = getActiveEventCategories(visibleThemes);
-    const candidates = events.filter((e) => activeCats.includes(e.category));
+
+    const candidates = events.filter((event) => activeCats.includes(event.category));
 
     const highSignal = candidates.filter((event) => {
       if (event.severity !== 'monitor') return true;
@@ -972,35 +844,159 @@ function MonitorMap({
     const nonCriticalBudget = Math.max(0, MAX_EVENTS_ON_MAP - critical.length);
 
     return [...critical, ...nonCritical.slice(0, nonCriticalBudget)];
-  }, [events, visibleThemes]);
+  }, [events, visibleThemes, visibleSignals.events]);
 
-  const displayMarketStacks = useMemo(() => {
+  const filteredMarkets = useMemo(() => {
+    if (!visibleSignals.markets) return [];
     const activeCats = getActiveMarketCategories(visibleThemes);
-    const highSignal = markets.filter(
-      (market) => activeCats.includes(market.category) && isHighSignalMapMarket(market),
-    );
-    return collapseMarketsForMap(highSignal);
-  }, [markets, visibleThemes]);
+    return markets.filter((market) => activeCats.includes(market.category) && isHighSignalMapMarket(market));
+  }, [markets, visibleThemes, visibleSignals.markets]);
 
-  const filteredSituations = useMemo(() => {
-    const activeCats = getActiveSituationCategories(visibleThemes);
-    const allSituations = ongoingSituationsData as OngoingSituation[];
-    return allSituations.filter((s) => activeCats.includes(s.category));
-  }, [visibleThemes]);
+  const filteredWatchZones = useMemo(() => {
+    if (!visibleSignals.watch_zones) return [];
+    return watchZones.filter((zone) => visibleThemes[zone.theme] && visibleWatchZones[zone.id]);
+  }, [watchZones, visibleSignals.watch_zones, visibleThemes, visibleWatchZones]);
+
+  const openCandidate = useCallback((candidate: MapSelectionCandidate) => {
+    if (candidate.type === 'event') onEventClickRef.current?.(candidate.data);
+    if (candidate.type === 'market') onMarketClickRef.current?.(candidate.data);
+    if (candidate.type === 'earthquake') onEarthquakeClickRef.current?.(candidate.data);
+    if (candidate.type === 'watch_zone') onWatchZoneClickRef.current?.(candidate.data);
+  }, []);
+
+  const candidateFromFeature = useCallback((feature: mapboxgl.MapboxGeoJSONFeature): MapSelectionCandidate | null => {
+    const layer = feature.layer?.id;
+    if (!layer) return null;
+    const props = feature.properties || {};
+
+    if (layer === 'event-points') {
+      const id = String(props.id || '');
+      const event = eventByIdRef.current.get(id);
+      if (!event) return null;
+      return {
+        type: 'event',
+        id,
+        title: event.title,
+        subtitle: `${event.severity.toUpperCase()} - ${event.sourceCount} sources`,
+        data: event,
+      };
+    }
+
+    if (layer === 'market-markers') {
+      const id = String(props.id || '');
+      const market = marketByIdRef.current.get(id);
+      if (!market) return null;
+      return {
+        type: 'market',
+        id,
+        title: market.title,
+        subtitle: `${Math.round(market.probability * 100)}% - ${market.volume}`,
+        data: market,
+      };
+    }
+
+    if (layer === 'earthquake-circles') {
+      const id = String(props.id || '');
+      const quake = quakeByIdRef.current.get(id);
+      if (!quake) return null;
+      return {
+        type: 'earthquake',
+        id,
+        title: quake.place,
+        subtitle: `M${quake.magnitude.toFixed(1)} - ${new Date(quake.timestamp).toLocaleDateString('en-US')}`,
+        data: quake,
+      };
+    }
+
+    if (layer === 'watch-zone-fill' || layer === 'watch-zone-outline') {
+      const id = String(props.id || '');
+      const zone = watchZoneByIdRef.current.get(id);
+      if (!zone) return null;
+      return {
+        type: 'watch_zone',
+        id,
+        title: zone.name,
+        subtitle: `${zone.severity.toUpperCase()} - ${zone.scope}`,
+        data: zone,
+      };
+    }
+
+    return null;
+  }, []);
+
+  const buildCandidates = useCallback((features: mapboxgl.MapboxGeoJSONFeature[]): MapSelectionCandidate[] => {
+    const seen = new Set<string>();
+    const out: MapSelectionCandidate[] = [];
+
+    for (const feature of features) {
+      const candidate = candidateFromFeature(feature);
+      if (!candidate) continue;
+      const key = `${candidate.type}:${candidate.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(candidate);
+    }
+
+    return out;
+  }, [candidateFromFeature]);
+
+  const expandMarketClusterStep = useCallback((feature: mapboxgl.MapboxGeoJSONFeature) => {
+    const m = map.current;
+    if (!m) return;
+
+    const source = m.getSource('markets') as mapboxgl.GeoJSONSource | undefined;
+    if (!source) return;
+
+    const clusterId = Number(feature.properties?.cluster_id);
+    if (!Number.isFinite(clusterId)) return;
+
+    const center = (feature.geometry as GeoJSON.Point).coordinates as [number, number];
+
+    source.getClusterExpansionZoom(clusterId, (err, expansionZoom) => {
+      if (err || expansionZoom == null) return;
+
+      const currentZoom = m.getZoom();
+      const nextZoom = Math.min(currentZoom + 1.4, expansionZoom, MARKET_CLUSTER_MAX_ZOOM + 0.1);
+
+      if (nextZoom > currentZoom + 0.05) {
+        m.easeTo({ center, zoom: nextZoom, duration: 500 });
+        return;
+      }
+
+      source.getClusterLeaves(clusterId, 12, 0, (leafErr, leavesRaw) => {
+        if (leafErr) return;
+        const leaves = Array.isArray(leavesRaw) ? leavesRaw : [];
+
+        const candidates: MapSelectionCandidate[] = [];
+        const seen = new Set<string>();
+        for (const leaf of leaves) {
+          const id = String(leaf.properties?.id || '');
+          const market = marketByIdRef.current.get(id);
+          if (!market || seen.has(id)) continue;
+          seen.add(id);
+          candidates.push({
+            type: 'market',
+            id,
+            title: market.title,
+            subtitle: `${Math.round(market.probability * 100)}% - ${market.volume}`,
+            data: market,
+          });
+        }
+
+        if (candidates.length > 0) {
+          onSelectionCandidatesRef.current?.('Market Stack', candidates);
+        }
+      });
+    });
+  }, []);
 
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
 
     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-    if (!token) {
-      return;
-    }
+    if (!token) return;
 
     mapboxgl.accessToken = token;
-
-    if (process.env.NODE_ENV === 'development') {
-      (window as unknown as Record<string, unknown>).__monitorMap = null;
-    }
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
@@ -1015,7 +1011,6 @@ function MonitorMap({
       if (!map.current) return;
       const m = map.current;
 
-      // Atmosphere
       m.setFog({
         color: 'rgb(15, 26, 46)',
         'high-color': 'rgb(36, 60, 100)',
@@ -1024,70 +1019,23 @@ function MonitorMap({
         'star-intensity': 0.5,
       });
 
-      // Land
       m.setPaintProperty('land', 'background-color', '#1A2540');
       m.setPaintProperty('landuse', 'fill-color', '#1C2744');
-      m.setPaintProperty('national-park', 'fill-color', '#1B2642');
-      m.setPaintProperty('land-structure-polygon', 'fill-color', '#1A2540');
-
-      // Water
       m.setPaintProperty('water', 'fill-color', '#0F1A2E');
       m.setPaintProperty('waterway', 'line-color', '#0D1830');
-
-      // Borders
       m.setPaintProperty('admin-0-boundary', 'line-color', '#334155');
-      m.setPaintProperty('admin-0-boundary', 'line-width', 0.8);
-      m.setPaintProperty('admin-0-boundary-bg', 'line-color', '#1E293B');
-      m.setPaintProperty('admin-0-boundary-disputed', 'line-color', '#2A3A52');
       m.setPaintProperty('admin-1-boundary', 'line-color', '#1E293B');
-      m.setPaintProperty('admin-1-boundary', 'line-opacity', 0.4);
-      m.setPaintProperty('admin-1-boundary-bg', 'line-opacity', 0.2);
-
-      // Hide roads
-      const roadLayers = [
-        'road-simple', 'road-path', 'road-path-trail',
-        'road-path-cycleway-piste', 'road-steps', 'road-pedestrian',
-        'road-rail', 'road-label-simple',
-        'tunnel-simple', 'tunnel-path', 'tunnel-path-trail',
-        'tunnel-path-cycleway-piste', 'tunnel-steps', 'tunnel-pedestrian',
-        'bridge-simple', 'bridge-case-simple', 'bridge-path',
-        'bridge-path-trail', 'bridge-path-cycleway-piste',
-        'bridge-steps', 'bridge-pedestrian', 'bridge-rail',
-        'aeroway-polygon', 'aeroway-line',
-      ];
-      for (const layer of roadLayers) {
-        m.setLayerZoomRange(layer, 14, 24);
-      }
-
-      m.setLayerZoomRange('building', 15, 24);
-
-      m.setLayoutProperty('settlement-minor-label', 'visibility', 'none');
-      m.setLayoutProperty('settlement-subdivision-label', 'visibility', 'none');
-
-      m.setPaintProperty('settlement-major-label', 'text-color', '#64748B');
-      m.setPaintProperty('settlement-major-label', 'text-halo-color', '#0B1120');
-      m.setPaintProperty('settlement-major-label', 'text-halo-width', 1);
-
-      m.setPaintProperty('country-label', 'text-color', '#536380');
-      m.setPaintProperty('country-label', 'text-halo-color', '#0B1120');
-      m.setPaintProperty('state-label', 'text-color', '#475569');
-      m.setPaintProperty('state-label', 'text-halo-color', '#0B1120');
-      m.setPaintProperty('continent-label', 'text-color', '#475569');
-
       m.setLayoutProperty('poi-label', 'visibility', 'none');
       m.setLayoutProperty('airport-label', 'visibility', 'none');
       m.setLayoutProperty('natural-point-label', 'visibility', 'none');
       m.setLayoutProperty('natural-line-label', 'visibility', 'none');
       m.setLayoutProperty('waterway-label', 'visibility', 'none');
 
-      m.setPaintProperty('water-line-label', 'text-color', '#1A2A45');
-      m.setPaintProperty('water-point-label', 'text-color', '#1A2A45');
+      if (!m.hasImage('market-diamond')) {
+        m.addImage('market-diamond', createDiamondImage(), { sdf: true });
+      }
 
-      // Add diamond image for market markers
-      m.addImage('market-diamond', createDiamondImage(), { sdf: true });
-
-      // Data layers
-      addSituationLayers(m);
+      addWatchZoneLayers(m);
       addEventLayers(m);
       addMarketLayers(m);
       addNotamLayers(m);
@@ -1097,140 +1045,56 @@ function MonitorMap({
       addTerminatorLayers(m);
       layersReady.current = true;
 
-      if (process.env.NODE_ENV === 'development') {
-        (window as unknown as Record<string, unknown>).__monitorMap = m;
-      }
-
-      // --- Click handlers ---
-
-      // Click on individual event
-      m.on('click', 'event-points', (e) => {
-        if (!e.features?.[0]) return;
-        const props = e.features[0].properties!;
-        const event: GdeltEvent = {
-          id: props.id,
-          canonicalId: props.canonicalId || props.id,
-          title: props.title,
-          category: props.category,
-          severity: props.severity,
-          lat: (e.features[0].geometry as GeoJSON.Point).coordinates[1],
-          lng: (e.features[0].geometry as GeoJSON.Point).coordinates[0],
-          timestamp: props.timestamp,
-          summary: props.summary,
-          sources: JSON.parse(props.sources || '[]'),
-          sourceCount: Number(props.sourceCount) || 0,
-          firstSeenAt: props.firstSeenAt || props.timestamp,
-          lastSeenAt: props.lastSeenAt || props.timestamp,
-          classificationConfidence: Number(props.classificationConfidence) || 0.6,
-          classificationMethod: props.classificationMethod || 'rules',
-          fingerprint: props.fingerprint || props.id,
-          tone: props.tone,
-          region: props.region,
-        };
-        onEventClickRef.current?.(event);
-      });
-
-      // Click on cluster -> zoom in
-      m.on('click', 'event-clusters', (e) => {
-        const features = m.queryRenderedFeatures(e.point, { layers: ['event-clusters'] });
-        if (!features[0]) return;
-        const clusterId = features[0].properties!.cluster_id;
-        (m.getSource('events') as mapboxgl.GeoJSONSource).getClusterExpansionZoom(
-          clusterId,
-          (err, zoom) => {
-            if (err || zoom == null) return;
-            m.easeTo({
-              center: (features[0].geometry as GeoJSON.Point).coordinates as [number, number],
-              zoom,
-            });
-          },
-        );
-      });
-
-      // Click on market (now uses market-markers symbol layer)
-      m.on('click', 'market-markers', (e) => {
-        if (!e.features?.[0]) return;
-        const props = e.features[0].properties!;
-        const stackCount = Number(props.stackCount) || 1;
-        const market: PolymarketMarket = {
-          id: props.id,
-          title: stackCount > 1 ? `${props.title} (+${stackCount - 1} nearby)` : props.title,
-          category: props.category,
-          categoryNormalized: props.categoryNormalized || props.category,
-          probability: Number(props.probability) || 0.5,
-          volume: props.volume,
-          volumeRaw: Number(props.volumeRaw) || 0,
-          lat: (e.features[0].geometry as GeoJSON.Point).coordinates[1],
-          lng: (e.features[0].geometry as GeoJSON.Point).coordinates[0],
-          url: props.url,
-          lastUpdated: props.lastUpdated,
-          outcomes: JSON.parse(props.outcomes || '[]'),
-          outcomePrices: JSON.parse(props.outcomePrices || '[]'),
-          liquidity: Number(props.liquidity) || 0,
-          endDate: props.endDate,
-          geoConfidence: Number(props.geoConfidence) || 0.5,
-          geoMethod: props.geoMethod || 'none',
-          isMapPlottable: props.isMapPlottable === true || props.isMapPlottable === 'true',
-        };
-        onMarketClickRef.current?.(market);
-      });
-
-      // Click on earthquake
-      m.on('click', 'earthquake-circles', (e) => {
-        if (!e.features?.[0]) return;
-        const props = e.features[0].properties!;
-        const eq: UsgsEarthquake = {
-          id: props.id,
-          title: props.title,
-          magnitude: props.magnitude,
-          magType: props.magType,
-          depth: props.depth,
-          lat: (e.features[0].geometry as GeoJSON.Point).coordinates[1],
-          lng: (e.features[0].geometry as GeoJSON.Point).coordinates[0],
-          place: props.place,
-          timestamp: props.timestamp,
-          tsunami: props.tsunami === true || props.tsunami === 'true',
-          felt: props.felt ?? null,
-          significance: props.significance,
-          alert: props.alert || null,
-          url: props.url,
-        };
-        onEarthquakeClickRef.current?.(eq);
-      });
-
-      // Click on situation
-      m.on('click', 'situation-circles', (e) => {
-        if (!e.features?.[0]) return;
-        const props = e.features[0].properties!;
-        try {
-          const situation: OngoingSituation = JSON.parse(props.situationData);
-          onSituationClickRef.current?.(situation);
-        } catch {
-          // Invalid data
-        }
-      });
-
-      // Click on map background -> close panel
       m.on('click', (e) => {
-        const hitFeatures = m.queryRenderedFeatures(e.point, {
-          layers: ['event-points', 'event-clusters', 'market-markers', 'market-labels', 'earthquake-circles', 'situation-circles'],
-        });
-        if (hitFeatures.length === 0) {
-          onMapClickRef.current?.();
+        const clusterHits = m.queryRenderedFeatures(e.point, { layers: ['event-clusters', 'market-clusters'] });
+        if (clusterHits.length > 0) {
+        const cluster = clusterHits[0];
+          if (cluster.layer?.id === 'event-clusters') {
+            const source = m.getSource('events') as mapboxgl.GeoJSONSource;
+            const clusterId = Number(cluster.properties?.cluster_id);
+            source.getClusterExpansionZoom(clusterId, (err, zoom) => {
+              if (err || zoom == null) return;
+              m.easeTo({
+                center: (cluster.geometry as GeoJSON.Point).coordinates as [number, number],
+                zoom,
+              });
+            });
+            return;
+          }
+
+          if (cluster.layer?.id === 'market-clusters') {
+            expandMarketClusterStep(cluster);
+            return;
+          }
         }
+
+        const hits = m.queryRenderedFeatures(e.point, {
+          layers: ['event-points', 'market-markers', 'earthquake-circles', 'watch-zone-fill', 'watch-zone-outline'],
+        });
+
+        if (hits.length === 0) {
+          onMapClickRef.current?.();
+          return;
+        }
+
+        const candidates = buildCandidates(hits);
+        if (candidates.length === 0) {
+          onMapClickRef.current?.();
+          return;
+        }
+
+        if (candidates.length > 1) {
+          onSelectionCandidatesRef.current?.('Multiple Signals At This Location', candidates);
+          return;
+        }
+
+        openCandidate(candidates[0]);
       });
 
-      // Cursor styles
-      m.on('mouseenter', 'event-points', () => { m.getCanvas().style.cursor = 'pointer'; });
-      m.on('mouseleave', 'event-points', () => { m.getCanvas().style.cursor = ''; });
-      m.on('mouseenter', 'event-clusters', () => { m.getCanvas().style.cursor = 'pointer'; });
-      m.on('mouseleave', 'event-clusters', () => { m.getCanvas().style.cursor = ''; });
-      m.on('mouseenter', 'market-markers', () => { m.getCanvas().style.cursor = 'pointer'; });
-      m.on('mouseleave', 'market-markers', () => { m.getCanvas().style.cursor = ''; });
-      m.on('mouseenter', 'earthquake-circles', () => { m.getCanvas().style.cursor = 'pointer'; });
-      m.on('mouseleave', 'earthquake-circles', () => { m.getCanvas().style.cursor = ''; });
-      m.on('mouseenter', 'situation-circles', () => { m.getCanvas().style.cursor = 'pointer'; });
-      m.on('mouseleave', 'situation-circles', () => { m.getCanvas().style.cursor = ''; });
+      for (const layerId of ['event-points', 'event-clusters', 'market-markers', 'market-clusters', 'earthquake-circles', 'watch-zone-fill', 'watch-zone-outline']) {
+        m.on('mouseenter', layerId, () => { m.getCanvas().style.cursor = 'pointer'; });
+        m.on('mouseleave', layerId, () => { m.getCanvas().style.cursor = ''; });
+      }
 
       setMapReady(true);
     });
@@ -1239,9 +1103,8 @@ function MonitorMap({
       map.current?.remove();
       map.current = null;
     };
-  }, []);
+  }, [buildCandidates, expandMarketClusterStep, openCandidate]);
 
-  // Resize map when container dimensions change
   useEffect(() => {
     if (!mapContainer.current) return;
     const ro = new ResizeObserver(() => {
@@ -1251,7 +1114,6 @@ function MonitorMap({
     return () => ro.disconnect();
   }, []);
 
-  // Fly to selected situation room viewport
   useEffect(() => {
     if (!map.current || !activeRoom) return;
     map.current.flyTo({
@@ -1262,7 +1124,6 @@ function MonitorMap({
     });
   }, [activeRoom]);
 
-  // Update terminator periodically
   useEffect(() => {
     if (!layersReady.current) return;
     const interval = setInterval(() => {
@@ -1271,77 +1132,87 @@ function MonitorMap({
     return () => clearInterval(interval);
   }, [mapReady]);
 
-  // Update event source data when filtered events change
   useEffect(() => {
     if (!map.current || !layersReady.current) return;
     const source = map.current.getSource('events') as mapboxgl.GeoJSONSource | undefined;
-    if (source) {
-      source.setData(eventsToGeoJSON(filteredEvents));
-    }
-  }, [filteredEvents, mapReady]);
+    if (source) source.setData(eventsToGeoJSON(filteredEvents, activeRoom));
 
-  // Update market source data when market stacks change
+    const showEvents = visibleSignals.events;
+    for (const layerId of EVENT_LAYERS) {
+      try {
+        map.current.setLayoutProperty(layerId, 'visibility', showEvents ? 'visible' : 'none');
+      } catch {
+        // Layer may not exist yet.
+      }
+    }
+  }, [filteredEvents, visibleSignals.events, activeRoom, mapReady]);
+
   useEffect(() => {
     if (!map.current || !layersReady.current) return;
     const source = map.current.getSource('markets') as mapboxgl.GeoJSONSource | undefined;
-    if (source) {
-      source.setData(marketsToGeoJSON(displayMarketStacks));
-    }
-  }, [displayMarketStacks, mapReady]);
+    if (source) source.setData(marketsToGeoJSON(filteredMarkets, activeRoom));
 
-  // Update situation source data when filtered situations change
+    const showMarkets = visibleSignals.markets;
+    for (const layerId of MARKET_LAYERS) {
+      try {
+        map.current.setLayoutProperty(layerId, 'visibility', showMarkets ? 'visible' : 'none');
+      } catch {
+        // Layer may not exist yet.
+      }
+    }
+  }, [filteredMarkets, visibleSignals.markets, activeRoom, mapReady]);
+
   useEffect(() => {
     if (!map.current || !layersReady.current) return;
-    const source = map.current.getSource('situations') as mapboxgl.GeoJSONSource | undefined;
-    if (source) {
-      source.setData(situationsToGeoJSON(filteredSituations));
-    }
-  }, [filteredSituations, mapReady]);
+    const source = map.current.getSource('watch-zones') as mapboxgl.GeoJSONSource | undefined;
+    if (source) source.setData(watchZonesToGeoJSON(filteredWatchZones, activeRoom));
 
-  // Update earthquake source data + visibility
+    const showWatchZones = visibleSignals.watch_zones;
+    for (const layerId of WATCH_ZONE_LAYERS) {
+      try {
+        map.current.setLayoutProperty(layerId, 'visibility', showWatchZones ? 'visible' : 'none');
+      } catch {
+        // Layer may not exist yet.
+      }
+    }
+  }, [filteredWatchZones, visibleSignals.watch_zones, activeRoom, mapReady]);
+
   useEffect(() => {
     if (!map.current || !layersReady.current) return;
     const m = map.current;
 
-    // Update earthquake data
     const source = m.getSource('earthquakes') as mapboxgl.GeoJSONSource | undefined;
-    if (source) {
-      source.setData(earthquakesToGeoJSON(earthquakes));
-    }
+    if (source) source.setData(earthquakesToGeoJSON(earthquakes, activeRoom));
 
-    // Toggle earthquake layer visibility based on disasters theme
-    const eqVisible = visibleThemes.disasters;
+    const showEarthquakes = visibleSignals.disasters && visibleThemes.disasters;
     for (const layerId of EARTHQUAKE_LAYERS) {
       try {
-        m.setLayoutProperty(layerId, 'visibility', eqVisible ? 'visible' : 'none');
+        m.setLayoutProperty(layerId, 'visibility', showEarthquakes ? 'visible' : 'none');
       } catch {
-        // Layer may not exist yet
+        // Layer may not exist yet.
       }
     }
-  }, [earthquakes, visibleThemes.disasters, mapReady]);
+  }, [earthquakes, visibleSignals.disasters, visibleThemes.disasters, activeRoom, mapReady]);
 
-  // Update NOTAM + shipping overlays and visibility
   useEffect(() => {
     if (!map.current || !layersReady.current) return;
     const m = map.current;
 
     const notamSource = m.getSource('notams') as mapboxgl.GeoJSONSource | undefined;
-    if (notamSource) {
-      notamSource.setData(notamsToGeoJSON(notamZones));
-    }
+    if (notamSource) notamSource.setData(notamsToGeoJSON(notamZones));
 
     const shippingSource = m.getSource('shipping') as mapboxgl.GeoJSONSource | undefined;
-    if (shippingSource) {
-      shippingSource.setData(shippingToGeoJSON(shippingChokepoints));
-    }
+    if (shippingSource) shippingSource.setData(shippingToGeoJSON(shippingChokepoints));
 
-    const showInfra = visibleThemes.infrastructure;
-    const showNotams = showInfra && visibleLayers.notams;
-    const showShipping = showInfra && visibleLayers.shipping;
+    const electionSource = m.getSource('elections') as mapboxgl.GeoJSONSource | undefined;
+    if (electionSource) electionSource.setData(electionsToGeoJSON(elections));
+
+    const showInfra = visibleSignals.infrastructure_overlays && visibleThemes.infrastructure;
+    const showElectionOverlay = visibleSignals.infrastructure_overlays && visibleThemes.elections;
 
     for (const layerId of NOTAM_LAYERS) {
       try {
-        m.setLayoutProperty(layerId, 'visibility', showNotams ? 'visible' : 'none');
+        m.setLayoutProperty(layerId, 'visibility', showInfra ? 'visible' : 'none');
       } catch {
         // Layer may not exist yet.
       }
@@ -1349,34 +1220,21 @@ function MonitorMap({
 
     for (const layerId of SHIPPING_LAYERS) {
       try {
-        m.setLayoutProperty(layerId, 'visibility', showShipping ? 'visible' : 'none');
+        m.setLayoutProperty(layerId, 'visibility', showInfra ? 'visible' : 'none');
       } catch {
         // Layer may not exist yet.
       }
     }
-  }, [notamZones, shippingChokepoints, visibleThemes.infrastructure, visibleLayers.notams, visibleLayers.shipping, mapReady]);
 
-  // Update elections overlay and visibility
-  useEffect(() => {
-    if (!map.current || !layersReady.current) return;
-    const m = map.current;
-
-    const source = m.getSource('elections') as mapboxgl.GeoJSONSource | undefined;
-    if (source) {
-      source.setData(electionsToGeoJSON(elections));
-    }
-
-    const showElectionLayer = visibleThemes.elections && visibleLayers.elections;
     for (const layerId of ELECTION_LAYERS) {
       try {
-        m.setLayoutProperty(layerId, 'visibility', showElectionLayer ? 'visible' : 'none');
+        m.setLayoutProperty(layerId, 'visibility', showElectionOverlay ? 'visible' : 'none');
       } catch {
         // Layer may not exist yet.
       }
     }
-  }, [elections, visibleThemes.elections, visibleLayers.elections, mapReady]);
+  }, [notamZones, shippingChokepoints, elections, visibleSignals.infrastructure_overlays, visibleThemes.infrastructure, visibleThemes.elections, mapReady]);
 
-  // Update related lines when selection changes
   useEffect(() => {
     if (!map.current || !layersReady.current) return;
     const source = map.current.getSource('related-lines') as mapboxgl.GeoJSONSource | undefined;
@@ -1387,16 +1245,16 @@ function MonitorMap({
       return;
     }
 
-    const features = relatedMarkets.map((m, i) => ({
+    const features = relatedMarkets.map((market, index) => ({
       type: 'Feature' as const,
       geometry: {
         type: 'LineString' as const,
         coordinates: [
           [selectedEventCoords.lng, selectedEventCoords.lat],
-          [m.lng, m.lat],
+          [market.lng, market.lat],
         ],
       },
-      properties: { id: `line_${i}` },
+      properties: { id: `line_${index}` },
     }));
 
     source.setData({ type: 'FeatureCollection', features });
