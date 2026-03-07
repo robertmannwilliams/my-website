@@ -127,8 +127,22 @@ function getInitialRoomFromStorage(): SituationRoomConfig | null {
 function normalizeEventShape(event: GdeltEvent): GdeltEvent {
   const topicTags = Array.isArray(event.topicTags) ? event.topicTags : [];
   const signalScore = Number(event.signalScore) || 0;
+  const status =
+    event.status === 'observed' || event.status === 'upcoming' || event.status === 'speculative'
+      ? event.status
+      : 'observed';
+  const actors = Array.isArray(event.actors)
+    ? event.actors.filter((actor): actor is string => typeof actor === 'string').slice(0, 8)
+    : [];
+  const eventTime =
+    typeof event.eventTime === 'string' && Number.isFinite(new Date(event.eventTime).getTime())
+      ? new Date(event.eventTime).toISOString()
+      : null;
   return {
     ...event,
+    status,
+    actors,
+    eventTime,
     topicTags,
     signalScore,
     mapPriority: Number(event.mapPriority) || signalScore,
@@ -525,12 +539,12 @@ export default function MonitorPage() {
   );
 
   const signalCounts = useMemo(() => ({
-    events: allEvents.length,
+    events: allEvents.filter((event) => event.status !== 'speculative').length,
     markets: allMarkets.length,
     disasters: allEarthquakes.length,
     infrastructure_overlays: notamZones.length + shippingChokepoints.length + elections.length,
     watch_zones: watchZones.length,
-  }), [allEvents.length, allMarkets.length, allEarthquakes.length, notamZones.length, shippingChokepoints.length, elections.length]);
+  }), [allEvents, allMarkets.length, allEarthquakes.length, notamZones.length, shippingChokepoints.length, elections.length]);
 
   const relatedMarkets = useMemo(() => {
     if (selectedItem?.type !== 'event') return [];

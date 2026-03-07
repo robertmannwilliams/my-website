@@ -993,7 +993,10 @@ function MonitorMap({
     const activeCats = getActiveEventCategories(visibleThemes);
 
     const candidates = events.filter(
-      (event) => activeCats.includes(event.category) && event.geoValidity === 'valid',
+      (event) =>
+        activeCats.includes(event.category) &&
+        event.geoValidity === 'valid' &&
+        event.status !== 'speculative',
     );
 
     const highSignal = candidates.filter((event) => {

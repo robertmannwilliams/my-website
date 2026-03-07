@@ -111,6 +111,7 @@ export function computeThemeCounts(
   };
 
   for (const e of events) {
+    if (e.status === 'speculative') continue;
     const t = eventCategoryToTheme(e.category);
     if (t) counts[t]++;
   }

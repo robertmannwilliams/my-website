@@ -33,6 +33,12 @@ const SEVERITY_CONFIG = {
   monitor: { label: 'MONITOR', color: '#666680', bg: 'rgba(102,102,128,0.12)' },
 };
 
+const STATUS_CONFIG = {
+  observed: { label: 'OBSERVED', color: '#8BC7FF', bg: 'rgba(139,199,255,0.14)' },
+  upcoming: { label: 'UPCOMING', color: '#22C55E', bg: 'rgba(34,197,94,0.14)' },
+  speculative: { label: 'SPECULATIVE', color: '#C084FC', bg: 'rgba(192,132,252,0.14)' },
+} as const;
+
 const CATEGORY_LABELS: Record<string, string> = {
   conflicts: 'Conflicts',
   elections: 'Elections',
@@ -64,6 +70,7 @@ function formatEndDate(ts: string): string {
 
 function EventContent({ event, relatedMarkets }: { event: GdeltEvent; relatedMarkets?: PolymarketMarket[] }) {
   const sev = SEVERITY_CONFIG[event.severity];
+  const statusConfig = STATUS_CONFIG[event.status] || STATUS_CONFIG.observed;
 
   return (
     <>
@@ -85,6 +92,19 @@ function EventContent({ event, relatedMarkets }: { event: GdeltEvent; relatedMar
             }}
           >
             {CATEGORY_LABELS[event.category] || event.category}
+          </span>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: '0.04em',
+              color: statusConfig.color,
+              background: statusConfig.bg,
+              padding: '2px 8px',
+              borderRadius: 3,
+            }}
+          >
+            {statusConfig.label}
           </span>
         </div>
         <h3 style={{ color: '#E8E8ED', fontSize: 15, fontWeight: 600, lineHeight: 1.35, margin: 0 }}>{event.title}</h3>
@@ -112,6 +132,11 @@ function EventContent({ event, relatedMarkets }: { event: GdeltEvent; relatedMar
           <div style={{ fontSize: 11, color: '#64748B' }}>
             Last Seen: <span style={{ color: '#CBD5E1' }}>{formatTimestamp(event.lastSeenAt)}</span>
           </div>
+          {event.eventTime && (
+            <div style={{ fontSize: 11, color: '#64748B', gridColumn: '1 / -1' }}>
+              Event Time: <span style={{ color: '#CBD5E1' }}>{new Date(event.eventTime).toLocaleString('en-US')}</span>
+            </div>
+          )}
           <div style={{ fontSize: 10, color: '#475569', gridColumn: '1 / -1', fontFamily: 'monospace' }}>
             Canonical: {event.canonicalId} · {event.fingerprint}
           </div>
@@ -119,6 +144,30 @@ function EventContent({ event, relatedMarkets }: { event: GdeltEvent; relatedMar
             Geo: <span style={{ color: '#CBD5E1' }}>{event.geoValidity}</span> · <span style={{ color: '#94A3B8' }}>{event.geoReason}</span>
           </div>
         </div>
+
+        {event.actors.length > 0 && (
+          <div style={{ marginBottom: 18 }}>
+            <span style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, display: 'block', marginBottom: 8 }}>
+              Actors
+            </span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {event.actors.slice(0, 6).map((actor) => (
+                <span
+                  key={actor}
+                  style={{
+                    fontSize: 11,
+                    color: '#9EC8FF',
+                    background: 'rgba(158,200,255,0.12)',
+                    padding: '3px 8px',
+                    borderRadius: 999,
+                  }}
+                >
+                  {actor}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {event.sources.length > 0 && (
           <div style={{ marginBottom: 20 }}>

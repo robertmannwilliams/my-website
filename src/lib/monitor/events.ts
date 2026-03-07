@@ -26,6 +26,9 @@ export interface GdeltEvent {
   lastSeenAt: string;
   classificationConfidence: number;
   classificationMethod: ClassificationMethod;
+  status: EventStatus;
+  actors: string[];
+  eventTime: string | null;
   fingerprint: string;
   tone: number;
   region: string;
@@ -45,6 +48,7 @@ export type EventCategory =
   | 'infrastructure';
 
 export type EventSeverity = 'critical' | 'watch' | 'monitor';
+export type EventStatus = 'observed' | 'upcoming' | 'speculative';
 export type ClassificationMethod = 'rules' | 'llm' | 'hybrid';
 
 const CLASSIFIED_CLUSTER_TTL = 72 * 60 * 60; // 72h
@@ -185,9 +189,91 @@ const WATCH_KEYWORDS = [
   'talks stalled',
 ];
 
+const UPCOMING_KEYWORDS = [
+  'scheduled',
+  'set to',
+  'to be held',
+  'planned',
+  'expected to',
+  'upcoming',
+  'deadline',
+  'summit',
+  'vote on',
+];
+
+const SPECULATIVE_KEYWORDS = [
+  'will ',
+  'could ',
+  'might ',
+  'may ',
+  'if ',
+  'likely to',
+  'odds',
+  'chance',
+  'what if',
+];
+
+const MONTH_DATE_PATTERN =
+  /\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:,\s*\d{4})?\b/i;
+const ISO_DATE_PATTERN = /\b\d{4}-\d{2}-\d{2}(?:[ t]\d{2}:\d{2}(?::\d{2})?(?:z|[+-]\d{2}:?\d{2})?)?\b/i;
+
+const SPECULATIVE_PATTERNS: RegExp[] = [
+  /\?/i,
+  /^\s*will\s+/i,
+  /^\s*could\s+/i,
+  /^\s*might\s+/i,
+  /^\s*may\s+/i,
+  /\bodds?\b/i,
+  /\bchance\b/i,
+  /\bwhat\s+if\b/i,
+  /\bwhether\b/i,
+];
+
+const UPCOMING_PATTERNS = UPCOMING_KEYWORDS.map((kw) => new RegExp(`\\b${kw.trim().replace(/\s+/g, '\\s+')}\\b`, 'i'));
+
+const ACTOR_STOPWORDS = new Set([
+  'the',
+  'a',
+  'an',
+  'and',
+  'or',
+  'of',
+  'in',
+  'on',
+  'to',
+  'for',
+  'from',
+  'with',
+  'by',
+  'after',
+  'before',
+  'amid',
+  'new',
+  'global',
+  'middle',
+  'east',
+  'north',
+  'south',
+  'west',
+  'east',
+  'week',
+  'month',
+  'year',
+  'today',
+  'tomorrow',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+  'sunday',
+]);
+
 interface RuleClassification {
   category: EventCategory;
   severity: EventSeverity;
+  status: EventStatus;
   confidence: number;
   relevance: number;
   highImpact: boolean;
@@ -212,6 +298,9 @@ interface LlmClassification {
   summary: string;
   category: EventCategory;
   severity: EventSeverity;
+  status: EventStatus;
+  actors?: string[];
+  eventTime?: string | null;
   latitude: number;
   longitude: number;
   confidence: number;
@@ -222,6 +311,9 @@ interface CachedClassifiedCluster {
   summary: string;
   category: EventCategory;
   severity: EventSeverity;
+  status: EventStatus;
+  actors: string[];
+  eventTime: string | null;
   lat: number;
   lng: number;
   classificationConfidence: number;
@@ -254,6 +346,7 @@ function topicTagsForText(text: string): string[] {
 
 function eventSignalScoreFromData(input: {
   severity: EventSeverity;
+  status: EventStatus;
   sourceCount: number;
   confidence: number;
   lastSeenAt: string;
@@ -263,7 +356,8 @@ function eventSignalScoreFromData(input: {
   const confidenceScore = input.confidence * 6;
   const ageHours = Math.max(0, (Date.now() - new Date(input.lastSeenAt).getTime()) / 3_600_000);
   const recencyScore = Math.max(0, 4 - ageHours / 6);
-  return severityScore + sourceScore + confidenceScore + recencyScore;
+  const statusAdjustment = input.status === 'speculative' ? -5 : input.status === 'upcoming' ? -1 : 0;
+  return severityScore + sourceScore + confidenceScore + recencyScore + statusAdjustment;
 }
 
 function severityRank(s: EventSeverity): number {
@@ -276,6 +370,163 @@ function isIrrelevant(normalized: string): boolean {
 
 function containsAny(text: string, words: string[]): boolean {
   return words.some((kw) => text.includes(kw));
+}
+
+function containsAnyPattern(text: string, patterns: RegExp[]): boolean {
+  return patterns.some((pattern) => pattern.test(text));
+}
+
+function inferStatusFromText(normalized: string): EventStatus {
+  if (containsAnyPattern(normalized, SPECULATIVE_PATTERNS)) return 'speculative';
+  if (containsAnyPattern(normalized, UPCOMING_PATTERNS)) return 'upcoming';
+  if (containsAny(normalized, SPECULATIVE_KEYWORDS)) return 'speculative';
+  return 'observed';
+}
+
+function isEventStatus(value: unknown): value is EventStatus {
+  return value === 'observed' || value === 'upcoming' || value === 'speculative';
+}
+
+function parseEventTime(value: unknown): string | null {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
+  return date.toISOString();
+}
+
+function statusBreakdown(cluster: EventCluster): {
+  status: EventStatus;
+  dominance: number;
+  weights: Record<EventStatus, number>;
+} {
+  const weights: Record<EventStatus, number> = {
+    observed: 0,
+    upcoming: 0,
+    speculative: 0,
+  };
+
+  for (const candidate of cluster.candidates) {
+    const w = Math.max(0.35, candidate.headline.sourceWeight + candidate.classification.confidence);
+    weights[candidate.classification.status] += w;
+  }
+
+  const ranked = (Object.entries(weights) as Array<[EventStatus, number]>).sort((a, b) => b[1] - a[1]);
+  const [firstStatus, firstWeight] = ranked[0] || ['observed', 0];
+  const secondWeight = ranked[1]?.[1] || 0;
+  const total = firstWeight + secondWeight + (ranked[2]?.[1] || 0);
+  const dominance = total > 0 ? (firstWeight - secondWeight) / total : 1;
+
+  return {
+    status: firstStatus,
+    dominance,
+    weights,
+  };
+}
+
+function extractActorsFromCluster(cluster: EventCluster): string[] {
+  const scoreByActor = new Map<string, number>();
+  const displayByActor = new Map<string, string>();
+
+  for (const candidate of cluster.candidates.slice(0, 12)) {
+    const text = `${candidate.headline.title} ${candidate.headline.summary || ''}`;
+    const matches = text.match(/\b(?:[A-Z][a-z]+|[A-Z]{2,})(?:\s+(?:[A-Z][a-z]+|[A-Z]{2,})){0,2}\b/g) || [];
+    const weight = Math.max(0.4, candidate.headline.sourceWeight + candidate.classification.confidence * 0.4);
+
+    for (const raw of matches) {
+      const cleaned = raw
+        .trim()
+        .replace(/[^A-Za-z0-9'\-.\s]/g, '')
+        .replace(/\s+/g, ' ');
+
+      if (cleaned.length < 3) continue;
+      const pieces = cleaned.toLowerCase().split(' ');
+      if (pieces.every((piece) => ACTOR_STOPWORDS.has(piece))) continue;
+      if (pieces.length === 1 && pieces[0].length < 4 && !/^[A-Z]{2,}$/.test(cleaned)) continue;
+
+      const key = cleaned.toLowerCase();
+      scoreByActor.set(key, (scoreByActor.get(key) || 0) + weight);
+      if (!displayByActor.has(key)) displayByActor.set(key, cleaned);
+    }
+  }
+
+  return [...scoreByActor.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([key]) => displayByActor.get(key) || key);
+}
+
+function extractRelativeEventTime(normalized: string, baseIso: string): string | null {
+  const base = new Date(baseIso);
+  if (!Number.isFinite(base.getTime())) return null;
+
+  if (/\btomorrow\b/i.test(normalized)) {
+    const date = new Date(base.getTime() + 24 * 60 * 60_000);
+    return date.toISOString();
+  }
+
+  if (/\bnext week\b/i.test(normalized)) {
+    const date = new Date(base.getTime() + 7 * 24 * 60 * 60_000);
+    return date.toISOString();
+  }
+
+  if (/\bnext month\b/i.test(normalized)) {
+    const date = new Date(base);
+    date.setUTCMonth(date.getUTCMonth() + 1);
+    return date.toISOString();
+  }
+
+  if (/\btoday\b/i.test(normalized)) {
+    return base.toISOString();
+  }
+
+  return null;
+}
+
+function extractEventTimeFromCluster(cluster: EventCluster, status: EventStatus): string | null {
+  if (status === 'observed') return null;
+
+  const bySourceWeight = [...cluster.candidates].sort((a, b) => b.headline.sourceWeight - a.headline.sourceWeight);
+  for (const candidate of bySourceWeight) {
+    const text = `${candidate.headline.title} ${candidate.headline.summary || ''}`;
+    const normalized = normalizeForSimilarity(text);
+
+    const isoMatch = text.match(ISO_DATE_PATTERN)?.[0];
+    const isoParsed = parseEventTime(isoMatch || null);
+    if (isoParsed) return isoParsed;
+
+    const monthMatch = text.match(MONTH_DATE_PATTERN)?.[0];
+    if (monthMatch) {
+      const monthWithYear = /\d{4}/.test(monthMatch)
+        ? monthMatch
+        : `${monthMatch}, ${new Date(candidate.headline.timestamp).getUTCFullYear()}`;
+      const monthParsed = parseEventTime(monthWithYear);
+      if (monthParsed) return monthParsed;
+    }
+
+    const relative = extractRelativeEventTime(normalized, candidate.headline.timestamp);
+    if (relative) return relative;
+  }
+
+  return null;
+}
+
+function sanitizeActors(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const cleaned: string[] = [];
+  const seen = new Set<string>();
+
+  for (const entry of value) {
+    if (typeof entry !== 'string') continue;
+    const actor = entry.trim().replace(/\s+/g, ' ');
+    if (actor.length < 2) continue;
+    const key = actor.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    cleaned.push(actor);
+    if (cleaned.length >= 8) break;
+  }
+
+  return cleaned;
 }
 
 function inferRuleClassification(normalized: string, sourceWeight: number): RuleClassification {
@@ -293,6 +544,7 @@ function inferRuleClassification(normalized: string, sourceWeight: number): Rule
   const critical = containsAny(normalized, CRITICAL_KEYWORDS);
   const watch = critical ? false : containsAny(normalized, WATCH_KEYWORDS);
   const severity: EventSeverity = critical ? 'critical' : watch ? 'watch' : 'monitor';
+  const status = inferStatusFromText(normalized);
 
   const highImpact = containsAny(normalized, HIGH_IMPACT_KEYWORDS) || severity !== 'monitor';
 
@@ -308,6 +560,7 @@ function inferRuleClassification(normalized: string, sourceWeight: number): Rule
   return {
     category: bestCategory,
     severity,
+    status,
     confidence: baseConfidence,
     relevance,
     highImpact,
@@ -507,21 +760,33 @@ function chooseLocation(cluster: EventCluster): GeoMatch {
   return centroidForRegion('global');
 }
 
-function shouldEscalateToLlm(cluster: EventCluster, confidence: number, category: EventCategory, severity: EventSeverity): boolean {
-  if (cluster.candidates.length >= 4 && severity !== 'monitor') return true;
-  if (confidence < 0.68) return true;
-  if (severity === 'critical') return true;
-
-  // If category votes conflict heavily, escalate.
+function shouldEscalateToLlm(
+  cluster: EventCluster,
+  confidence: number,
+  category: EventCategory,
+  severity: EventSeverity,
+  status: EventStatus,
+  statusDominance: number,
+): boolean {
+  const highImpactCluster = cluster.candidates.some((c) => c.classification.highImpact || c.classification.severity !== 'monitor');
   const categories = new Set(cluster.candidates.map((c) => c.classification.category));
+
+  if (cluster.candidates.length >= 3) return true;
+  if (severity === 'critical') return true;
+  if (status === 'upcoming') return true;
+  if (statusDominance < 0.22) return true;
+  if (confidence < 0.72) return true;
   if (categories.size >= 3) return true;
 
-  // Infrastructure/economy events are often noisier and benefit from semantic pass.
-  if (category === 'infrastructure' || category === 'economy') {
-    return cluster.candidates.some((c) => c.classification.highImpact);
+  if (status === 'speculative' && cluster.candidates.length <= 2 && !highImpactCluster) {
+    return false;
   }
 
-  return false;
+  if (category === 'infrastructure' || category === 'economy') {
+    return highImpactCluster || cluster.candidates.length >= 2;
+  }
+
+  return highImpactCluster && cluster.candidates.length >= 2;
 }
 
 async function classifyClusterWithClaude(cluster: EventCluster): Promise<LlmClassification | null> {
@@ -533,7 +798,20 @@ async function classifyClusterWithClaude(cluster: EventCluster): Promise<LlmClas
     .map((c) => `- [${c.headline.source}] ${c.headline.title}${c.headline.summary ? ` | ${c.headline.summary}` : ''}`)
     .join('\n');
 
-  const system = `You classify one geopolitical event cluster for a monitoring dashboard. Return ONLY valid JSON with keys: title, summary, category, severity, latitude, longitude, confidence.\n\nAllowed category values: conflicts, elections, economy, disasters, infrastructure.\nAllowed severity values: critical, watch, monitor.`;
+  const system = `You classify one geopolitical event cluster for a monitoring dashboard.
+Return ONLY valid JSON with keys:
+title, summary, category, severity, status, actors, eventTime, latitude, longitude, confidence.
+
+Allowed category values: conflicts, elections, economy, disasters, infrastructure.
+Allowed severity values: critical, watch, monitor.
+Allowed status values: observed, upcoming, speculative.
+
+Rules:
+- "observed" means event occurred/ongoing.
+- "upcoming" means scheduled/expected future event.
+- "speculative" means hypothetical/question-like or prediction framing.
+- actors should be an array of 1-6 concrete entities (countries, organizations, leaders), empty array if unclear.
+- eventTime should be ISO timestamp if explicit in text, else null.`;
 
   const user = `Classify this cluster of headlines into one canonical event:\n${sample}`;
 
@@ -569,14 +847,30 @@ async function classifyClusterWithClaude(cluster: EventCluster): Promise<LlmClas
     const severity = (['critical', 'watch', 'monitor'].includes(parsed.severity)
       ? parsed.severity
       : 'monitor') as EventSeverity;
+    const status = isEventStatus(parsed.status)
+      ? parsed.status
+      : inferStatusFromText(normalizeForSimilarity(`${parsed.title || ''} ${parsed.summary || ''}`));
+    const actors = sanitizeActors(parsed.actors);
+    const eventTime = parseEventTime(parsed.eventTime);
+
+    const lat = Number(parsed.latitude);
+    const lng = Number(parsed.longitude);
+    const hasCoords =
+      Number.isFinite(lat) &&
+      Number.isFinite(lng) &&
+      Math.abs(lat) <= 90 &&
+      Math.abs(lng) <= 180;
 
     return {
       title: parsed.title,
       summary: parsed.summary,
       category,
       severity,
-      latitude: Number(parsed.latitude) || 0,
-      longitude: Number(parsed.longitude) || 0,
+      status,
+      actors,
+      eventTime,
+      latitude: hasCoords ? lat : Number.NaN,
+      longitude: hasCoords ? lng : Number.NaN,
       confidence: Math.max(0, Math.min(1, Number(parsed.confidence) || 0.72)),
     };
   } catch {
@@ -587,7 +881,10 @@ async function classifyClusterWithClaude(cluster: EventCluster): Promise<LlmClas
 function eventFromRules(cluster: EventCluster): CachedClassifiedCluster {
   const category = chooseWeightedCategory(cluster);
   const severity = chooseSeverity(cluster);
+  const statusInfo = statusBreakdown(cluster);
   const loc = chooseLocation(cluster);
+  const actors = extractActorsFromCluster(cluster);
+  const eventTime = extractEventTimeFromCluster(cluster, statusInfo.status);
 
   const sourceWeightAvg =
     cluster.candidates.reduce((sum, c) => sum + c.headline.sourceWeight, 0) / Math.max(1, cluster.candidates.length);
@@ -604,6 +901,9 @@ function eventFromRules(cluster: EventCluster): CachedClassifiedCluster {
     summary: summarizeCluster(cluster),
     category,
     severity,
+    status: statusInfo.status,
+    actors,
+    eventTime,
     lat: loc.lat,
     lng: loc.lng,
     classificationConfidence: confidence,
@@ -611,6 +911,55 @@ function eventFromRules(cluster: EventCluster): CachedClassifiedCluster {
     geoValidity: loc.validity,
     geoReason: loc.reason,
   };
+}
+
+function normalizeCachedCluster(cached: CachedClassifiedCluster, cluster: EventCluster): CachedClassifiedCluster {
+  const statusInfo = statusBreakdown(cluster);
+  const status = isEventStatus(cached.status) ? cached.status : statusInfo.status;
+  const actors = sanitizeActors(cached.actors);
+  const fallbackActors = actors.length > 0 ? actors : extractActorsFromCluster(cluster);
+  const eventTime = parseEventTime(cached.eventTime) || extractEventTimeFromCluster(cluster, status);
+
+  return {
+    ...cached,
+    status,
+    actors: fallbackActors,
+    eventTime,
+  };
+}
+
+function applyStatusPolicy(
+  input: {
+    status: EventStatus;
+    title: string;
+    summary: string;
+    sourceCount: number;
+    severity: EventSeverity;
+    confidence: number;
+    eventTime: string | null;
+  },
+): EventStatus {
+  let status = input.status;
+  const normalized = normalizeForSimilarity(`${input.title} ${input.summary || ''}`);
+  const questionLike = containsAnyPattern(normalized, SPECULATIVE_PATTERNS);
+
+  if (
+    questionLike &&
+    input.sourceCount <= 2 &&
+    input.severity === 'monitor' &&
+    input.confidence < 0.9
+  ) {
+    status = 'speculative';
+  }
+
+  if (status === 'upcoming' && input.eventTime) {
+    const eventTimeMs = new Date(input.eventTime).getTime();
+    if (Number.isFinite(eventTimeMs) && eventTimeMs < Date.now() - 24 * 60 * 60_000) {
+      status = 'observed';
+    }
+  }
+
+  return status;
 }
 
 async function canUseLlm(runCalls: number): Promise<boolean> {
@@ -625,15 +974,18 @@ async function classifyCluster(cluster: EventCluster, runCalls: { value: number 
   const cached = await monitorGetJson<CachedClassifiedCluster>(`classified:${cluster.fingerprint}`);
   if (cached) {
     await incrementMetric('classified_cluster_cache_hit');
-    return cached;
+    return normalizeCachedCluster(cached, cluster);
   }
 
   const base = eventFromRules(cluster);
+  const statusInfo = statusBreakdown(cluster);
   const escalate = shouldEscalateToLlm(
     cluster,
     base.classificationConfidence,
     base.category,
     base.severity,
+    base.status,
+    statusInfo.dominance,
   );
 
   let finalResult = base;
@@ -645,17 +997,28 @@ async function classifyCluster(cluster: EventCluster, runCalls: { value: number 
       await incrementMetric('llm_calls');
       await incrementMetric('llm_cluster_classifications');
 
+      const hasLlmCoords =
+        Number.isFinite(llm.latitude) &&
+        Number.isFinite(llm.longitude) &&
+        Math.abs(llm.latitude) <= 90 &&
+        Math.abs(llm.longitude) <= 180;
+      const llmActors = sanitizeActors(llm.actors);
+      const llmEventTime = parseEventTime(llm.eventTime);
+
       finalResult = {
         title: llm.title || base.title,
         summary: llm.summary || base.summary,
         category: llm.category || base.category,
         severity: llm.severity || base.severity,
-        lat: llm.latitude || base.lat,
-        lng: llm.longitude || base.lng,
+        status: llm.status || base.status,
+        actors: llmActors.length > 0 ? llmActors : base.actors,
+        eventTime: llmEventTime || base.eventTime,
+        lat: hasLlmCoords ? llm.latitude : base.lat,
+        lng: hasLlmCoords ? llm.longitude : base.lng,
         classificationConfidence: Math.max(base.classificationConfidence, llm.confidence),
         classificationMethod: base.classificationMethod === 'rules' ? 'hybrid' : 'llm',
-        geoValidity: llm.latitude && llm.longitude ? 'valid' : base.geoValidity,
-        geoReason: llm.latitude && llm.longitude ? 'llm-provided coordinates' : base.geoReason,
+        geoValidity: hasLlmCoords ? 'valid' : base.geoValidity,
+        geoReason: hasLlmCoords ? 'llm-provided coordinates' : base.geoReason,
       };
     }
   }
@@ -684,11 +1047,25 @@ export async function fetchClassifiedEvents(): Promise<ClassifiedEventsResult> {
 
   const runCalls = { value: 0 };
   const events: GdeltEvent[] = [];
+  let demotedSpeculativeCount = 0;
 
   for (const cluster of clusters) {
     const classified = await classifyCluster(cluster, runCalls);
     const { firstSeenAt, lastSeenAt } = firstAndLastSeen(cluster);
     const sources = aggregateSources(cluster);
+    const eventTime = parseEventTime(classified.eventTime);
+    const status = applyStatusPolicy({
+      status: classified.status,
+      title: classified.title,
+      summary: classified.summary,
+      sourceCount: sources.length,
+      severity: classified.severity,
+      confidence: classified.classificationConfidence,
+      eventTime,
+    });
+    if (status === 'speculative' && classified.status !== 'speculative') {
+      demotedSpeculativeCount += 1;
+    }
 
     const id = `evt_${cluster.fingerprint}`;
     const canonicalId = id;
@@ -710,6 +1087,9 @@ export async function fetchClassifiedEvents(): Promise<ClassifiedEventsResult> {
       lastSeenAt,
       classificationConfidence: classified.classificationConfidence,
       classificationMethod: classified.classificationMethod,
+      status,
+      actors: sanitizeActors(classified.actors),
+      eventTime,
       fingerprint: cluster.fingerprint,
       tone: toneFromSeverity(classified.severity),
       region: inferRegion(classified.lat, classified.lng),
@@ -724,6 +1104,7 @@ export async function fetchClassifiedEvents(): Promise<ClassifiedEventsResult> {
   for (const event of events) {
     event.signalScore = eventSignalScoreFromData({
       severity: event.severity,
+      status: event.status,
       sourceCount: event.sourceCount,
       confidence: event.classificationConfidence,
       lastSeenAt: event.lastSeenAt,
@@ -741,6 +1122,9 @@ export async function fetchClassifiedEvents(): Promise<ClassifiedEventsResult> {
 
   const dedupRatio = headlines.length > 0 ? 1 - events.length / headlines.length : 0;
   await incrementMetric('events_dedup_ratio_bp', Math.round(dedupRatio * 10_000));
+  if (demotedSpeculativeCount > 0) {
+    await incrementMetric('events_status_demoted_speculative', demotedSpeculativeCount);
+  }
   await incrementMetric('events_final_count', events.length);
 
   return {
