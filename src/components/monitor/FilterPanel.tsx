@@ -2,9 +2,9 @@
 
 import { useState, useEffect, memo } from 'react';
 import Link from 'next/link';
-import { THEMES, THEME_KEYS, type ThemeKey } from '@/lib/monitor/themes';
+import { THEMES, type ThemeKey } from '@/lib/monitor/themes';
 import type { MonitorResponseMeta } from '@/lib/monitor/response';
-import type { EventConfidenceGate, SignalKey, SituationRoomConfig, WatchZone } from '@/lib/monitor/types';
+import type { EventConfidenceGate, LayerKey, SituationRoomConfig, WatchZone } from '@/lib/monitor/types';
 
 interface FilterPanelProps {
   focusMode: 'global' | 'room';
@@ -12,12 +12,9 @@ interface FilterPanelProps {
   activeSituationRoomId: string | null;
   onSelectGlobalFocus: () => void;
   onSelectSituationRoom: (roomId: string) => void;
-  visibleThemes: Record<ThemeKey, boolean>;
-  onToggleTheme: (key: ThemeKey) => void;
-  themeCounts: Record<ThemeKey, number>;
-  visibleSignals: Record<SignalKey, boolean>;
-  onToggleSignal: (key: SignalKey) => void;
-  signalCounts: Record<SignalKey, number>;
+  visibleLayers: Record<LayerKey, boolean>;
+  onToggleLayer: (key: LayerKey) => void;
+  layerCounts: Record<LayerKey, number>;
   eventConfidenceGate: EventConfidenceGate;
   onChangeEventConfidenceGate: (value: EventConfidenceGate) => void;
   eventGateStats: {
@@ -59,20 +56,26 @@ interface FilterPanelProps {
   };
 }
 
-const SIGNAL_CONFIG: Record<SignalKey, { label: string; color: string }> = {
-  events: { label: 'Events / News', color: '#FF6666' },
+const LAYER_CONFIG: Record<LayerKey, { label: string; color: string }> = {
+  events: { label: 'Events', color: '#FF6666' },
   markets: { label: 'Prediction Markets', color: '#66AAFF' },
   disasters: { label: 'Disaster Sensors', color: '#FFAA33' },
-  infrastructure_overlays: { label: 'Infrastructure Overlays', color: '#00DDCC' },
+  notams: { label: 'NOTAM Airspace', color: '#FF8C42' },
+  shipping: { label: 'Shipping Chokepoints', color: '#00DDCC' },
+  elections: { label: 'Election Calendar', color: '#7AB4FF' },
   watch_zones: { label: 'Watch Zones', color: '#8B9BB5' },
+  prices: { label: 'Macro Price Ticker', color: '#2DD4BF' },
 };
 
-const SIGNAL_KEYS: SignalKey[] = [
+const LAYER_KEYS: LayerKey[] = [
   'events',
   'markets',
   'disasters',
-  'infrastructure_overlays',
+  'notams',
+  'shipping',
+  'elections',
   'watch_zones',
+  'prices',
 ];
 
 const EVENT_CONFIDENCE_MODES: Array<{
@@ -181,12 +184,9 @@ function FilterPanel({
   activeSituationRoomId,
   onSelectGlobalFocus,
   onSelectSituationRoom,
-  visibleThemes,
-  onToggleTheme,
-  themeCounts,
-  visibleSignals,
-  onToggleSignal,
-  signalCounts,
+  visibleLayers,
+  onToggleLayer,
+  layerCounts,
   eventConfidenceGate,
   onChangeEventConfidenceGate,
   eventGateStats,
@@ -306,61 +306,15 @@ function FilterPanel({
 
       <div style={{ borderTop: '1px solid #1E293B', margin: '14px 0' }} />
 
-      <SectionHeader>Themes</SectionHeader>
+      <SectionHeader>Layers</SectionHeader>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {THEME_KEYS.map((key) => {
-          const theme = THEMES[key];
-          const isOn = visibleThemes[key];
+        {LAYER_KEYS.map((key) => {
+          const cfg = LAYER_CONFIG[key];
+          const isOn = visibleLayers[key];
           return (
             <div
               key={key}
-              onClick={() => onToggleTheme(key)}
-              style={{
-                padding: '7px 8px',
-                borderRadius: 6,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                cursor: 'pointer',
-                color: isOn ? '#CBD5E1' : '#64748B',
-              }}
-            >
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: isOn ? theme.color : '#475569' }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, lineHeight: '16px' }}>{theme.label}</div>
-                <div style={{ fontSize: 9, color: '#475569', lineHeight: '11px' }}>{theme.description}</div>
-              </div>
-              <span
-                style={{
-                  fontSize: 10,
-                  fontWeight: 600,
-                  color: isOn ? theme.color : '#475569',
-                  background: isOn ? `${theme.color}15` : 'transparent',
-                  padding: '1px 5px',
-                  borderRadius: 3,
-                  minWidth: 20,
-                  textAlign: 'center',
-                }}
-              >
-                {themeCounts[key]}
-              </span>
-              <ToggleSwitch on={isOn} color={theme.color} />
-            </div>
-          );
-        })}
-      </div>
-
-      <div style={{ borderTop: '1px solid #1E293B', margin: '14px 0' }} />
-
-      <SectionHeader>Signal Types</SectionHeader>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {SIGNAL_KEYS.map((key) => {
-          const cfg = SIGNAL_CONFIG[key];
-          const isOn = visibleSignals[key];
-          return (
-            <div
-              key={key}
-              onClick={() => onToggleSignal(key)}
+              onClick={() => onToggleLayer(key)}
               style={{
                 padding: '7px 8px',
                 borderRadius: 6,
@@ -385,7 +339,7 @@ function FilterPanel({
                   textAlign: 'center',
                 }}
               >
-                {signalCounts[key]}
+                {layerCounts[key]}
               </span>
               <ToggleSwitch on={isOn} color={cfg.color} />
             </div>

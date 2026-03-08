@@ -3,6 +3,7 @@ import {
   fetchClassifiedEvents,
   type GdeltEvent,
   type GeopoliticalEventsPayload,
+  type OffMapEventCandidate,
 } from '@/lib/monitor/events';
 import type { PolymarketMarket } from '@/lib/monitor/polymarket';
 import { envelopeFromPayload, readCachedPayload, writeCachedPayload } from '@/lib/monitor/cache';
@@ -15,8 +16,21 @@ const MARKETS_TTL_SECONDS = 5 * 60;
 function normalizeEventRecord(event: GdeltEvent): GdeltEvent {
   return {
     ...event,
+    placement: event.placement || {
+      mapEligible: true,
+      reasonCode: null,
+      reasonDetail: 'legacy event',
+    },
     evidenceIds: Array.isArray(event.evidenceIds) ? event.evidenceIds : [],
     scenarioIds: Array.isArray(event.scenarioIds) ? event.scenarioIds : [],
+  };
+}
+
+function normalizeOffMapRecord(item: OffMapEventCandidate): OffMapEventCandidate {
+  return {
+    ...item,
+    reasonDetail: item.reasonDetail || 'hidden from map',
+    geoReason: item.geoReason || 'location unavailable',
   };
 }
 
@@ -28,6 +42,7 @@ function normalizeGeopoliticalPayload(
       events: items.map(normalizeEventRecord),
       evidence: [],
       scenarios: [],
+      offMap: [],
     };
   }
 
@@ -35,6 +50,7 @@ function normalizeGeopoliticalPayload(
     events: (items.events || []).map(normalizeEventRecord),
     evidence: Array.isArray(items.evidence) ? items.evidence : [],
     scenarios: Array.isArray(items.scenarios) ? items.scenarios : [],
+    offMap: Array.isArray(items.offMap) ? items.offMap.map(normalizeOffMapRecord) : [],
   };
 }
 
@@ -99,6 +115,7 @@ export async function GET() {
           events: [],
           evidence: [],
           scenarios: [],
+          offMap: [],
         },
         meta: {
           generatedAt: new Date().toISOString(),

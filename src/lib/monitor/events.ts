@@ -11,6 +11,14 @@ import { getMetric, incrementMetric } from './metrics';
 import { findRelatedMarkets, type PolymarketMarket } from './polymarket';
 import type { SourceCoverageEntry } from './response';
 
+export type OffMapReasonCode = 'geo_invalid' | 'geo_ambiguous' | 'low_confidence' | 'speculative';
+
+export interface EventPlacement {
+  mapEligible: boolean;
+  reasonCode: OffMapReasonCode | null;
+  reasonDetail: string;
+}
+
 export interface GdeltEvent {
   id: string;
   canonicalId: string;
@@ -39,6 +47,7 @@ export interface GdeltEvent {
   linkConfidence?: number;
   geoValidity: 'valid' | 'ambiguous' | 'invalid';
   geoReason: string;
+  placement: EventPlacement;
   evidenceIds: string[];
   scenarioIds: string[];
 }
@@ -52,6 +61,7 @@ export interface EventEvidence {
   summary: string;
   publishedAt: string;
   sourceWeight: number;
+  reliability: number;
 }
 
 export interface EventScenario {
@@ -65,13 +75,32 @@ export interface EventScenario {
   category: string;
   url: string;
   linkConfidence: number;
+  linkReason: string[];
   topicTags: string[];
+}
+
+export interface OffMapEventCandidate {
+  id: string;
+  eventId: string;
+  title: string;
+  severity: EventSeverity;
+  status: EventStatus;
+  lastSeenAt: string;
+  reasonCode: OffMapReasonCode;
+  reasonDetail: string;
+  geoReason: string;
+  lat: number;
+  lng: number;
+  region: string;
+  sourceCount: number;
+  confidence: number;
 }
 
 export interface GeopoliticalEventsPayload {
   events: GdeltEvent[];
   evidence: EventEvidence[];
   scenarios: EventScenario[];
+  offMap: OffMapEventCandidate[];
 }
 
 export type EventCategory =
@@ -817,6 +846,7 @@ function aggregateEvidence(cluster: EventCluster, eventId: string): EventEvidenc
       summary: candidate.headline.summary || '',
       publishedAt: candidate.headline.timestamp,
       sourceWeight: candidate.headline.sourceWeight,
+      reliability: Math.max(0.1, Math.min(1, candidate.headline.sourceWeight)),
     });
   }
 
@@ -842,6 +872,7 @@ function buildEventScenarios(event: GdeltEvent, markets: PolymarketMarket[]): Ev
       category: market.category,
       url: market.url,
       linkConfidence: market.linkConfidence ?? 0,
+      linkReason: market.linkReason || [],
       topicTags: (market.topicTags || []).slice(0, 5),
     });
   }
@@ -892,24 +923,22 @@ function shouldEscalateToLlm(
   const highImpactCluster = cluster.candidates.some((c) => c.classification.highImpact || c.classification.severity !== 'monitor');
   const categories = new Set(cluster.candidates.map((c) => c.classification.category));
   const hasQuestionLikeHeadline = cluster.candidates.some((c) => isQuestionLikeText(c.headline.title));
+  const sourceDiversity = new Set(cluster.candidates.map((c) => c.headline.source)).size;
 
-  if (hasQuestionLikeHeadline) return true;
-  if (cluster.candidates.length >= 2 && status !== 'speculative') return true;
-  if (severity === 'critical') return true;
-  if (status === 'upcoming') return true;
-  if (statusDominance < 0.22) return true;
-  if (confidence < 0.72) return true;
-  if (categories.size >= 3) return true;
-
-  if (status === 'speculative' && cluster.candidates.length <= 2 && !highImpactCluster) {
+  // Aggressive synthesis: use LLM for most accepted clusters, while keeping
+  // a minimal deterministic-only path for tiny low-impact speculative clusters.
+  if (status === 'speculative' && cluster.candidates.length === 1 && !highImpactCluster && confidence >= 0.88) {
     return false;
   }
-
-  if (category === 'infrastructure' || category === 'economy') {
-    return highImpactCluster || cluster.candidates.length >= 2;
-  }
-
-  return highImpactCluster && cluster.candidates.length >= 2;
+  if (sourceDiversity >= 2) return true;
+  if (hasQuestionLikeHeadline) return true;
+  if (cluster.candidates.length >= 2) return true;
+  if (severity === 'critical' || status === 'upcoming') return true;
+  if (statusDominance < 0.3) return true;
+  if (confidence < 0.82) return true;
+  if (categories.size >= 2) return true;
+  if (category === 'infrastructure' || category === 'economy') return true;
+  return highImpactCluster;
 }
 
 async function classifyClusterWithClaude(cluster: EventCluster): Promise<LlmClassification | null> {
@@ -1098,6 +1127,182 @@ function applyStatusPolicy(
   return status;
 }
 
+function toDeclarativeTitle(raw: string, fallback: string, status: EventStatus): string {
+  const trimmed = (raw || '').trim().replace(/\?+\s*$/, '');
+  if (!trimmed) return fallback;
+  if (status !== 'speculative' && isQuestionLikeText(trimmed)) return fallback;
+  const lowered = trimmed.toLowerCase();
+  if (status !== 'speculative' && /^(will|could|might|may)\b/.test(lowered)) return fallback;
+  return trimmed;
+}
+
+function normalizeClassifiedResult(
+  result: CachedClassifiedCluster,
+  base: CachedClassifiedCluster,
+  cluster: EventCluster,
+): CachedClassifiedCluster {
+  const status = applyStatusPolicy({
+    status: result.status,
+    title: result.title,
+    summary: result.summary,
+    sourceCount: cluster.candidates.length,
+    severity: result.severity,
+    confidence: result.classificationConfidence,
+    eventTime: result.eventTime,
+  });
+
+  return {
+    ...result,
+    title: toDeclarativeTitle(result.title, base.title, status),
+    summary: result.summary?.trim() || base.summary,
+    status,
+    actors: sanitizeActors(result.actors).slice(0, 8),
+    eventTime: parseEventTime(result.eventTime),
+    classificationConfidence: Math.max(0.2, Math.min(1, result.classificationConfidence || base.classificationConfidence)),
+    geoValidity: result.geoValidity || base.geoValidity,
+    geoReason: result.geoReason || base.geoReason,
+  };
+}
+
+function eventPlacementFromData(input: {
+  status: EventStatus;
+  severity: EventSeverity;
+  sourceCount: number;
+  confidence: number;
+  geoValidity: 'valid' | 'ambiguous' | 'invalid';
+  geoReason: string;
+}): EventPlacement {
+  if (input.status === 'speculative') {
+    return { mapEligible: false, reasonCode: 'speculative', reasonDetail: 'speculative status' };
+  }
+  if (input.geoValidity === 'invalid') {
+    return { mapEligible: false, reasonCode: 'geo_invalid', reasonDetail: input.geoReason || 'geo invalid' };
+  }
+  if (input.geoValidity === 'ambiguous') {
+    return { mapEligible: false, reasonCode: 'geo_ambiguous', reasonDetail: input.geoReason || 'geo ambiguous' };
+  }
+  if (input.severity === 'monitor' && input.sourceCount < 2 && input.confidence < 0.72) {
+    return { mapEligible: false, reasonCode: 'low_confidence', reasonDetail: 'monitor event confidence below threshold' };
+  }
+  return { mapEligible: true, reasonCode: null, reasonDetail: 'map eligible' };
+}
+
+function canonicalEventId(event: {
+  category: EventCategory;
+  actors: string[];
+  eventTime: string | null;
+  firstSeenAt: string;
+  lat: number;
+  lng: number;
+  title: string;
+}): string {
+  const actorKey = event.actors
+    .slice(0, 3)
+    .map((actor) => normalizeForSimilarity(actor))
+    .filter(Boolean)
+    .join('|') || 'unknown';
+  const timeBase = event.eventTime || event.firstSeenAt;
+  const date = new Date(timeBase);
+  const day = Number.isFinite(date.getTime())
+    ? `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`
+    : 'unknown-day';
+  const locBucket = `${Math.round(event.lat * 2) / 2},${Math.round(event.lng * 2) / 2}`;
+  const titleKey = topicTagsForText(event.title).slice(0, 4).join('|') || 'event';
+  return `cev_${hashFingerprint(`${event.category}|${actorKey}|${locBucket}|${day}|${titleKey}`)}`;
+}
+
+function mergeSources(
+  left: Array<{ name: string; url: string }>,
+  right: Array<{ name: string; url: string }>,
+): Array<{ name: string; url: string }> {
+  const seen = new Set<string>();
+  const out: Array<{ name: string; url: string }> = [];
+  for (const source of [...left, ...right]) {
+    const key = `${source.name}|${source.url}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(source);
+  }
+  return out.slice(0, 12);
+}
+
+function shouldMergeCanonicalEvents(a: GdeltEvent, b: GdeltEvent): boolean {
+  if (a.category !== b.category) return false;
+  const timeDeltaHours = Math.abs(new Date(a.lastSeenAt).getTime() - new Date(b.lastSeenAt).getTime()) / 3_600_000;
+  if (timeDeltaHours > 72) return false;
+  const titleSim = jaccardSimilarity(normalizeForSimilarity(a.title), normalizeForSimilarity(b.title));
+  const summarySim = jaccardSimilarity(normalizeForSimilarity(a.summary), normalizeForSimilarity(b.summary));
+  if (Math.max(titleSim, summarySim) < 0.34) return false;
+  if (a.geoValidity === 'valid' && b.geoValidity === 'valid') {
+    const dist = haversineKm(a.lat, a.lng, b.lat, b.lng);
+    if (dist > 450) return false;
+  }
+  return true;
+}
+
+function mergeCanonicalEvents(
+  events: GdeltEvent[],
+  evidenceByEventId: Map<string, EventEvidence[]>,
+): GdeltEvent[] {
+  const merged: GdeltEvent[] = [];
+  const byCanonical = new Map<string, GdeltEvent>();
+
+  const ranked = [...events].sort((a, b) => {
+    const sev = severityRank(b.severity) - severityRank(a.severity);
+    if (sev !== 0) return sev;
+    if (b.sourceCount !== a.sourceCount) return b.sourceCount - a.sourceCount;
+    return new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime();
+  });
+
+  for (const event of ranked) {
+    const existing = byCanonical.get(event.canonicalId);
+    if (!existing) {
+      byCanonical.set(event.canonicalId, event);
+      merged.push(event);
+      continue;
+    }
+
+    if (!shouldMergeCanonicalEvents(existing, event)) {
+      merged.push(event);
+      continue;
+    }
+
+    existing.sources = mergeSources(existing.sources, event.sources);
+    existing.sourceCount = existing.sources.length;
+    existing.firstSeenAt = new Date(existing.firstSeenAt) < new Date(event.firstSeenAt) ? existing.firstSeenAt : event.firstSeenAt;
+    existing.lastSeenAt = new Date(existing.lastSeenAt) > new Date(event.lastSeenAt) ? existing.lastSeenAt : event.lastSeenAt;
+    existing.classificationConfidence = Math.max(existing.classificationConfidence, event.classificationConfidence);
+    existing.classificationMethod =
+      existing.classificationMethod === event.classificationMethod
+        ? existing.classificationMethod
+        : 'hybrid';
+    existing.signalScore = Math.max(existing.signalScore, event.signalScore);
+    existing.mapPriority = Math.max(existing.mapPriority, event.mapPriority);
+    existing.topicTags = [...new Set([...existing.topicTags, ...event.topicTags])].slice(0, 10);
+    existing.actors = [...new Set([...existing.actors, ...event.actors])].slice(0, 8);
+    existing.placement =
+      existing.placement.mapEligible || !event.placement.mapEligible
+        ? existing.placement
+        : event.placement;
+
+    const keepEvidence = evidenceByEventId.get(existing.id) || [];
+    const mergeEvidence = evidenceByEventId.get(event.id) || [];
+    if (mergeEvidence.length > 0) {
+      const seen = new Set(keepEvidence.map((item) => item.url || item.id));
+      const mergedEvidence = [...keepEvidence];
+      for (const item of mergeEvidence) {
+        const key = item.url || item.id;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        mergedEvidence.push({ ...item, eventId: existing.id });
+      }
+      evidenceByEventId.set(existing.id, mergedEvidence.slice(0, 18));
+    }
+  }
+
+  return merged;
+}
+
 async function canUseLlm(runCalls: number): Promise<boolean> {
   if (!process.env.ANTHROPIC_API_KEY) return false;
   if (runCalls >= INTERVAL_LLM_LIMIT) return false;
@@ -1159,8 +1364,9 @@ async function classifyCluster(cluster: EventCluster, runCalls: { value: number 
     }
   }
 
-  await monitorSetJson(`classified:${cluster.fingerprint}`, finalResult, CLASSIFIED_CLUSTER_TTL);
-  return finalResult;
+  const normalized = normalizeClassifiedResult(finalResult, base, cluster);
+  await monitorSetJson(`classified:${cluster.fingerprint}`, normalized, CLASSIFIED_CLUSTER_TTL);
+  return normalized;
 }
 
 export interface ClassifiedEventsResult {
@@ -1218,10 +1424,27 @@ export async function fetchClassifiedEvents(markets: PolymarketMarket[] = []): P
     }
 
     const id = `evt_${cluster.fingerprint}`;
-    const canonicalId = id;
+    const actors = sanitizeActors(classified.actors);
+    const canonicalId = canonicalEventId({
+      category: classified.category,
+      actors,
+      eventTime,
+      firstSeenAt,
+      lat: classified.lat,
+      lng: classified.lng,
+      title: classified.title,
+    });
     const timestamp = lastSeenAt;
     const evidence = aggregateEvidence(cluster, id);
     evidenceByEventId.set(id, evidence);
+    const placement = eventPlacementFromData({
+      status,
+      severity: classified.severity,
+      sourceCount: sources.length,
+      confidence: classified.classificationConfidence,
+      geoValidity: classified.geoValidity,
+      geoReason: classified.geoReason,
+    });
 
     events.push({
       id,
@@ -1240,7 +1463,7 @@ export async function fetchClassifiedEvents(markets: PolymarketMarket[] = []): P
       classificationConfidence: classified.classificationConfidence,
       classificationMethod: classified.classificationMethod,
       status,
-      actors: sanitizeActors(classified.actors),
+      actors,
       eventTime,
       fingerprint: cluster.fingerprint,
       tone: toneFromSeverity(classified.severity),
@@ -1250,12 +1473,15 @@ export async function fetchClassifiedEvents(markets: PolymarketMarket[] = []): P
       mapPriority: 0,
       geoValidity: classified.geoValidity,
       geoReason: classified.geoReason,
+      placement,
       evidenceIds: evidence.map((item) => item.id),
       scenarioIds: [],
     });
   }
 
-  for (const event of events) {
+  const canonicalEvents = mergeCanonicalEvents(events, evidenceByEventId);
+
+  for (const event of canonicalEvents) {
     event.signalScore = eventSignalScoreFromData({
       severity: event.severity,
       status: event.status,
@@ -1266,7 +1492,7 @@ export async function fetchClassifiedEvents(markets: PolymarketMarket[] = []): P
     event.mapPriority = event.signalScore;
   }
 
-  events.sort((a, b) => {
+  canonicalEvents.sort((a, b) => {
     const sev = severityRank(b.severity) - severityRank(a.severity);
     if (sev !== 0) return sev;
 
@@ -1274,14 +1500,15 @@ export async function fetchClassifiedEvents(markets: PolymarketMarket[] = []): P
     return new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime();
   });
 
-  const dedupRatio = headlines.length > 0 ? 1 - events.length / headlines.length : 0;
+  const dedupRatio = headlines.length > 0 ? 1 - canonicalEvents.length / headlines.length : 0;
   await incrementMetric('events_dedup_ratio_bp', Math.round(dedupRatio * 10_000));
   if (demotedSpeculativeCount > 0) {
     await incrementMetric('events_status_demoted_speculative', demotedSpeculativeCount);
   }
-  const topEvents = events.slice(0, MAX_EVENTS);
+  const topEvents = canonicalEvents.slice(0, MAX_EVENTS);
   const evidence: EventEvidence[] = [];
   const scenarios: EventScenario[] = [];
+  const offMap: OffMapEventCandidate[] = [];
 
   for (const event of topEvents) {
     const eventEvidence = evidenceByEventId.get(event.id) || [];
@@ -1289,6 +1516,24 @@ export async function fetchClassifiedEvents(markets: PolymarketMarket[] = []): P
     const linkedScenarios = buildEventScenarios(event, markets);
     event.scenarioIds = linkedScenarios.map((item) => item.id);
     scenarios.push(...linkedScenarios);
+    if (!event.placement.mapEligible && event.placement.reasonCode) {
+      offMap.push({
+        id: `off_${event.id}`,
+        eventId: event.id,
+        title: event.title,
+        severity: event.severity,
+        status: event.status,
+        lastSeenAt: event.lastSeenAt,
+        reasonCode: event.placement.reasonCode,
+        reasonDetail: event.placement.reasonDetail,
+        geoReason: event.geoReason,
+        lat: event.lat,
+        lng: event.lng,
+        region: event.region,
+        sourceCount: event.sourceCount,
+        confidence: event.classificationConfidence,
+      });
+    }
   }
 
   await incrementMetric('events_final_count', topEvents.length);
@@ -1300,6 +1545,7 @@ export async function fetchClassifiedEvents(markets: PolymarketMarket[] = []): P
       events: topEvents,
       evidence,
       scenarios,
+      offMap,
     },
     sourceCoverage,
   };

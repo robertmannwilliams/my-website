@@ -4,6 +4,8 @@ import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import type {
   EventEvidence,
+  OffMapEventCandidate,
+  OffMapReasonCode,
   EventScenario,
   GdeltEvent,
   GeopoliticalEventsPayload,
@@ -20,11 +22,11 @@ import type {
   MapSelectionCandidate,
   NotamZone,
   ShippingChokepoint,
-  SignalKey,
+  LayerKey,
   SituationRoomConfig,
   WatchZone,
 } from '@/lib/monitor/types';
-import { type ThemeKey, computeThemeCounts } from '@/lib/monitor/themes';
+import { type ThemeKey } from '@/lib/monitor/themes';
 import type { MonitorResponse, MonitorResponseMeta } from '@/lib/monitor/response';
 import watchZonesData from '@/app/monitor/data/watch-zones.json';
 import roomsData from '@/app/monitor/data/situation-rooms.json';
@@ -54,15 +56,14 @@ const FilterPanel = dynamic(
 const watchZones = watchZonesData as WatchZone[];
 const situationRooms = roomsData as SituationRoomConfig[];
 
-type OffMapReasonCode = 'speculative' | 'geo_invalid' | 'geo_ambiguous' | 'low_confidence';
-
 interface OffMapEventPreview {
-  id: string;
+  id: string; // eventId
   title: string;
   severity: GdeltEvent['severity'];
   lastSeenAt: string;
-  reasonCode: OffMapReasonCode;
+  reasonCode: OffMapEventCandidate['reasonCode'];
   reasonLabel: string;
+  reasonDetail: string;
   geoReason: string;
 }
 
@@ -82,13 +83,16 @@ function makeDefaultThemes(): Record<ThemeKey, boolean> {
   };
 }
 
-function makeDefaultSignals(): Record<SignalKey, boolean> {
+function makeDefaultLayers(): Record<LayerKey, boolean> {
   return {
     events: true,
     markets: true,
     disasters: true,
-    infrastructure_overlays: true,
+    notams: true,
+    shipping: true,
+    elections: true,
     watch_zones: true,
+    prices: true,
   };
 }
 
@@ -98,16 +102,19 @@ function makeDefaultWatchZoneVisibility(): Record<string, boolean> {
   return out;
 }
 
-function roomSignalVisibility(room: SituationRoomConfig): Record<SignalKey, boolean> {
-  const out: Record<SignalKey, boolean> = {
+function roomLayerVisibility(room: SituationRoomConfig): Record<LayerKey, boolean> {
+  const out: Record<LayerKey, boolean> = {
     events: false,
     markets: false,
     disasters: false,
-    infrastructure_overlays: false,
+    notams: false,
+    shipping: false,
+    elections: false,
     watch_zones: false,
+    prices: false,
   };
-  const defaults = room.defaultSignalTypes || [];
-  if (defaults.length === 0) return makeDefaultSignals();
+  const defaults = room.defaultLayers || room.defaultSignalTypes || [];
+  if (defaults.length === 0) return makeDefaultLayers();
   for (const key of defaults) out[key] = true;
   return out;
 }
@@ -155,36 +162,7 @@ function getInitialEventConfidenceGate(): EventConfidenceGate {
   return 'strict';
 }
 
-function offMapReasonForEvent(event: GdeltEvent, gate: EventConfidenceGate): OffMapReasonCode | null {
-  const weakStrict =
-    event.severity === 'monitor' &&
-    event.sourceCount < 2 &&
-    event.classificationConfidence < 0.72;
-  const weakBalanced =
-    event.severity === 'monitor' &&
-    event.sourceCount < 2 &&
-    event.classificationConfidence < 0.58;
-
-  if (gate === 'strict') {
-    if (event.status === 'speculative') return 'speculative';
-    if (event.geoValidity === 'invalid') return 'geo_invalid';
-    if (event.geoValidity === 'ambiguous') return 'geo_ambiguous';
-    if (weakStrict) return 'low_confidence';
-    return null;
-  }
-
-  if (gate === 'balanced') {
-    if (event.status === 'speculative') return 'speculative';
-    if (event.geoValidity === 'invalid') return 'geo_invalid';
-    if (weakBalanced) return 'low_confidence';
-    return null;
-  }
-
-  if (event.geoValidity === 'invalid') return 'geo_invalid';
-  return null;
-}
-
-function offMapReasonLabel(reason: OffMapReasonCode): string {
+function offMapReasonLabel(reason: OffMapEventCandidate['reasonCode']): string {
   if (reason === 'speculative') return 'Speculative framing';
   if (reason === 'geo_invalid') return 'Geo unresolved';
   if (reason === 'geo_ambiguous') return 'Geo ambiguous';
@@ -221,6 +199,11 @@ function normalizeEventShape(event: GdeltEvent): GdeltEvent {
     mapPriority: Number(event.mapPriority) || signalScore,
     geoValidity: event.geoValidity || 'invalid',
     geoReason: event.geoReason || 'location unavailable',
+    placement: event.placement || {
+      mapEligible: true,
+      reasonCode: null,
+      reasonDetail: 'legacy placement',
+    },
     evidenceIds: Array.isArray(event.evidenceIds) ? event.evidenceIds : [],
     scenarioIds: Array.isArray(event.scenarioIds) ? event.scenarioIds : [],
   };
@@ -251,6 +234,7 @@ export default function MonitorPage() {
   const [allEvents, setAllEvents] = useState<GdeltEvent[]>([]);
   const [allEventEvidence, setAllEventEvidence] = useState<EventEvidence[]>([]);
   const [allEventScenarios, setAllEventScenarios] = useState<EventScenario[]>([]);
+  const [allOffMap, setAllOffMap] = useState<OffMapEventCandidate[]>([]);
   const [allMarkets, setAllMarkets] = useState<PolymarketMarket[]>([]);
   const [allEarthquakes, setAllEarthquakes] = useState<UsgsEarthquake[]>([]);
   const [notamZones, setNotamZones] = useState<NotamZone[]>([]);
@@ -268,11 +252,8 @@ export default function MonitorPage() {
     shipping: null,
     elections: null,
   });
-  const [visibleThemes, setVisibleThemes] = useState<Record<ThemeKey, boolean>>(
-    () => (initialRoom ? roomThemeVisibility(initialRoom) : makeDefaultThemes()),
-  );
-  const [visibleSignals, setVisibleSignals] = useState<Record<SignalKey, boolean>>(
-    () => (initialRoom ? roomSignalVisibility(initialRoom) : makeDefaultSignals()),
+  const [visibleLayers, setVisibleLayers] = useState<Record<LayerKey, boolean>>(
+    () => (initialRoom ? roomLayerVisibility(initialRoom) : makeDefaultLayers()),
   );
   const [visibleWatchZones, setVisibleWatchZones] = useState<Record<string, boolean>>(
     () => (initialRoom ? roomWatchZoneVisibility(initialRoom) : makeDefaultWatchZoneVisibility()),
@@ -285,9 +266,13 @@ export default function MonitorPage() {
   const [interactionMode, setInteractionMode] = useState<MapInteractionMode>('idle');
   const [forceClearFanoutKey, setForceClearFanoutKey] = useState(0);
 
+  const activeThemeMask = useMemo(
+    () => (activeRoom ? roomThemeVisibility(activeRoom) : makeDefaultThemes()),
+    [activeRoom],
+  );
+
   const globalSnapshotRef = useRef({
-    themes: makeDefaultThemes(),
-    signals: makeDefaultSignals(),
+    layers: makeDefaultLayers(),
     watchZones: makeDefaultWatchZoneVisibility(),
   });
 
@@ -426,18 +411,10 @@ export default function MonitorPage() {
     setSelectedItem({ type: 'fanout', data: activeFanout });
   }, [activeFanout]);
 
-  const toggleTheme = useCallback((key: ThemeKey) => {
-    setVisibleThemes((prev) => {
+  const toggleLayer = useCallback((key: LayerKey) => {
+    setVisibleLayers((prev) => {
       const next = { ...prev, [key]: !prev[key] };
-      if (focusMode === 'global') globalSnapshotRef.current.themes = next;
-      return next;
-    });
-  }, [focusMode]);
-
-  const toggleSignal = useCallback((key: SignalKey) => {
-    setVisibleSignals((prev) => {
-      const next = { ...prev, [key]: !prev[key] };
-      if (focusMode === 'global') globalSnapshotRef.current.signals = next;
+      if (focusMode === 'global') globalSnapshotRef.current.layers = next;
       return next;
     });
   }, [focusMode]);
@@ -454,8 +431,7 @@ export default function MonitorPage() {
     setForceClearFanoutKey((prev) => prev + 1);
     setFocusMode('global');
     setActiveRoom(null);
-    setVisibleThemes(globalSnapshotRef.current.themes);
-    setVisibleSignals(globalSnapshotRef.current.signals);
+    setVisibleLayers(globalSnapshotRef.current.layers);
     setVisibleWatchZones(globalSnapshotRef.current.watchZones);
     setActiveFanout(null);
     setInteractionMode('idle');
@@ -469,8 +445,7 @@ export default function MonitorPage() {
 
     if (focusMode === 'global') {
       globalSnapshotRef.current = {
-        themes: visibleThemes,
-        signals: visibleSignals,
+        layers: visibleLayers,
         watchZones: visibleWatchZones,
       };
     }
@@ -482,13 +457,11 @@ export default function MonitorPage() {
     setInteractionMode('idle');
     setSelectedItem({ type: 'room', data: room });
 
-    setVisibleThemes(roomThemeVisibility(room));
-
-    setVisibleSignals(roomSignalVisibility(room));
+    setVisibleLayers(roomLayerVisibility(room));
     setVisibleWatchZones(roomWatchZoneVisibility(room));
 
     window.localStorage.setItem('monitor:last-focus', `room:${room.id}`);
-  }, [focusMode, visibleThemes, visibleSignals, visibleWatchZones]);
+  }, [focusMode, visibleLayers, visibleWatchZones]);
 
   // Fetch events
   useEffect(() => {
@@ -504,16 +477,19 @@ export default function MonitorPage() {
             setAllEvents(payload.map(normalizeEventShape));
             setAllEventEvidence([]);
             setAllEventScenarios([]);
+            setAllOffMap([]);
           } else {
             const payloadItems = 'items' in payload ? payload.items : payload;
             if (Array.isArray(payloadItems)) {
               setAllEvents(payloadItems.map(normalizeEventShape));
               setAllEventEvidence([]);
               setAllEventScenarios([]);
+              setAllOffMap([]);
             } else {
               setAllEvents((payloadItems.events || []).map(normalizeEventShape));
               setAllEventEvidence(payloadItems.evidence || []);
               setAllEventScenarios(payloadItems.scenarios || []);
+              setAllOffMap(payloadItems.offMap || []);
             }
             if ('meta' in payload) {
               setEventsMeta(payload.meta || null);
@@ -633,29 +609,22 @@ export default function MonitorPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const themeCounts = useMemo(
-    () => computeThemeCounts(allEvents, allMarkets, allEarthquakes),
-    [allEvents, allMarkets, allEarthquakes],
-  );
-
-  const signalCounts = useMemo(() => ({
+  const layerCounts = useMemo(() => ({
     events: allEvents.filter((event) => event.status !== 'speculative').length,
     markets: allMarkets.length,
     disasters: allEarthquakes.length,
-    infrastructure_overlays: notamZones.length + shippingChokepoints.length + elections.length,
+    notams: notamZones.length,
+    shipping: shippingChokepoints.length,
+    elections: elections.length,
     watch_zones: watchZones.length,
+    prices: 7,
   }), [allEvents, allMarkets.length, allEarthquakes.length, notamZones.length, shippingChokepoints.length, elections.length]);
 
   const eventGateStats = useMemo(() => {
-    const speculative = allEvents.filter((event) => event.status === 'speculative').length;
-    const ambiguousGeo = allEvents.filter((event) => event.geoValidity === 'ambiguous').length;
-    const invalidGeo = allEvents.filter((event) => event.geoValidity === 'invalid').length;
-    const lowConfidence = allEvents.filter((event) =>
-      event.severity === 'monitor' &&
-      event.status !== 'speculative' &&
-      event.sourceCount < 2 &&
-      event.classificationConfidence < 0.72,
-    ).length;
+    const speculative = allOffMap.filter((item) => item.reasonCode === 'speculative').length;
+    const ambiguousGeo = allOffMap.filter((item) => item.reasonCode === 'geo_ambiguous').length;
+    const invalidGeo = allOffMap.filter((item) => item.reasonCode === 'geo_invalid').length;
+    const lowConfidence = allOffMap.filter((item) => item.reasonCode === 'low_confidence').length;
 
     return {
       total: allEvents.length,
@@ -664,27 +633,35 @@ export default function MonitorPage() {
       invalidGeo,
       lowConfidence,
     };
-  }, [allEvents]);
+  }, [allEvents.length, allOffMap]);
 
   const offMapPreview = useMemo(() => {
     const forced = new Set(temporaryPlottedEventIds);
+    const eventById = new Map(allEvents.map((event) => [event.id, event] as const));
 
-    const items: OffMapEventPreview[] = allEvents
-      .filter((event) => visibleThemes[event.category])
-      .map((event) => {
-        const reasonCode = offMapReasonForEvent(event, eventConfidenceGate);
-        if (!reasonCode) return null;
+    const isHiddenByGate = (reasonCode: OffMapEventCandidate['reasonCode']): boolean => {
+      if (eventConfidenceGate === 'strict') return true;
+      if (eventConfidenceGate === 'balanced') return reasonCode !== 'geo_ambiguous';
+      return reasonCode === 'geo_invalid';
+    };
+
+    const items: OffMapEventPreview[] = allOffMap
+      .filter((item) => isHiddenByGate(item.reasonCode))
+      .map((item) => {
+        const event = eventById.get(item.eventId);
+        if (!event) return null;
         return {
-          id: event.id,
-          title: event.title,
-          severity: event.severity,
-          lastSeenAt: event.lastSeenAt,
-          reasonCode,
-          reasonLabel: offMapReasonLabel(reasonCode),
-          geoReason: event.geoReason,
+          id: item.eventId,
+          title: item.title,
+          severity: item.severity,
+          lastSeenAt: item.lastSeenAt,
+          reasonCode: item.reasonCode,
+          reasonLabel: offMapReasonLabel(item.reasonCode),
+          reasonDetail: item.reasonDetail,
+          geoReason: item.geoReason,
         };
       })
-      .filter((event): event is OffMapEventPreview => Boolean(event))
+      .filter((item): item is OffMapEventPreview => Boolean(item))
       .sort((a, b) => {
         const aForced = forced.has(a.id) ? 1 : 0;
         const bForced = forced.has(b.id) ? 1 : 0;
@@ -718,7 +695,7 @@ export default function MonitorPage() {
         byReason,
       },
     };
-  }, [allEvents, eventConfidenceGate, temporaryPlottedEventIds, visibleThemes]);
+  }, [allEvents, allOffMap, eventConfidenceGate, temporaryPlottedEventIds]);
 
   const handleSelectOffMapEvent = useCallback((eventId: string) => {
     const event = allEvents.find((candidate) => candidate.id === eventId);
@@ -819,8 +796,8 @@ export default function MonitorPage() {
         events={allEvents}
         markets={allMarkets}
         earthquakes={allEarthquakes}
-        visibleThemes={visibleThemes}
-        visibleSignals={visibleSignals}
+        activeThemes={activeThemeMask}
+        visibleLayers={visibleLayers}
       />
 
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
@@ -830,12 +807,9 @@ export default function MonitorPage() {
           situationRooms={situationRooms}
           onSelectGlobalFocus={handleSelectGlobalFocus}
           onSelectSituationRoom={handleSituationRoomSelect}
-          visibleThemes={visibleThemes}
-          onToggleTheme={toggleTheme}
-          themeCounts={themeCounts}
-          visibleSignals={visibleSignals}
-          onToggleSignal={toggleSignal}
-          signalCounts={signalCounts}
+          visibleLayers={visibleLayers}
+          onToggleLayer={toggleLayer}
+          layerCounts={layerCounts}
           eventConfidenceGate={eventConfidenceGate}
           onChangeEventConfidenceGate={setEventConfidenceGate}
           eventGateStats={eventGateStats}
@@ -875,8 +849,8 @@ export default function MonitorPage() {
                 : null
             }
             relatedMarkets={relatedMarkets}
-            visibleThemes={visibleThemes}
-            visibleSignals={visibleSignals}
+            activeThemes={activeThemeMask}
+            visibleLayers={visibleLayers}
             visibleWatchZones={visibleWatchZones}
             eventConfidenceGate={eventConfidenceGate}
             temporaryPlottedEventIds={temporaryPlottedEventIds}
@@ -906,7 +880,7 @@ export default function MonitorPage() {
         </div>
       </div>
 
-      <PriceTicker />
+      {visibleLayers.prices && <PriceTicker />}
     </div>
   );
 }

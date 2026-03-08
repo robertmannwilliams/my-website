@@ -53,6 +53,15 @@ const CATEGORY_LABELS: Record<string, string> = {
   climate: 'Climate',
 };
 
+const ROOM_MODULE_COPY: Record<string, string> = {
+  'middle-east-brief': 'Escalation digest across Levant and Gulf theatres with actor-level posture shifts.',
+  chokepoints: 'Shipping chokepoint risk and throughput pressure across Suez, Bab el-Mandeb, and Hormuz.',
+  airspace: 'NOTAM and airspace disruption context for military and commercial routing.',
+  'ukraine-brief': 'Frontline and strike-pattern brief with major force-movement updates.',
+  sanctions: 'Sanctions and enforcement context with macro spillover to trade and energy.',
+  'black-sea-logistics': 'Black Sea maritime/logistics posture including port pressure and corridor risk.',
+};
+
 function formatTimestamp(ts: string): string {
   const d = new Date(ts);
   const now = new Date();
@@ -287,6 +296,11 @@ function EventContent({
                     <span style={{ fontSize: 10, color: '#A7B5CA', background: 'rgba(167,181,202,0.1)', padding: '2px 6px', borderRadius: 10 }}>
                       link {Math.round(scenario.linkConfidence * 100)}%
                     </span>
+                    {(scenario.linkReason || []).map((reason) => (
+                      <span key={`${scenario.id}-reason-${reason}`} style={{ fontSize: 10, color: '#6FD6B2', background: 'rgba(111,214,178,0.12)', padding: '2px 6px', borderRadius: 10 }}>
+                        {reason.replace('_', ' ')}
+                      </span>
+                    ))}
                     {(scenario.topicTags || []).slice(0, 3).map((tag) => (
                       <span key={`${scenario.id}-${tag}`} style={{ fontSize: 10, color: '#8BC7FF', background: 'rgba(139,199,255,0.1)', padding: '2px 6px', borderRadius: 10 }}>
                         {tag}
@@ -336,6 +350,11 @@ function EventContent({
                         link {Math.round(m.linkConfidence * 100)}%
                       </span>
                     )}
+                    {(m.linkReason || []).map((reason) => (
+                      <span key={`${m.id}-reason-${reason}`} style={{ fontSize: 10, color: '#6FD6B2', background: 'rgba(111,214,178,0.12)', padding: '2px 6px', borderRadius: 10 }}>
+                        {reason.replace('_', ' ')}
+                      </span>
+                    ))}
                     {(m.topicTags || []).slice(0, 3).map((tag) => (
                       <span key={`${m.id}-${tag}`} style={{ fontSize: 10, color: '#8BC7FF', background: 'rgba(139,199,255,0.1)', padding: '2px 6px', borderRadius: 10 }}>
                         {tag}
@@ -555,12 +574,51 @@ function RoomContent({ room }: { room: SituationRoomConfig }) {
 
         <div style={{ marginBottom: 18 }}>
           <span style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, display: 'block', marginBottom: 8 }}>
-            Default Signal Types
+            Default Layers
           </span>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {(room.defaultSignalTypes || []).map((signal) => (
-              <span key={signal} style={{ fontSize: 11, color: '#8FB8F2', background: 'rgba(74,158,255,0.12)', padding: '3px 10px', borderRadius: 12, border: '1px solid rgba(74,158,255,0.2)' }}>
-                {signal}
+            {room.defaultLayers.map((layer) => (
+              <span key={layer} style={{ fontSize: 11, color: '#8FB8F2', background: 'rgba(74,158,255,0.12)', padding: '3px 10px', borderRadius: 12, border: '1px solid rgba(74,158,255,0.2)' }}>
+                {layer}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 18 }}>
+          <span style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, display: 'block', marginBottom: 8 }}>
+            Context Modules
+          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {room.contextModules.map((moduleKey) => (
+              <div
+                key={moduleKey}
+                style={{
+                  fontSize: 11,
+                  color: '#9EC8FF',
+                  background: 'rgba(158,200,255,0.08)',
+                  padding: '8px 10px',
+                  borderRadius: 8,
+                  border: '1px solid rgba(158,200,255,0.18)',
+                }}
+              >
+                <div style={{ fontWeight: 600, marginBottom: 4 }}>{moduleKey}</div>
+                <div style={{ color: '#8FA7C4', lineHeight: 1.35 }}>
+                  {ROOM_MODULE_COPY[moduleKey] || 'Context module active for this room.'}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 18 }}>
+          <span style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, display: 'block', marginBottom: 8 }}>
+            Priority Regions
+          </span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {(room.priorityRegions || []).map((region) => (
+              <span key={region} style={{ fontSize: 11, color: '#A9BCD3', background: 'rgba(169,188,211,0.1)', padding: '3px 10px', borderRadius: 12, border: '1px solid rgba(169,188,211,0.18)' }}>
+                {region.replace('_', ' ')}
               </span>
             ))}
           </div>

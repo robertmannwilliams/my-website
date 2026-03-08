@@ -25,6 +25,7 @@ export interface PolymarketMarket {
   topicTags: string[];
   mapPriority: number;
   linkConfidence?: number;
+  linkReason?: string[];
   geoValidity: 'valid' | 'ambiguous' | 'invalid';
   geoReason: string;
 }
@@ -407,6 +408,9 @@ export function findRelatedMarkets(
           ? 850
           : radiusKm;
 
+  const minTopicScore = event.category === 'economy' ? 0.09 : 0.12;
+  const minGeoScore = event.category === 'economy' ? 0.08 : 0.12;
+
   const nearby = markets
     .filter((m) => isHighSignalMapMarket(m))
     .map((m) => {
@@ -420,17 +424,27 @@ export function findRelatedMarkets(
       }
       const denom = Math.max(1, Math.min(12, eventTags.length + mTokens.length - overlap));
       const topicScore = overlap / denom;
-
-      const linkConfidence = topicScore * 0.58 + geoScore * 0.42;
+      const linkConfidence = topicScore * 0.66 + geoScore * 0.34;
+      const linkReason = [
+        ...(topicScore >= minTopicScore ? ['topic_match'] : []),
+        ...(geoScore >= minGeoScore ? ['geo_match'] : []),
+      ];
       return {
         market: m,
         dist,
         topicScore,
+        geoScore,
         linkConfidence,
+        linkReason,
         overlapTokens: mTokens.filter((token) => eventTokenSet.has(token)).slice(0, 3),
       };
     })
-    .filter((row) => row.dist <= categoryRadius && row.topicScore >= 0.08 && row.linkConfidence >= 0.2);
+    .filter((row) => (
+      row.dist <= categoryRadius &&
+      row.topicScore >= minTopicScore &&
+      row.geoScore >= minGeoScore &&
+      row.linkConfidence >= 0.24
+    ));
 
   nearby.sort((a, b) => {
     const scoreDelta = b.linkConfidence - a.linkConfidence;
@@ -450,6 +464,7 @@ export function findRelatedMarkets(
     deduped.push({
       ...market,
       linkConfidence: row.linkConfidence,
+      linkReason: row.linkReason,
       topicTags: row.overlapTokens.length > 0 ? row.overlapTokens : market.topicTags.slice(0, 2),
     });
     if (deduped.length >= 5) break;

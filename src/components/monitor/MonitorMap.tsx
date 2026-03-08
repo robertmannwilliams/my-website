@@ -14,14 +14,13 @@ import type {
   MapSelectionCandidate,
   NotamZone,
   ShippingChokepoint,
-  SignalKey,
+  LayerKey,
   SituationRoomConfig,
   WatchZone,
 } from '@/lib/monitor/types';
 import {
   type ThemeKey,
-  getActiveEventCategories,
-  getActiveMarketCategories,
+  marketCategoryToTheme,
 } from '@/lib/monitor/themes';
 
 interface MonitorMapProps {
@@ -36,8 +35,8 @@ interface MonitorMapProps {
   focusEventRequest?: { lat: number; lng: number; seq: number } | null;
   selectedEventCoords?: { lat: number; lng: number } | null;
   relatedMarkets?: PolymarketMarket[];
-  visibleThemes: Record<ThemeKey, boolean>;
-  visibleSignals: Record<SignalKey, boolean>;
+  activeThemes: Record<ThemeKey, boolean>;
+  visibleLayers: Record<LayerKey, boolean>;
   visibleWatchZones: Record<string, boolean>;
   eventConfidenceGate: EventConfidenceGate;
   temporaryPlottedEventIds: string[];
@@ -1090,8 +1089,8 @@ function MonitorMap({
   focusEventRequest,
   selectedEventCoords,
   relatedMarkets,
-  visibleThemes,
-  visibleSignals,
+  activeThemes,
+  visibleLayers,
   visibleWatchZones,
   eventConfidenceGate,
   temporaryPlottedEventIds,
@@ -1163,11 +1162,10 @@ function MonitorMap({
   const forcedEventIds = useMemo(() => new Set(temporaryPlottedEventIds), [temporaryPlottedEventIds]);
 
   const filteredEvents = useMemo(() => {
-    if (!visibleSignals.events) return [];
-    const activeCats = getActiveEventCategories(visibleThemes);
+    if (!visibleLayers.events) return [];
     const forced = forcedEventIds;
 
-    const candidates = events.filter((event) => activeCats.includes(event.category));
+    const candidates = events;
     const forcedCandidates = candidates.filter((event) => forced.has(event.id) && Number.isFinite(event.lat) && Number.isFinite(event.lng));
 
     const gated = candidates.filter((event) => {
@@ -1190,8 +1188,19 @@ function MonitorMap({
       return true;
     });
 
+    const inRoomTheme = (event: GdeltEvent): boolean =>
+      Object.prototype.hasOwnProperty.call(activeThemes, event.category)
+        ? activeThemes[event.category as ThemeKey]
+        : false;
+
+    const weightedScore = (event: GdeltEvent): number => {
+      const base = eventSignalScore(event);
+      if (!activeRoom) return base;
+      return base + (inRoomTheme(event) ? 4.5 : -1.4);
+    };
+
     const byScore = (a: GdeltEvent, b: GdeltEvent) => {
-      const scoreDelta = eventSignalScore(b) - eventSignalScore(a);
+      const scoreDelta = weightedScore(b) - weightedScore(a);
       if (scoreDelta !== 0) return scoreDelta;
       return new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime();
     };
@@ -1213,18 +1222,27 @@ function MonitorMap({
     const unique = new Map<string, GdeltEvent>();
     for (const event of merged) unique.set(event.id, event);
     return [...unique.values()];
-  }, [events, eventConfidenceGate, forcedEventIds, visibleThemes, visibleSignals.events]);
+  }, [events, eventConfidenceGate, forcedEventIds, activeThemes, activeRoom, visibleLayers.events]);
 
   const filteredMarkets = useMemo(() => {
-    if (!visibleSignals.markets) return [];
-    const activeCats = getActiveMarketCategories(visibleThemes);
-    return markets.filter((market) => activeCats.includes(market.category) && isHighSignalMapMarket(market));
-  }, [markets, visibleThemes, visibleSignals.markets]);
+    if (!visibleLayers.markets) return [];
+    const weightedScore = (market: PolymarketMarket): number => {
+      const base = market.signalScore;
+      if (!activeRoom) return base;
+      const theme = marketCategoryToTheme(market.category);
+      if (!theme) return base - 0.8;
+      return base + (activeThemes[theme] ? 3.2 : -1.2);
+    };
+
+    return markets
+      .filter((market) => isHighSignalMapMarket(market))
+      .sort((a, b) => weightedScore(b) - weightedScore(a));
+  }, [markets, activeThemes, activeRoom, visibleLayers.markets]);
 
   const filteredWatchZones = useMemo(() => {
-    if (!visibleSignals.watch_zones) return [];
-    return watchZones.filter((zone) => visibleThemes[zone.theme] && visibleWatchZones[zone.id]);
-  }, [watchZones, visibleSignals.watch_zones, visibleThemes, visibleWatchZones]);
+    if (!visibleLayers.watch_zones) return [];
+    return watchZones.filter((zone) => visibleWatchZones[zone.id]);
+  }, [watchZones, visibleLayers.watch_zones, visibleWatchZones]);
 
   const fanoutRef = useRef<FanoutInternalState | null>(null);
   const fanoutRequestRef = useRef(0);
@@ -1864,8 +1882,8 @@ function MonitorMap({
     const handleZoomEnd = () => {
       const state = fanoutRef.current;
       if (!state) return;
-      if (state.signalType === 'markets' && !visibleSignals.markets) return;
-      if (state.signalType === 'events' && !visibleSignals.events) return;
+      if (state.signalType === 'markets' && !visibleLayers.markets) return;
+      if (state.signalType === 'events' && !visibleLayers.events) return;
       renderFanout(state);
     };
 
@@ -1873,20 +1891,20 @@ function MonitorMap({
     return () => {
       m.off('zoomend', handleZoomEnd);
     };
-  }, [renderFanout, visibleSignals.events, visibleSignals.markets]);
+  }, [renderFanout, visibleLayers.events, visibleLayers.markets]);
 
   useEffect(() => {
     const state = fanoutRef.current;
     if (!state) return;
-    if (state.signalType === 'markets' && !visibleSignals.markets) {
+    if (state.signalType === 'markets' && !visibleLayers.markets) {
       resetFanout();
       return;
     }
-    if (state.signalType === 'events' && !visibleSignals.events) {
+    if (state.signalType === 'events' && !visibleLayers.events) {
       resetFanout();
       return;
     }
-  }, [visibleSignals.events, visibleSignals.markets, resetFanout]);
+  }, [visibleLayers.events, visibleLayers.markets, resetFanout]);
 
   useEffect(() => {
     const state = fanoutRef.current;
@@ -1927,7 +1945,7 @@ function MonitorMap({
     const source = map.current.getSource('events') as mapboxgl.GeoJSONSource | undefined;
     if (source) source.setData(eventsToGeoJSON(filteredEvents, activeRoom, forcedEventIds));
 
-    const showEvents = visibleSignals.events;
+    const showEvents = visibleLayers.events;
     for (const layerId of EVENT_LAYERS) {
       try {
         map.current.setLayoutProperty(layerId, 'visibility', showEvents ? 'visible' : 'none');
@@ -1935,14 +1953,14 @@ function MonitorMap({
         // Layer may not exist yet.
       }
     }
-  }, [filteredEvents, visibleSignals.events, activeRoom, forcedEventIds, mapReady]);
+  }, [filteredEvents, visibleLayers.events, activeRoom, forcedEventIds, mapReady]);
 
   useEffect(() => {
     if (!map.current || !layersReady.current) return;
     const source = map.current.getSource('markets') as mapboxgl.GeoJSONSource | undefined;
     if (source) source.setData(marketsToGeoJSON(filteredMarkets, activeRoom));
 
-    const showMarkets = visibleSignals.markets;
+    const showMarkets = visibleLayers.markets;
     for (const layerId of MARKET_LAYERS) {
       try {
         map.current.setLayoutProperty(layerId, 'visibility', showMarkets ? 'visible' : 'none');
@@ -1950,14 +1968,14 @@ function MonitorMap({
         // Layer may not exist yet.
       }
     }
-  }, [filteredMarkets, visibleSignals.markets, activeRoom, mapReady]);
+  }, [filteredMarkets, visibleLayers.markets, activeRoom, mapReady]);
 
   useEffect(() => {
     if (!map.current || !layersReady.current) return;
     const source = map.current.getSource('watch-zones') as mapboxgl.GeoJSONSource | undefined;
     if (source) source.setData(watchZonesToGeoJSON(filteredWatchZones, activeRoom));
 
-    const showWatchZones = visibleSignals.watch_zones;
+    const showWatchZones = visibleLayers.watch_zones;
     for (const layerId of WATCH_ZONE_LAYERS) {
       try {
         map.current.setLayoutProperty(layerId, 'visibility', showWatchZones ? 'visible' : 'none');
@@ -1965,7 +1983,7 @@ function MonitorMap({
         // Layer may not exist yet.
       }
     }
-  }, [filteredWatchZones, visibleSignals.watch_zones, activeRoom, mapReady]);
+  }, [filteredWatchZones, visibleLayers.watch_zones, activeRoom, mapReady]);
 
   useEffect(() => {
     if (!map.current || !layersReady.current) return;
@@ -1974,7 +1992,7 @@ function MonitorMap({
     const source = m.getSource('earthquakes') as mapboxgl.GeoJSONSource | undefined;
     if (source) source.setData(earthquakesToGeoJSON(earthquakes, activeRoom));
 
-    const showEarthquakes = visibleSignals.disasters && visibleThemes.disasters;
+    const showEarthquakes = visibleLayers.disasters;
     for (const layerId of EARTHQUAKE_LAYERS) {
       try {
         m.setLayoutProperty(layerId, 'visibility', showEarthquakes ? 'visible' : 'none');
@@ -1982,7 +2000,7 @@ function MonitorMap({
         // Layer may not exist yet.
       }
     }
-  }, [earthquakes, visibleSignals.disasters, visibleThemes.disasters, activeRoom, mapReady]);
+  }, [earthquakes, visibleLayers.disasters, activeRoom, mapReady]);
 
   useEffect(() => {
     if (!map.current || !layersReady.current) return;
@@ -1997,12 +2015,13 @@ function MonitorMap({
     const electionSource = m.getSource('elections') as mapboxgl.GeoJSONSource | undefined;
     if (electionSource) electionSource.setData(electionsToGeoJSON(elections));
 
-    const showInfra = visibleSignals.infrastructure_overlays && visibleThemes.infrastructure;
-    const showElectionOverlay = visibleSignals.infrastructure_overlays && visibleThemes.elections;
+    const showNotams = visibleLayers.notams;
+    const showShipping = visibleLayers.shipping;
+    const showElectionOverlay = visibleLayers.elections;
 
     for (const layerId of NOTAM_LAYERS) {
       try {
-        m.setLayoutProperty(layerId, 'visibility', showInfra ? 'visible' : 'none');
+        m.setLayoutProperty(layerId, 'visibility', showNotams ? 'visible' : 'none');
       } catch {
         // Layer may not exist yet.
       }
@@ -2010,7 +2029,7 @@ function MonitorMap({
 
     for (const layerId of SHIPPING_LAYERS) {
       try {
-        m.setLayoutProperty(layerId, 'visibility', showInfra ? 'visible' : 'none');
+        m.setLayoutProperty(layerId, 'visibility', showShipping ? 'visible' : 'none');
       } catch {
         // Layer may not exist yet.
       }
@@ -2023,7 +2042,7 @@ function MonitorMap({
         // Layer may not exist yet.
       }
     }
-  }, [notamZones, shippingChokepoints, elections, visibleSignals.infrastructure_overlays, visibleThemes.infrastructure, visibleThemes.elections, mapReady]);
+  }, [notamZones, shippingChokepoints, elections, visibleLayers.notams, visibleLayers.shipping, visibleLayers.elections, mapReady]);
 
   useEffect(() => {
     if (!map.current || !layersReady.current) return;

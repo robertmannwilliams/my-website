@@ -3,12 +3,18 @@ import type { PolymarketMarket } from './polymarket';
 import type { UsgsEarthquake } from './usgs';
 import type { ThemeKey } from './themes';
 
-export type SignalKey =
+export type LayerKey =
   | 'events'
   | 'markets'
   | 'disasters'
-  | 'infrastructure_overlays'
-  | 'watch_zones';
+  | 'notams'
+  | 'shipping'
+  | 'elections'
+  | 'watch_zones'
+  | 'prices';
+
+// Backward-compatible alias while migrating the monitor surface.
+export type SignalKey = LayerKey;
 
 export type EventConfidenceGate = 'strict' | 'balanced' | 'all';
 
@@ -44,7 +50,8 @@ export interface SituationRoomConfig {
   center: [number, number];
   zoom: number;
   activeThemes: ThemeKey[];
-  defaultSignalTypes: SignalKey[];
+  defaultLayers: LayerKey[];
+  defaultSignalTypes?: SignalKey[]; // legacy
   defaultWatchZoneIds: string[];
   priorityRegions: string[];
   contextModules: string[];

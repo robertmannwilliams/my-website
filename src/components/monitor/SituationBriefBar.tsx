@@ -4,7 +4,7 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import type { GdeltEvent } from '@/lib/monitor/events';
 import type { PolymarketMarket } from '@/lib/monitor/polymarket';
 import type { UsgsEarthquake } from '@/lib/monitor/usgs';
-import type { SignalKey, SituationRoomConfig } from '@/lib/monitor/types';
+import type { LayerKey, SituationRoomConfig } from '@/lib/monitor/types';
 import { marketCategoryToTheme, type ThemeKey } from '@/lib/monitor/themes';
 
 interface SituationBriefBarProps {
@@ -13,8 +13,8 @@ interface SituationBriefBarProps {
   events: GdeltEvent[];
   markets: PolymarketMarket[];
   earthquakes: UsgsEarthquake[];
-  visibleThemes: Record<ThemeKey, boolean>;
-  visibleSignals: Record<SignalKey, boolean>;
+  activeThemes: Record<ThemeKey, boolean>;
+  visibleLayers: Record<LayerKey, boolean>;
 }
 
 function formatRecency(ts: string): string {
@@ -38,25 +38,25 @@ function SituationBriefBar({
   events,
   markets,
   earthquakes,
-  visibleThemes,
-  visibleSignals,
+  activeThemes,
+  visibleLayers,
 }: SituationBriefBarProps) {
   const [messageIndex, setMessageIndex] = useState(0);
 
   const filteredEvents = useMemo(() => (
     events
-      .filter((event) => event.status !== 'speculative' && visibleThemes[event.category])
+      .filter((event) => event.status !== 'speculative' && activeThemes[event.category])
       .sort((a, b) => b.mapPriority - a.mapPriority)
-  ), [events, visibleThemes]);
+  ), [events, activeThemes]);
 
   const filteredMarkets = useMemo(() => (
     markets
       .filter((market) => {
         const theme = marketCategoryToTheme(market.category);
-        return theme ? visibleThemes[theme] : true;
+        return theme ? activeThemes[theme] : true;
       })
       .sort((a, b) => b.signalScore - a.signalScore)
-  ), [markets, visibleThemes]);
+  ), [markets, activeThemes]);
 
   const visibleQuakes = useMemo(() => (
     earthquakes
@@ -75,19 +75,19 @@ function SituationBriefBar({
     const topMarket = filteredMarkets[0];
     const topQuake = visibleQuakes[0];
 
-    if (topEvent && visibleSignals.events) {
+    if (topEvent && visibleLayers.events) {
       out.push(`${topEvent.severity.toUpperCase()} (${formatRecency(topEvent.lastSeenAt)}): ${truncate(topEvent.title, 110)}`);
     }
 
-    if (upcoming && visibleSignals.events) {
+    if (upcoming && visibleLayers.events) {
       out.push(`UPCOMING (${formatRecency(upcoming.lastSeenAt)}): ${truncate(upcoming.title, 100)}`);
     }
 
-    if (topMarket && visibleSignals.markets) {
+    if (topMarket && visibleLayers.markets) {
       out.push(`MARKET ${Math.round(topMarket.probability * 100)}%: ${truncate(topMarket.title, 104)}`);
     }
 
-    if (topQuake && visibleSignals.disasters && visibleThemes.disasters) {
+    if (topQuake && visibleLayers.disasters && activeThemes.disasters) {
       out.push(`DISASTER M${topQuake.magnitude.toFixed(1)}: ${truncate(topQuake.place, 104)}`);
     }
 
@@ -96,7 +96,7 @@ function SituationBriefBar({
     }
 
     return out;
-  }, [filteredEvents, filteredMarkets, visibleQuakes, visibleSignals, visibleThemes.disasters]);
+  }, [filteredEvents, filteredMarkets, visibleQuakes, visibleLayers, activeThemes.disasters]);
 
   useEffect(() => {
     if (messages.length <= 1) return;
