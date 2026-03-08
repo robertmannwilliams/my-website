@@ -38,11 +38,14 @@ interface FilterPanelProps {
   }>;
   offMapSummary: {
     total: number;
+    hiddenNow: number;
+    plottedOverrides: number;
     byReason: Record<'speculative' | 'geo_invalid' | 'geo_ambiguous' | 'low_confidence', number>;
   };
   onSelectOffMapEvent: (eventId: string) => void;
   offMapPlottedIds: string[];
   onToggleOffMapPlot: (eventId: string) => void;
+  onClearOffMapPlots: () => void;
   watchZones: WatchZone[];
   visibleWatchZones: Record<string, boolean>;
   onToggleWatchZone: (zoneId: string) => void;
@@ -192,6 +195,7 @@ function FilterPanel({
   onSelectOffMapEvent,
   offMapPlottedIds,
   onToggleOffMapPlot,
+  onClearOffMapPlots,
   watchZones,
   visibleWatchZones,
   onToggleWatchZone,
@@ -447,11 +451,32 @@ function FilterPanel({
       </div>
 
       <div style={{ fontSize: 9, color: '#475569', lineHeight: '13px', marginBottom: offMapOpen ? 8 : 0 }}>
-        {offMapSummary.total} hidden. Spec {offMapSummary.byReason.speculative} · Geo {offMapSummary.byReason.geo_invalid + offMapSummary.byReason.geo_ambiguous} · Confidence {offMapSummary.byReason.low_confidence}
+        {offMapSummary.hiddenNow} hidden now · {offMapSummary.plottedOverrides} plotted overrides · {offMapSummary.total} default-hidden total
+      </div>
+      <div style={{ fontSize: 9, color: '#475569', lineHeight: '13px', marginBottom: offMapOpen ? 8 : 0 }}>
+        Spec {offMapSummary.byReason.speculative} · Geo {offMapSummary.byReason.geo_invalid + offMapSummary.byReason.geo_ambiguous} · Confidence {offMapSummary.byReason.low_confidence}
       </div>
 
       {offMapOpen && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {offMapPlottedIds.length > 0 && (
+            <button
+              onClick={onClearOffMapPlots}
+              style={{
+                width: '100%',
+                textAlign: 'center',
+                background: 'rgba(255,255,255,0.02)',
+                border: '1px solid #334155',
+                color: '#94A3B8',
+                borderRadius: 6,
+                fontSize: 10,
+                padding: '5px 6px',
+                cursor: 'pointer',
+              }}
+            >
+              Clear plotted overrides ({offMapPlottedIds.length})
+            </button>
+          )}
           {offMapEvents.length === 0 && (
             <div style={{ fontSize: 10, color: '#64748B', padding: '2px 2px' }}>
               No hidden events for current filters.
@@ -463,7 +488,9 @@ function FilterPanel({
               style={{
                 width: '100%',
                 background: 'rgba(255,255,255,0.02)',
-                border: '1px solid #1E293B',
+                border: offMapPlottedIds.includes(event.id)
+                  ? '1px solid rgba(74,158,255,0.3)'
+                  : '1px solid #1E293B',
                 borderRadius: 6,
                 padding: '7px 8px',
                 color: '#CBD5E1',
@@ -473,6 +500,18 @@ function FilterPanel({
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: severityColor(event.severity), display: 'inline-block' }} />
                 <span style={{ fontSize: 9, color: '#64748B', textTransform: 'uppercase' }}>{event.reasonLabel}</span>
                 <span style={{ fontSize: 9, color: '#475569' }}>{formatAgo(event.lastSeenAt)}</span>
+                {offMapPlottedIds.includes(event.id) && (
+                  <span
+                    style={{
+                      marginLeft: 'auto',
+                      fontSize: 9,
+                      color: '#9EC8FF',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    plotted
+                  </span>
+                )}
               </div>
               <div style={{ fontSize: 11, lineHeight: '14px', marginBottom: 2 }}>
                 {event.title}

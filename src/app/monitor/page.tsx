@@ -66,6 +66,12 @@ interface OffMapEventPreview {
   geoReason: string;
 }
 
+interface FocusEventRequest {
+  lat: number;
+  lng: number;
+  seq: number;
+}
+
 function makeDefaultThemes(): Record<ThemeKey, boolean> {
   return {
     conflicts: true,
@@ -273,6 +279,7 @@ export default function MonitorPage() {
   );
   const [eventConfidenceGate, setEventConfidenceGate] = useState<EventConfidenceGate>(() => getInitialEventConfidenceGate());
   const [temporaryPlottedEventIds, setTemporaryPlottedEventIds] = useState<string[]>([]);
+  const [focusEventRequest, setFocusEventRequest] = useState<FocusEventRequest | null>(null);
   const [selectionContext, setSelectionContext] = useState<{ title: string; candidates: MapSelectionCandidate[] } | null>(null);
   const [activeFanout, setActiveFanout] = useState<ActiveFanout | null>(null);
   const [interactionMode, setInteractionMode] = useState<MapInteractionMode>('idle');
@@ -660,19 +667,13 @@ export default function MonitorPage() {
   }, [allEvents]);
 
   const offMapPreview = useMemo(() => {
-    const byReason: Record<OffMapReasonCode, number> = {
-      speculative: 0,
-      geo_invalid: 0,
-      geo_ambiguous: 0,
-      low_confidence: 0,
-    };
+    const forced = new Set(temporaryPlottedEventIds);
 
     const items: OffMapEventPreview[] = allEvents
       .filter((event) => visibleThemes[event.category])
       .map((event) => {
         const reasonCode = offMapReasonForEvent(event, eventConfidenceGate);
         if (!reasonCode) return null;
-        byReason[reasonCode] += 1;
         return {
           id: event.id,
           title: event.title,
@@ -685,19 +686,39 @@ export default function MonitorPage() {
       })
       .filter((event): event is OffMapEventPreview => Boolean(event))
       .sort((a, b) => {
+        const aForced = forced.has(a.id) ? 1 : 0;
+        const bForced = forced.has(b.id) ? 1 : 0;
+        if (bForced !== aForced) return bForced - aForced;
         const sevDelta = severityOrder(b.severity) - severityOrder(a.severity);
         if (sevDelta !== 0) return sevDelta;
         return new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime();
       });
 
+    const plottedOverrides = items.filter((event) => forced.has(event.id)).length;
+    const byReason = items
+      .filter((event) => !forced.has(event.id))
+      .reduce<Record<OffMapReasonCode, number>>((acc, event) => ({
+        ...acc,
+        [event.reasonCode]: acc[event.reasonCode] + 1,
+      }), {
+        speculative: 0,
+        geo_invalid: 0,
+        geo_ambiguous: 0,
+        low_confidence: 0,
+      });
+
+    const hiddenNow = Math.max(0, items.length - plottedOverrides);
+
     return {
       items: items.slice(0, 30),
       summary: {
         total: items.length,
+        hiddenNow,
+        plottedOverrides,
         byReason,
       },
     };
-  }, [allEvents, eventConfidenceGate, visibleThemes]);
+  }, [allEvents, eventConfidenceGate, temporaryPlottedEventIds, visibleThemes]);
 
   const handleSelectOffMapEvent = useCallback((eventId: string) => {
     const event = allEvents.find((candidate) => candidate.id === eventId);
@@ -706,6 +727,11 @@ export default function MonitorPage() {
     setActiveFanout(null);
     setInteractionMode('idle');
     setSelectedItem({ type: 'event', data: event });
+    setFocusEventRequest((prev) => ({
+      lat: event.lat,
+      lng: event.lng,
+      seq: (prev?.seq || 0) + 1,
+    }));
   }, [allEvents]);
 
   const handleToggleOffMapPlot = useCallback((eventId: string) => {
@@ -722,7 +748,16 @@ export default function MonitorPage() {
     setActiveFanout(null);
     setInteractionMode('idle');
     setSelectedItem({ type: 'event', data: event });
+    setFocusEventRequest((prev) => ({
+      lat: event.lat,
+      lng: event.lng,
+      seq: (prev?.seq || 0) + 1,
+    }));
   }, [allEvents]);
+
+  const handleClearOffMapPlots = useCallback(() => {
+    setTemporaryPlottedEventIds([]);
+  }, []);
 
   const selectedEventEvidence = useMemo(() => {
     if (selectedItem?.type !== 'event') return [];
@@ -809,6 +844,7 @@ export default function MonitorPage() {
           onSelectOffMapEvent={handleSelectOffMapEvent}
           offMapPlottedIds={temporaryPlottedEventIds}
           onToggleOffMapPlot={handleToggleOffMapPlot}
+          onClearOffMapPlots={handleClearOffMapPlots}
           watchZones={watchZones}
           visibleWatchZones={visibleWatchZones}
           onToggleWatchZone={toggleWatchZone}
@@ -832,6 +868,7 @@ export default function MonitorPage() {
             onMapClick={handleClosePanel}
             onFanoutChange={handleFanoutChange}
             forceClearFanoutKey={forceClearFanoutKey}
+            focusEventRequest={focusEventRequest}
             selectedEventCoords={
               selectedItem?.type === 'event'
                 ? { lat: selectedItem.data.lat, lng: selectedItem.data.lng }

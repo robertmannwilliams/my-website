@@ -33,6 +33,7 @@ interface MonitorMapProps {
   onFanoutChange?: (fanout: ActiveFanout | null) => void;
   onMapClick?: () => void;
   forceClearFanoutKey?: number;
+  focusEventRequest?: { lat: number; lng: number; seq: number } | null;
   selectedEventCoords?: { lat: number; lng: number } | null;
   relatedMarkets?: PolymarketMarket[];
   visibleThemes: Record<ThemeKey, boolean>;
@@ -1071,6 +1072,7 @@ function MonitorMap({
   onFanoutChange,
   onMapClick,
   forceClearFanoutKey = 0,
+  focusEventRequest,
   selectedEventCoords,
   relatedMarkets,
   visibleThemes,
@@ -1812,6 +1814,17 @@ function MonitorMap({
       essential: true,
     });
   }, [activeRoom]);
+
+  useEffect(() => {
+    if (!map.current || !focusEventRequest) return;
+    const zoom = Math.max(6.4, map.current.getZoom());
+    map.current.easeTo({
+      center: [focusEventRequest.lng, focusEventRequest.lat],
+      zoom,
+      duration: 650,
+      essential: true,
+    });
+  }, [focusEventRequest]);
 
   useEffect(() => {
     resetFanout();
