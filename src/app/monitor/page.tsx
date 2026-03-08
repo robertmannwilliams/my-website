@@ -272,6 +272,7 @@ export default function MonitorPage() {
     () => (initialRoom ? roomWatchZoneVisibility(initialRoom) : makeDefaultWatchZoneVisibility()),
   );
   const [eventConfidenceGate, setEventConfidenceGate] = useState<EventConfidenceGate>(() => getInitialEventConfidenceGate());
+  const [temporaryPlottedEventIds, setTemporaryPlottedEventIds] = useState<string[]>([]);
   const [selectionContext, setSelectionContext] = useState<{ title: string; candidates: MapSelectionCandidate[] } | null>(null);
   const [activeFanout, setActiveFanout] = useState<ActiveFanout | null>(null);
   const [interactionMode, setInteractionMode] = useState<MapInteractionMode>('idle');
@@ -707,6 +708,22 @@ export default function MonitorPage() {
     setSelectedItem({ type: 'event', data: event });
   }, [allEvents]);
 
+  const handleToggleOffMapPlot = useCallback((eventId: string) => {
+    const event = allEvents.find((candidate) => candidate.id === eventId);
+    if (!event) return;
+
+    setTemporaryPlottedEventIds((prev) => {
+      const exists = prev.includes(eventId);
+      if (exists) return prev.filter((id) => id !== eventId);
+      return [...prev, eventId];
+    });
+
+    setSelectionContext(null);
+    setActiveFanout(null);
+    setInteractionMode('idle');
+    setSelectedItem({ type: 'event', data: event });
+  }, [allEvents]);
+
   const selectedEventEvidence = useMemo(() => {
     if (selectedItem?.type !== 'event') return [];
     const evidenceById = new Map(allEventEvidence.map((item) => [item.id, item] as const));
@@ -790,6 +807,8 @@ export default function MonitorPage() {
           offMapEvents={offMapPreview.items}
           offMapSummary={offMapPreview.summary}
           onSelectOffMapEvent={handleSelectOffMapEvent}
+          offMapPlottedIds={temporaryPlottedEventIds}
+          onToggleOffMapPlot={handleToggleOffMapPlot}
           watchZones={watchZones}
           visibleWatchZones={visibleWatchZones}
           onToggleWatchZone={toggleWatchZone}
@@ -823,6 +842,7 @@ export default function MonitorPage() {
             visibleSignals={visibleSignals}
             visibleWatchZones={visibleWatchZones}
             eventConfidenceGate={eventConfidenceGate}
+            temporaryPlottedEventIds={temporaryPlottedEventIds}
             activeRoom={activeRoom}
             events={allEvents}
             markets={allMarkets}

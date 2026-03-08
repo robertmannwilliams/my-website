@@ -41,6 +41,8 @@ interface FilterPanelProps {
     byReason: Record<'speculative' | 'geo_invalid' | 'geo_ambiguous' | 'low_confidence', number>;
   };
   onSelectOffMapEvent: (eventId: string) => void;
+  offMapPlottedIds: string[];
+  onToggleOffMapPlot: (eventId: string) => void;
   watchZones: WatchZone[];
   visibleWatchZones: Record<string, boolean>;
   onToggleWatchZone: (zoneId: string) => void;
@@ -188,6 +190,8 @@ function FilterPanel({
   offMapEvents,
   offMapSummary,
   onSelectOffMapEvent,
+  offMapPlottedIds,
+  onToggleOffMapPlot,
   watchZones,
   visibleWatchZones,
   onToggleWatchZone,
@@ -454,17 +458,14 @@ function FilterPanel({
             </div>
           )}
           {offMapEvents.map((event) => (
-            <button
+            <div
               key={event.id}
-              onClick={() => onSelectOffMapEvent(event.id)}
               style={{
                 width: '100%',
-                textAlign: 'left',
                 background: 'rgba(255,255,255,0.02)',
                 border: '1px solid #1E293B',
                 borderRadius: 6,
                 padding: '7px 8px',
-                cursor: 'pointer',
                 color: '#CBD5E1',
               }}
             >
@@ -479,7 +480,41 @@ function FilterPanel({
               <div style={{ fontSize: 9, color: '#475569', lineHeight: '12px' }}>
                 {event.geoReason}
               </div>
-            </button>
+              <div style={{ display: 'flex', gap: 6, marginTop: 7 }}>
+                <button
+                  onClick={() => onSelectOffMapEvent(event.id)}
+                  style={{
+                    flex: 1,
+                    textAlign: 'center',
+                    background: 'rgba(255,255,255,0.02)',
+                    border: '1px solid #334155',
+                    color: '#AFC2D9',
+                    borderRadius: 5,
+                    fontSize: 10,
+                    padding: '4px 6px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  View
+                </button>
+                <button
+                  onClick={() => onToggleOffMapPlot(event.id)}
+                  style={{
+                    flex: 1,
+                    textAlign: 'center',
+                    background: offMapPlottedIds.includes(event.id) ? 'rgba(74,158,255,0.18)' : 'rgba(74,158,255,0.08)',
+                    border: offMapPlottedIds.includes(event.id) ? '1px solid rgba(74,158,255,0.38)' : '1px solid rgba(74,158,255,0.24)',
+                    color: offMapPlottedIds.includes(event.id) ? '#D6E8FF' : '#9EC8FF',
+                    borderRadius: 5,
+                    fontSize: 10,
+                    padding: '4px 6px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {offMapPlottedIds.includes(event.id) ? 'Unplot' : 'Plot anyway'}
+                </button>
+              </div>
+            </div>
           ))}
         </div>
       )}

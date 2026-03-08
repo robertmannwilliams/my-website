@@ -39,6 +39,7 @@ interface MonitorMapProps {
   visibleSignals: Record<SignalKey, boolean>;
   visibleWatchZones: Record<string, boolean>;
   eventConfidenceGate: EventConfidenceGate;
+  temporaryPlottedEventIds: string[];
   activeRoom: SituationRoomConfig | null;
   events: GdeltEvent[];
   markets: PolymarketMarket[];
@@ -1076,6 +1077,7 @@ function MonitorMap({
   visibleSignals,
   visibleWatchZones,
   eventConfidenceGate,
+  temporaryPlottedEventIds,
   activeRoom,
   events,
   markets,
@@ -1144,10 +1146,13 @@ function MonitorMap({
   const filteredEvents = useMemo(() => {
     if (!visibleSignals.events) return [];
     const activeCats = getActiveEventCategories(visibleThemes);
+    const forced = new Set(temporaryPlottedEventIds);
 
     const candidates = events.filter((event) => activeCats.includes(event.category));
+    const forcedCandidates = candidates.filter((event) => forced.has(event.id) && Number.isFinite(event.lat) && Number.isFinite(event.lng));
 
     const gated = candidates.filter((event) => {
+      if (forced.has(event.id)) return false;
       if (eventConfidenceGate === 'strict') {
         if (event.status === 'speculative') return false;
         if (event.geoValidity !== 'valid') return false;
@@ -1166,22 +1171,30 @@ function MonitorMap({
       return true;
     });
 
-    gated.sort((a, b) => {
+    const byScore = (a: GdeltEvent, b: GdeltEvent) => {
       const scoreDelta = eventSignalScore(b) - eventSignalScore(a);
       if (scoreDelta !== 0) return scoreDelta;
       return new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime();
-    });
+    };
+    gated.sort(byScore);
+    forcedCandidates.sort(byScore);
 
     if (eventConfidenceGate === 'strict') {
       const critical = gated.filter((event) => event.severity === 'critical');
       const nonCritical = gated.filter((event) => event.severity !== 'critical');
       const nonCriticalBudget = Math.max(0, MAX_EVENTS_ON_MAP - critical.length);
-      return [...critical, ...nonCritical.slice(0, nonCriticalBudget)];
+      const merged = [...forcedCandidates, ...critical, ...nonCritical.slice(0, nonCriticalBudget)];
+      const unique = new Map<string, GdeltEvent>();
+      for (const event of merged) unique.set(event.id, event);
+      return [...unique.values()];
     }
 
     const budget = eventConfidenceGate === 'all' ? MAX_EVENTS_ON_MAP * 2 : MAX_EVENTS_ON_MAP + 30;
-    return gated.slice(0, budget);
-  }, [events, eventConfidenceGate, visibleThemes, visibleSignals.events]);
+    const merged = [...forcedCandidates, ...gated.slice(0, budget)];
+    const unique = new Map<string, GdeltEvent>();
+    for (const event of merged) unique.set(event.id, event);
+    return [...unique.values()];
+  }, [events, eventConfidenceGate, temporaryPlottedEventIds, visibleThemes, visibleSignals.events]);
 
   const filteredMarkets = useMemo(() => {
     if (!visibleSignals.markets) return [];
