@@ -14,6 +14,7 @@ import type { UsgsEarthquake } from '@/lib/monitor/usgs';
 import type {
   ActiveFanout,
   ElectionCalendarItem,
+  EventConfidenceGate,
   MapInteractionMode,
   MapItem,
   MapSelectionCandidate,
@@ -129,6 +130,13 @@ function getInitialRoomFromStorage(): SituationRoomConfig | null {
   return situationRooms.find((room) => room.id === roomId) || null;
 }
 
+function getInitialEventConfidenceGate(): EventConfidenceGate {
+  if (typeof window === 'undefined') return 'strict';
+  const raw = window.localStorage.getItem('monitor:event-confidence-gate');
+  if (raw === 'strict' || raw === 'balanced' || raw === 'all') return raw;
+  return 'strict';
+}
+
 function normalizeEventShape(event: GdeltEvent): GdeltEvent {
   const topicTags = Array.isArray(event.topicTags) ? event.topicTags : [];
   const signalScore = Number(event.signalScore) || 0;
@@ -209,6 +217,7 @@ export default function MonitorPage() {
   const [visibleWatchZones, setVisibleWatchZones] = useState<Record<string, boolean>>(
     () => (initialRoom ? roomWatchZoneVisibility(initialRoom) : makeDefaultWatchZoneVisibility()),
   );
+  const [eventConfidenceGate, setEventConfidenceGate] = useState<EventConfidenceGate>(() => getInitialEventConfidenceGate());
   const [selectionContext, setSelectionContext] = useState<{ title: string; candidates: MapSelectionCandidate[] } | null>(null);
   const [activeFanout, setActiveFanout] = useState<ActiveFanout | null>(null);
   const [interactionMode, setInteractionMode] = useState<MapInteractionMode>('idle');
@@ -458,6 +467,10 @@ export default function MonitorPage() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    window.localStorage.setItem('monitor:event-confidence-gate', eventConfidenceGate);
+  }, [eventConfidenceGate]);
+
   // Fetch markets
   useEffect(() => {
     async function loadMarkets() {
@@ -571,6 +584,26 @@ export default function MonitorPage() {
     watch_zones: watchZones.length,
   }), [allEvents, allMarkets.length, allEarthquakes.length, notamZones.length, shippingChokepoints.length, elections.length]);
 
+  const eventGateStats = useMemo(() => {
+    const speculative = allEvents.filter((event) => event.status === 'speculative').length;
+    const ambiguousGeo = allEvents.filter((event) => event.geoValidity === 'ambiguous').length;
+    const invalidGeo = allEvents.filter((event) => event.geoValidity === 'invalid').length;
+    const lowConfidence = allEvents.filter((event) =>
+      event.severity === 'monitor' &&
+      event.status !== 'speculative' &&
+      event.sourceCount < 2 &&
+      event.classificationConfidence < 0.72,
+    ).length;
+
+    return {
+      total: allEvents.length,
+      speculative,
+      ambiguousGeo,
+      invalidGeo,
+      lowConfidence,
+    };
+  }, [allEvents]);
+
   const selectedEventEvidence = useMemo(() => {
     if (selectedItem?.type !== 'event') return [];
     const evidenceById = new Map(allEventEvidence.map((item) => [item.id, item] as const));
@@ -648,6 +681,9 @@ export default function MonitorPage() {
           visibleSignals={visibleSignals}
           onToggleSignal={toggleSignal}
           signalCounts={signalCounts}
+          eventConfidenceGate={eventConfidenceGate}
+          onChangeEventConfidenceGate={setEventConfidenceGate}
+          eventGateStats={eventGateStats}
           watchZones={watchZones}
           visibleWatchZones={visibleWatchZones}
           onToggleWatchZone={toggleWatchZone}
@@ -680,6 +716,7 @@ export default function MonitorPage() {
             visibleThemes={visibleThemes}
             visibleSignals={visibleSignals}
             visibleWatchZones={visibleWatchZones}
+            eventConfidenceGate={eventConfidenceGate}
             activeRoom={activeRoom}
             events={allEvents}
             markets={allMarkets}

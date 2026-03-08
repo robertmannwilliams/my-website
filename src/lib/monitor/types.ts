@@ -10,6 +10,8 @@ export type SignalKey =
   | 'infrastructure_overlays'
   | 'watch_zones';
 
+export type EventConfidenceGate = 'strict' | 'balanced' | 'all';
+
 export type WatchZoneGeometry =
   | {
     type: 'circle';

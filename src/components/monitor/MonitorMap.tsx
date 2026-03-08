@@ -9,6 +9,7 @@ import type { UsgsEarthquake } from '@/lib/monitor/usgs';
 import type {
   ActiveFanout,
   ElectionCalendarItem,
+  EventConfidenceGate,
   FanoutSignalType,
   MapSelectionCandidate,
   NotamZone,
@@ -37,6 +38,7 @@ interface MonitorMapProps {
   visibleThemes: Record<ThemeKey, boolean>;
   visibleSignals: Record<SignalKey, boolean>;
   visibleWatchZones: Record<string, boolean>;
+  eventConfidenceGate: EventConfidenceGate;
   activeRoom: SituationRoomConfig | null;
   events: GdeltEvent[];
   markets: PolymarketMarket[];
@@ -117,6 +119,12 @@ function eventSignalScore(event: GdeltEvent): number {
   const ageHours = Math.max(0, (Date.now() - new Date(event.lastSeenAt || event.timestamp).getTime()) / 3_600_000);
   const recencyScore = Math.max(0, 4 - ageHours / 6);
   return severityScore + sourceScore + confidenceScore + recencyScore;
+}
+
+function isWeakMonitorEvent(event: GdeltEvent, minConfidence: number): boolean {
+  if (event.severity !== 'monitor') return false;
+  if (event.sourceCount >= 2) return false;
+  return event.classificationConfidence < minConfidence;
 }
 
 function emptyCollection(): GeoJSON.FeatureCollection {
@@ -1067,6 +1075,7 @@ function MonitorMap({
   visibleThemes,
   visibleSignals,
   visibleWatchZones,
+  eventConfidenceGate,
   activeRoom,
   events,
   markets,
@@ -1136,31 +1145,43 @@ function MonitorMap({
     if (!visibleSignals.events) return [];
     const activeCats = getActiveEventCategories(visibleThemes);
 
-    const candidates = events.filter(
-      (event) =>
-        activeCats.includes(event.category) &&
-        event.geoValidity === 'valid' &&
-        event.status !== 'speculative',
-    );
+    const candidates = events.filter((event) => activeCats.includes(event.category));
 
-    const highSignal = candidates.filter((event) => {
-      if (event.severity !== 'monitor') return true;
-      if (event.sourceCount >= 2) return true;
-      return event.classificationConfidence >= 0.72;
+    const gated = candidates.filter((event) => {
+      if (eventConfidenceGate === 'strict') {
+        if (event.status === 'speculative') return false;
+        if (event.geoValidity !== 'valid') return false;
+        if (isWeakMonitorEvent(event, 0.72)) return false;
+        return true;
+      }
+
+      if (eventConfidenceGate === 'balanced') {
+        if (event.status === 'speculative') return false;
+        if (event.geoValidity === 'invalid') return false;
+        if (isWeakMonitorEvent(event, 0.58)) return false;
+        return true;
+      }
+
+      if (event.geoValidity === 'invalid') return false;
+      return true;
     });
 
-    highSignal.sort((a, b) => {
+    gated.sort((a, b) => {
       const scoreDelta = eventSignalScore(b) - eventSignalScore(a);
       if (scoreDelta !== 0) return scoreDelta;
       return new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime();
     });
 
-    const critical = highSignal.filter((event) => event.severity === 'critical');
-    const nonCritical = highSignal.filter((event) => event.severity !== 'critical');
-    const nonCriticalBudget = Math.max(0, MAX_EVENTS_ON_MAP - critical.length);
+    if (eventConfidenceGate === 'strict') {
+      const critical = gated.filter((event) => event.severity === 'critical');
+      const nonCritical = gated.filter((event) => event.severity !== 'critical');
+      const nonCriticalBudget = Math.max(0, MAX_EVENTS_ON_MAP - critical.length);
+      return [...critical, ...nonCritical.slice(0, nonCriticalBudget)];
+    }
 
-    return [...critical, ...nonCritical.slice(0, nonCriticalBudget)];
-  }, [events, visibleThemes, visibleSignals.events]);
+    const budget = eventConfidenceGate === 'all' ? MAX_EVENTS_ON_MAP * 2 : MAX_EVENTS_ON_MAP + 30;
+    return gated.slice(0, budget);
+  }, [events, eventConfidenceGate, visibleThemes, visibleSignals.events]);
 
   const filteredMarkets = useMemo(() => {
     if (!visibleSignals.markets) return [];

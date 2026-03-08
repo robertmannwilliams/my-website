@@ -4,7 +4,7 @@ import { useState, useEffect, memo } from 'react';
 import Link from 'next/link';
 import { THEMES, THEME_KEYS, type ThemeKey } from '@/lib/monitor/themes';
 import type { MonitorResponseMeta } from '@/lib/monitor/response';
-import type { SignalKey, SituationRoomConfig, WatchZone } from '@/lib/monitor/types';
+import type { EventConfidenceGate, SignalKey, SituationRoomConfig, WatchZone } from '@/lib/monitor/types';
 
 interface FilterPanelProps {
   focusMode: 'global' | 'room';
@@ -18,6 +18,15 @@ interface FilterPanelProps {
   visibleSignals: Record<SignalKey, boolean>;
   onToggleSignal: (key: SignalKey) => void;
   signalCounts: Record<SignalKey, number>;
+  eventConfidenceGate: EventConfidenceGate;
+  onChangeEventConfidenceGate: (value: EventConfidenceGate) => void;
+  eventGateStats: {
+    total: number;
+    speculative: number;
+    ambiguousGeo: number;
+    invalidGeo: number;
+    lowConfidence: number;
+  };
   watchZones: WatchZone[];
   visibleWatchZones: Record<string, boolean>;
   onToggleWatchZone: (zoneId: string) => void;
@@ -45,6 +54,28 @@ const SIGNAL_KEYS: SignalKey[] = [
   'disasters',
   'infrastructure_overlays',
   'watch_zones',
+];
+
+const EVENT_CONFIDENCE_MODES: Array<{
+  id: EventConfidenceGate;
+  label: string;
+  description: string;
+}> = [
+  {
+    id: 'strict',
+    label: 'Strict',
+    description: 'Default clean map: hides speculative, ambiguous geo, and weak monitor events.',
+  },
+  {
+    id: 'balanced',
+    label: 'Balanced',
+    description: 'Broader coverage: includes ambiguous geo and medium-confidence monitor events.',
+  },
+  {
+    id: 'all',
+    label: 'All Signals',
+    description: 'Exploration mode: includes speculative and most low-confidence signals.',
+  },
 ];
 
 const themeDot = (theme: ThemeKey): string => THEMES[theme].color;
@@ -121,6 +152,9 @@ function FilterPanel({
   visibleSignals,
   onToggleSignal,
   signalCounts,
+  eventConfidenceGate,
+  onChangeEventConfidenceGate,
+  eventGateStats,
   watchZones,
   visibleWatchZones,
   onToggleWatchZone,
@@ -315,6 +349,47 @@ function FilterPanel({
             </div>
           );
         })}
+      </div>
+
+      <div style={{ borderTop: '1px solid #1E293B', margin: '14px 0' }} />
+
+      <SectionHeader>Event Confidence</SectionHeader>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {EVENT_CONFIDENCE_MODES.map((mode) => {
+          const active = eventConfidenceGate === mode.id;
+          return (
+            <button
+              key={mode.id}
+              onClick={() => onChangeEventConfidenceGate(mode.id)}
+              style={{
+                width: '100%',
+                textAlign: 'left',
+                background: active ? 'rgba(74,158,255,0.14)' : 'rgba(255,255,255,0.02)',
+                border: active ? '1px solid rgba(74,158,255,0.35)' : '1px solid #1E293B',
+                color: active ? '#CFE5FF' : '#94A3B8',
+                borderRadius: 6,
+                padding: '8px 10px',
+                cursor: 'pointer',
+              }}
+            >
+              <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 2 }}>{mode.label}</div>
+              <div style={{ fontSize: 10, color: active ? '#9EC8FF' : '#64748B', lineHeight: 1.3 }}>
+                {mode.description}
+              </div>
+            </button>
+          );
+        })}
+        <div
+          style={{
+            marginTop: 2,
+            fontSize: 9,
+            color: '#475569',
+            lineHeight: '13px',
+            padding: '0 2px',
+          }}
+        >
+          Out of {eventGateStats.total} events: strict hides {eventGateStats.speculative} speculative, {eventGateStats.ambiguousGeo + eventGateStats.invalidGeo} low-geo, {eventGateStats.lowConfidence} weak-confidence.
+        </div>
       </div>
 
       <div style={{ borderTop: '1px solid #1E293B', margin: '14px 0' }} />
