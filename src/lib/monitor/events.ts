@@ -8,6 +8,7 @@ import {
 } from './headlines';
 import { monitorGetJson, monitorSetJson } from './cache';
 import { getMetric, incrementMetric } from './metrics';
+import { findRelatedMarkets, type PolymarketMarket } from './polymarket';
 import type { SourceCoverageEntry } from './response';
 
 export interface GdeltEvent {
@@ -38,6 +39,39 @@ export interface GdeltEvent {
   linkConfidence?: number;
   geoValidity: 'valid' | 'ambiguous' | 'invalid';
   geoReason: string;
+  evidenceIds: string[];
+  scenarioIds: string[];
+}
+
+export interface EventEvidence {
+  id: string;
+  eventId: string;
+  source: string;
+  url: string;
+  title: string;
+  summary: string;
+  publishedAt: string;
+  sourceWeight: number;
+}
+
+export interface EventScenario {
+  id: string;
+  eventId: string;
+  marketId: string;
+  title: string;
+  probability: number;
+  volume: string;
+  volumeRaw: number;
+  category: string;
+  url: string;
+  linkConfidence: number;
+  topicTags: string[];
+}
+
+export interface GeopoliticalEventsPayload {
+  events: GdeltEvent[];
+  evidence: EventEvidence[];
+  scenarios: EventScenario[];
 }
 
 export type EventCategory =
@@ -728,6 +762,59 @@ function aggregateSources(cluster: EventCluster): { name: string; url: string }[
   return out.slice(0, 8);
 }
 
+function aggregateEvidence(cluster: EventCluster, eventId: string): EventEvidence[] {
+  const seen = new Set<string>();
+  const out: EventEvidence[] = [];
+  const ranked = [...cluster.candidates].sort((a, b) => b.headline.sourceWeight - a.headline.sourceWeight);
+
+  for (const candidate of ranked) {
+    const canonical = candidate.headline.canonicalUrl || candidate.headline.url || '';
+    const key = canonical || `${candidate.headline.source}|${candidate.headline.title}`;
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+
+    const evidenceId = `evd_${hashFingerprint(`${eventId}|${key}`)}`;
+    out.push({
+      id: evidenceId,
+      eventId,
+      source: candidate.headline.source,
+      url: candidate.headline.url,
+      title: candidate.headline.title,
+      summary: candidate.headline.summary || '',
+      publishedAt: candidate.headline.timestamp,
+      sourceWeight: candidate.headline.sourceWeight,
+    });
+  }
+
+  return out.slice(0, 14);
+}
+
+function buildEventScenarios(event: GdeltEvent, markets: PolymarketMarket[]): EventScenario[] {
+  if (markets.length === 0) return [];
+
+  const linked = findRelatedMarkets(event, markets);
+  const out: EventScenario[] = [];
+
+  for (const market of linked) {
+    const id = `scn_${hashFingerprint(`${event.id}|${market.id}`)}`;
+    out.push({
+      id,
+      eventId: event.id,
+      marketId: market.id,
+      title: market.title,
+      probability: market.probability,
+      volume: market.volume,
+      volumeRaw: market.volumeRaw,
+      category: market.category,
+      url: market.url,
+      linkConfidence: market.linkConfidence ?? 0,
+      topicTags: (market.topicTags || []).slice(0, 5),
+    });
+  }
+
+  return out;
+}
+
 function firstAndLastSeen(cluster: EventCluster): { firstSeenAt: string; lastSeenAt: string } {
   const timestamps = cluster.candidates.map((c) => new Date(c.headline.timestamp).getTime()).filter(Number.isFinite);
   if (timestamps.length === 0) {
@@ -1028,11 +1115,11 @@ async function classifyCluster(cluster: EventCluster, runCalls: { value: number 
 }
 
 export interface ClassifiedEventsResult {
-  items: GdeltEvent[];
+  items: GeopoliticalEventsPayload;
   sourceCoverage: SourceCoverageEntry[];
 }
 
-export async function fetchClassifiedEvents(): Promise<ClassifiedEventsResult> {
+export async function fetchClassifiedEvents(markets: PolymarketMarket[] = []): Promise<ClassifiedEventsResult> {
   const { items: headlines, sourceCoverage } = await fetchTieredHeadlines(160);
   await incrementMetric('events_headlines_received', headlines.length);
 
@@ -1047,6 +1134,7 @@ export async function fetchClassifiedEvents(): Promise<ClassifiedEventsResult> {
 
   const runCalls = { value: 0 };
   const events: GdeltEvent[] = [];
+  const evidenceByEventId = new Map<string, EventEvidence[]>();
   let demotedSpeculativeCount = 0;
 
   for (const cluster of clusters) {
@@ -1070,6 +1158,8 @@ export async function fetchClassifiedEvents(): Promise<ClassifiedEventsResult> {
     const id = `evt_${cluster.fingerprint}`;
     const canonicalId = id;
     const timestamp = lastSeenAt;
+    const evidence = aggregateEvidence(cluster, id);
+    evidenceByEventId.set(id, evidence);
 
     events.push({
       id,
@@ -1098,6 +1188,8 @@ export async function fetchClassifiedEvents(): Promise<ClassifiedEventsResult> {
       mapPriority: 0,
       geoValidity: classified.geoValidity,
       geoReason: classified.geoReason,
+      evidenceIds: evidence.map((item) => item.id),
+      scenarioIds: [],
     });
   }
 
@@ -1125,10 +1217,28 @@ export async function fetchClassifiedEvents(): Promise<ClassifiedEventsResult> {
   if (demotedSpeculativeCount > 0) {
     await incrementMetric('events_status_demoted_speculative', demotedSpeculativeCount);
   }
-  await incrementMetric('events_final_count', events.length);
+  const topEvents = events.slice(0, MAX_EVENTS);
+  const evidence: EventEvidence[] = [];
+  const scenarios: EventScenario[] = [];
+
+  for (const event of topEvents) {
+    const eventEvidence = evidenceByEventId.get(event.id) || [];
+    evidence.push(...eventEvidence);
+    const linkedScenarios = buildEventScenarios(event, markets);
+    event.scenarioIds = linkedScenarios.map((item) => item.id);
+    scenarios.push(...linkedScenarios);
+  }
+
+  await incrementMetric('events_final_count', topEvents.length);
+  await incrementMetric('events_evidence_records', evidence.length);
+  await incrementMetric('events_scenario_records', scenarios.length);
 
   return {
-    items: events.slice(0, MAX_EVENTS),
+    items: {
+      events: topEvents,
+      evidence,
+      scenarios,
+    },
     sourceCoverage,
   };
 }

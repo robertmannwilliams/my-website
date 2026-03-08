@@ -1,26 +1,68 @@
 import { NextResponse } from 'next/server';
-import { fetchClassifiedEvents } from '@/lib/monitor/events';
+import {
+  fetchClassifiedEvents,
+  type GdeltEvent,
+  type GeopoliticalEventsPayload,
+} from '@/lib/monitor/events';
+import type { PolymarketMarket } from '@/lib/monitor/polymarket';
 import { envelopeFromPayload, readCachedPayload, writeCachedPayload } from '@/lib/monitor/cache';
 import { incrementMetric } from '@/lib/monitor/metrics';
 
 const RESOURCE = 'events';
 const TTL_SECONDS = 10 * 60;
+const MARKETS_TTL_SECONDS = 5 * 60;
+
+function normalizeEventRecord(event: GdeltEvent): GdeltEvent {
+  return {
+    ...event,
+    evidenceIds: Array.isArray(event.evidenceIds) ? event.evidenceIds : [],
+    scenarioIds: Array.isArray(event.scenarioIds) ? event.scenarioIds : [],
+  };
+}
+
+function normalizeGeopoliticalPayload(
+  items: GeopoliticalEventsPayload | GdeltEvent[],
+): GeopoliticalEventsPayload {
+  if (Array.isArray(items)) {
+    return {
+      events: items.map(normalizeEventRecord),
+      evidence: [],
+      scenarios: [],
+    };
+  }
+
+  return {
+    events: (items.events || []).map(normalizeEventRecord),
+    evidence: Array.isArray(items.evidence) ? items.evidence : [],
+    scenarios: Array.isArray(items.scenarios) ? items.scenarios : [],
+  };
+}
 
 export async function GET() {
-  const cached = await readCachedPayload(RESOURCE, TTL_SECONDS);
+  const cached = await readCachedPayload<GeopoliticalEventsPayload | GdeltEvent[]>(
+    RESOURCE,
+    TTL_SECONDS,
+  );
   if (cached.payload && cached.fresh) {
     await incrementMetric('api_events_cache_hit');
-    const response = envelopeFromPayload(cached.payload, cached.ageSeconds, 'HIT');
+    const normalizedPayload = {
+      ...cached.payload,
+      items: normalizeGeopoliticalPayload(cached.payload.items),
+    };
+    const response = envelopeFromPayload(normalizedPayload, cached.ageSeconds, 'HIT');
     return NextResponse.json(response, {
       headers: {
         'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=120',
         'X-Cache': 'HIT',
+        'X-Event-Model': 'event-evidence-scenario-v1',
       },
     });
   }
 
   try {
-    const result = await fetchClassifiedEvents();
+    const marketsCache = await readCachedPayload<PolymarketMarket[]>('markets', MARKETS_TTL_SECONDS);
+    const markets = marketsCache.payload?.items || [];
+    const result = await fetchClassifiedEvents(markets);
     const stored = await writeCachedPayload(RESOURCE, result.items, result.sourceCoverage, TTL_SECONDS);
     await incrementMetric('api_events_cache_miss');
 
@@ -29,25 +71,35 @@ export async function GET() {
       headers: {
         'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=120',
         'X-Cache': 'MISS',
-        'X-Event-Count': String(result.items.length),
+        'X-Event-Count': String(result.items.events.length),
+        'X-Event-Model': 'event-evidence-scenario-v1',
       },
     });
   } catch {
     await incrementMetric('api_events_error');
 
     if (cached.payload) {
-      const response = envelopeFromPayload(cached.payload, cached.ageSeconds, 'STALE');
+      const normalizedPayload = {
+        ...cached.payload,
+        items: normalizeGeopoliticalPayload(cached.payload.items),
+      };
+      const response = envelopeFromPayload(normalizedPayload, cached.ageSeconds, 'STALE');
       return NextResponse.json(response, {
         headers: {
           'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
           'X-Cache': 'STALE',
+          'X-Event-Model': 'event-evidence-scenario-v1',
         },
       });
     }
 
     return NextResponse.json(
       {
-        items: [],
+        items: {
+          events: [],
+          evidence: [],
+          scenarios: [],
+        },
         meta: {
           generatedAt: new Date().toISOString(),
           freshnessSeconds: 0,

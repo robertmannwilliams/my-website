@@ -2,7 +2,11 @@
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import type { GdeltEvent } from '@/lib/monitor/events';
+import type {
+  EventScenario,
+  GdeltEvent,
+  GeopoliticalEventsPayload,
+} from '@/lib/monitor/events';
 import type { PolymarketMarket } from '@/lib/monitor/polymarket';
 import { findRelatedMarkets } from '@/lib/monitor/polymarket';
 import type { UsgsEarthquake } from '@/lib/monitor/usgs';
@@ -148,6 +152,8 @@ function normalizeEventShape(event: GdeltEvent): GdeltEvent {
     mapPriority: Number(event.mapPriority) || signalScore,
     geoValidity: event.geoValidity || 'invalid',
     geoReason: event.geoReason || 'location unavailable',
+    evidenceIds: Array.isArray(event.evidenceIds) ? event.evidenceIds : [],
+    scenarioIds: Array.isArray(event.scenarioIds) ? event.scenarioIds : [],
   };
 }
 
@@ -174,6 +180,7 @@ export default function MonitorPage() {
   const [activeRoom, setActiveRoom] = useState<SituationRoomConfig | null>(initialRoom);
   const [focusMode, setFocusMode] = useState<'global' | 'room'>(initialRoom ? 'room' : 'global');
   const [allEvents, setAllEvents] = useState<GdeltEvent[]>([]);
+  const [allEventScenarios, setAllEventScenarios] = useState<EventScenario[]>([]);
   const [allMarkets, setAllMarkets] = useState<PolymarketMarket[]>([]);
   const [allEarthquakes, setAllEarthquakes] = useState<UsgsEarthquake[]>([]);
   const [notamZones, setNotamZones] = useState<NotamZone[]>([]);
@@ -416,12 +423,25 @@ export default function MonitorPage() {
       try {
         const res = await fetch('/api/events/geopolitical');
         if (res.ok) {
-          const payload = (await res.json()) as MonitorResponse<GdeltEvent[]> | GdeltEvent[];
+          const payload = (await res.json()) as
+            | MonitorResponse<GdeltEvent[] | GeopoliticalEventsPayload>
+            | GdeltEvent[]
+            | GeopoliticalEventsPayload;
           if (Array.isArray(payload)) {
             setAllEvents(payload.map(normalizeEventShape));
+            setAllEventScenarios([]);
           } else {
-            setAllEvents((payload.items || []).map(normalizeEventShape));
-            setEventsMeta(payload.meta || null);
+            const payloadItems = 'items' in payload ? payload.items : payload;
+            if (Array.isArray(payloadItems)) {
+              setAllEvents(payloadItems.map(normalizeEventShape));
+              setAllEventScenarios([]);
+            } else {
+              setAllEvents((payloadItems.events || []).map(normalizeEventShape));
+              setAllEventScenarios(payloadItems.scenarios || []);
+            }
+            if ('meta' in payload) {
+              setEventsMeta(payload.meta || null);
+            }
           }
         }
       } catch {
@@ -548,8 +568,28 @@ export default function MonitorPage() {
 
   const relatedMarkets = useMemo(() => {
     if (selectedItem?.type !== 'event') return [];
+
+    if (selectedItem.data.scenarioIds.length > 0 && allEventScenarios.length > 0) {
+      const scenarioById = new Map(allEventScenarios.map((scenario) => [scenario.id, scenario] as const));
+      const marketsById = new Map(allMarkets.map((market) => [market.id, market] as const));
+      const linked: PolymarketMarket[] = [];
+      for (const scenarioId of selectedItem.data.scenarioIds) {
+        const scenario = scenarioById.get(scenarioId);
+        if (!scenario) continue;
+        const market = marketsById.get(scenario.marketId);
+        if (!market) continue;
+        linked.push({
+          ...market,
+          linkConfidence: scenario.linkConfidence,
+          topicTags: scenario.topicTags.length > 0 ? scenario.topicTags : market.topicTags,
+        });
+      }
+
+      if (linked.length > 0) return linked;
+    }
+
     return findRelatedMarkets(selectedItem.data, allMarkets);
-  }, [selectedItem, allMarkets]);
+  }, [selectedItem, allMarkets, allEventScenarios]);
 
   return (
     <div
