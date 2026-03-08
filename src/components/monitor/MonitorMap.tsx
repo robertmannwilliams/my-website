@@ -295,7 +295,11 @@ function isDimmed(region: string, activeRoom: SituationRoomConfig | null): boole
   return !activeRoom.priorityRegions.includes(region);
 }
 
-function eventsToGeoJSON(events: GdeltEvent[], activeRoom: SituationRoomConfig | null): GeoJSON.FeatureCollection {
+function eventsToGeoJSON(
+  events: GdeltEvent[],
+  activeRoom: SituationRoomConfig | null,
+  forcedEventIds: Set<string>,
+): GeoJSON.FeatureCollection {
   return {
     type: 'FeatureCollection',
     features: events.map((event) => ({
@@ -324,6 +328,7 @@ function eventsToGeoJSON(events: GdeltEvent[], activeRoom: SituationRoomConfig |
         geoValidity: event.geoValidity,
         geoReason: event.geoReason,
         severityRank: event.severity === 'critical' ? 3 : event.severity === 'watch' ? 2 : 1,
+        isForced: forcedEventIds.has(event.id),
         dimmed: isDimmed(event.region, activeRoom),
       },
     })),
@@ -724,8 +729,18 @@ function addEventLayers(m: mapboxgl.Map) {
       'circle-color': EVENT_CATEGORY_COLOR,
       'circle-radius': ['match', ['get', 'severity'], 'critical', 7, 'watch', 5, 4],
       'circle-opacity': ['case', ['==', ['get', 'dimmed'], true], 0.45, 0.9],
-      'circle-stroke-width': ['match', ['get', 'severity'], 'critical', 2, 'watch', 1, 0.5],
-      'circle-stroke-color': 'rgba(255,255,255,0.2)',
+      'circle-stroke-width': [
+        'case',
+        ['==', ['get', 'isForced'], true],
+        2.8,
+        ['match', ['get', 'severity'], 'critical', 2, 'watch', 1, 0.5],
+      ],
+      'circle-stroke-color': [
+        'case',
+        ['==', ['get', 'isForced'], true],
+        'rgba(74,158,255,0.95)',
+        'rgba(255,255,255,0.2)',
+      ],
     },
   });
 
@@ -1145,10 +1160,12 @@ function MonitorMap({
   useEffect(() => { quakeByIdRef.current = quakeById; }, [quakeById]);
   useEffect(() => { watchZoneByIdRef.current = watchZoneById; }, [watchZoneById]);
 
+  const forcedEventIds = useMemo(() => new Set(temporaryPlottedEventIds), [temporaryPlottedEventIds]);
+
   const filteredEvents = useMemo(() => {
     if (!visibleSignals.events) return [];
     const activeCats = getActiveEventCategories(visibleThemes);
-    const forced = new Set(temporaryPlottedEventIds);
+    const forced = forcedEventIds;
 
     const candidates = events.filter((event) => activeCats.includes(event.category));
     const forcedCandidates = candidates.filter((event) => forced.has(event.id) && Number.isFinite(event.lat) && Number.isFinite(event.lng));
@@ -1196,7 +1213,7 @@ function MonitorMap({
     const unique = new Map<string, GdeltEvent>();
     for (const event of merged) unique.set(event.id, event);
     return [...unique.values()];
-  }, [events, eventConfidenceGate, temporaryPlottedEventIds, visibleThemes, visibleSignals.events]);
+  }, [events, eventConfidenceGate, forcedEventIds, visibleThemes, visibleSignals.events]);
 
   const filteredMarkets = useMemo(() => {
     if (!visibleSignals.markets) return [];
@@ -1908,7 +1925,7 @@ function MonitorMap({
   useEffect(() => {
     if (!map.current || !layersReady.current) return;
     const source = map.current.getSource('events') as mapboxgl.GeoJSONSource | undefined;
-    if (source) source.setData(eventsToGeoJSON(filteredEvents, activeRoom));
+    if (source) source.setData(eventsToGeoJSON(filteredEvents, activeRoom, forcedEventIds));
 
     const showEvents = visibleSignals.events;
     for (const layerId of EVENT_LAYERS) {
@@ -1918,7 +1935,7 @@ function MonitorMap({
         // Layer may not exist yet.
       }
     }
-  }, [filteredEvents, visibleSignals.events, activeRoom, mapReady]);
+  }, [filteredEvents, visibleSignals.events, activeRoom, forcedEventIds, mapReady]);
 
   useEffect(() => {
     if (!map.current || !layersReady.current) return;
