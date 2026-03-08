@@ -54,6 +54,18 @@ const FilterPanel = dynamic(
 const watchZones = watchZonesData as WatchZone[];
 const situationRooms = roomsData as SituationRoomConfig[];
 
+type OffMapReasonCode = 'speculative' | 'geo_invalid' | 'geo_ambiguous' | 'low_confidence';
+
+interface OffMapEventPreview {
+  id: string;
+  title: string;
+  severity: GdeltEvent['severity'];
+  lastSeenAt: string;
+  reasonCode: OffMapReasonCode;
+  reasonLabel: string;
+  geoReason: string;
+}
+
 function makeDefaultThemes(): Record<ThemeKey, boolean> {
   return {
     conflicts: true,
@@ -135,6 +147,48 @@ function getInitialEventConfidenceGate(): EventConfidenceGate {
   const raw = window.localStorage.getItem('monitor:event-confidence-gate');
   if (raw === 'strict' || raw === 'balanced' || raw === 'all') return raw;
   return 'strict';
+}
+
+function offMapReasonForEvent(event: GdeltEvent, gate: EventConfidenceGate): OffMapReasonCode | null {
+  const weakStrict =
+    event.severity === 'monitor' &&
+    event.sourceCount < 2 &&
+    event.classificationConfidence < 0.72;
+  const weakBalanced =
+    event.severity === 'monitor' &&
+    event.sourceCount < 2 &&
+    event.classificationConfidence < 0.58;
+
+  if (gate === 'strict') {
+    if (event.status === 'speculative') return 'speculative';
+    if (event.geoValidity === 'invalid') return 'geo_invalid';
+    if (event.geoValidity === 'ambiguous') return 'geo_ambiguous';
+    if (weakStrict) return 'low_confidence';
+    return null;
+  }
+
+  if (gate === 'balanced') {
+    if (event.status === 'speculative') return 'speculative';
+    if (event.geoValidity === 'invalid') return 'geo_invalid';
+    if (weakBalanced) return 'low_confidence';
+    return null;
+  }
+
+  if (event.geoValidity === 'invalid') return 'geo_invalid';
+  return null;
+}
+
+function offMapReasonLabel(reason: OffMapReasonCode): string {
+  if (reason === 'speculative') return 'Speculative framing';
+  if (reason === 'geo_invalid') return 'Geo unresolved';
+  if (reason === 'geo_ambiguous') return 'Geo ambiguous';
+  return 'Low confidence';
+}
+
+function severityOrder(severity: GdeltEvent['severity']): number {
+  if (severity === 'critical') return 3;
+  if (severity === 'watch') return 2;
+  return 1;
 }
 
 function normalizeEventShape(event: GdeltEvent): GdeltEvent {
@@ -604,6 +658,55 @@ export default function MonitorPage() {
     };
   }, [allEvents]);
 
+  const offMapPreview = useMemo(() => {
+    const byReason: Record<OffMapReasonCode, number> = {
+      speculative: 0,
+      geo_invalid: 0,
+      geo_ambiguous: 0,
+      low_confidence: 0,
+    };
+
+    const items: OffMapEventPreview[] = allEvents
+      .filter((event) => visibleThemes[event.category])
+      .map((event) => {
+        const reasonCode = offMapReasonForEvent(event, eventConfidenceGate);
+        if (!reasonCode) return null;
+        byReason[reasonCode] += 1;
+        return {
+          id: event.id,
+          title: event.title,
+          severity: event.severity,
+          lastSeenAt: event.lastSeenAt,
+          reasonCode,
+          reasonLabel: offMapReasonLabel(reasonCode),
+          geoReason: event.geoReason,
+        };
+      })
+      .filter((event): event is OffMapEventPreview => Boolean(event))
+      .sort((a, b) => {
+        const sevDelta = severityOrder(b.severity) - severityOrder(a.severity);
+        if (sevDelta !== 0) return sevDelta;
+        return new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime();
+      });
+
+    return {
+      items: items.slice(0, 30),
+      summary: {
+        total: items.length,
+        byReason,
+      },
+    };
+  }, [allEvents, eventConfidenceGate, visibleThemes]);
+
+  const handleSelectOffMapEvent = useCallback((eventId: string) => {
+    const event = allEvents.find((candidate) => candidate.id === eventId);
+    if (!event) return;
+    setSelectionContext(null);
+    setActiveFanout(null);
+    setInteractionMode('idle');
+    setSelectedItem({ type: 'event', data: event });
+  }, [allEvents]);
+
   const selectedEventEvidence = useMemo(() => {
     if (selectedItem?.type !== 'event') return [];
     const evidenceById = new Map(allEventEvidence.map((item) => [item.id, item] as const));
@@ -684,6 +787,9 @@ export default function MonitorPage() {
           eventConfidenceGate={eventConfidenceGate}
           onChangeEventConfidenceGate={setEventConfidenceGate}
           eventGateStats={eventGateStats}
+          offMapEvents={offMapPreview.items}
+          offMapSummary={offMapPreview.summary}
+          onSelectOffMapEvent={handleSelectOffMapEvent}
           watchZones={watchZones}
           visibleWatchZones={visibleWatchZones}
           onToggleWatchZone={toggleWatchZone}

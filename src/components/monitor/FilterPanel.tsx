@@ -27,6 +27,20 @@ interface FilterPanelProps {
     invalidGeo: number;
     lowConfidence: number;
   };
+  offMapEvents: Array<{
+    id: string;
+    title: string;
+    severity: 'critical' | 'watch' | 'monitor';
+    lastSeenAt: string;
+    reasonCode: 'speculative' | 'geo_invalid' | 'geo_ambiguous' | 'low_confidence';
+    reasonLabel: string;
+    geoReason: string;
+  }>;
+  offMapSummary: {
+    total: number;
+    byReason: Record<'speculative' | 'geo_invalid' | 'geo_ambiguous' | 'low_confidence', number>;
+  };
+  onSelectOffMapEvent: (eventId: string) => void;
   watchZones: WatchZone[];
   visibleWatchZones: Record<string, boolean>;
   onToggleWatchZone: (zoneId: string) => void;
@@ -140,6 +154,22 @@ function formatSourceDetail(meta: MonitorResponseMeta | null | undefined, fallba
   return `${freshness} - ${meta.cacheState}`;
 }
 
+function formatAgo(ts: string): string {
+  const ms = new Date(ts).getTime();
+  if (!Number.isFinite(ms)) return 'now';
+  const diffMins = Math.max(0, Math.floor((Date.now() - ms) / 60_000));
+  if (diffMins < 60) return `${diffMins}m`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h`;
+  return `${Math.floor(diffHours / 24)}d`;
+}
+
+function severityColor(severity: 'critical' | 'watch' | 'monitor'): string {
+  if (severity === 'critical') return '#FF4D4F';
+  if (severity === 'watch') return '#F59E0B';
+  return '#60A5FA';
+}
+
 function FilterPanel({
   focusMode,
   situationRooms,
@@ -155,6 +185,9 @@ function FilterPanel({
   eventConfidenceGate,
   onChangeEventConfidenceGate,
   eventGateStats,
+  offMapEvents,
+  offMapSummary,
+  onSelectOffMapEvent,
   watchZones,
   visibleWatchZones,
   onToggleWatchZone,
@@ -163,6 +196,7 @@ function FilterPanel({
   const [isMobile, setIsMobile] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [healthOpen, setHealthOpen] = useState(false);
+  const [offMapOpen, setOffMapOpen] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)');
@@ -391,6 +425,64 @@ function FilterPanel({
           Out of {eventGateStats.total} events: strict hides {eventGateStats.speculative} speculative, {eventGateStats.ambiguousGeo + eventGateStats.invalidGeo} low-geo, {eventGateStats.lowConfidence} weak-confidence.
         </div>
       </div>
+
+      <div style={{ borderTop: '1px solid #1E293B', margin: '14px 0' }} />
+
+      <div
+        onClick={() => setOffMapOpen((prev) => !prev)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          cursor: 'pointer',
+          marginBottom: offMapOpen ? 8 : 0,
+        }}
+      >
+        <SectionHeader>Off-Map Events</SectionHeader>
+        <span style={{ color: '#64748B', fontSize: 11 }}>{offMapOpen ? '−' : '+'}</span>
+      </div>
+
+      <div style={{ fontSize: 9, color: '#475569', lineHeight: '13px', marginBottom: offMapOpen ? 8 : 0 }}>
+        {offMapSummary.total} hidden. Spec {offMapSummary.byReason.speculative} · Geo {offMapSummary.byReason.geo_invalid + offMapSummary.byReason.geo_ambiguous} · Confidence {offMapSummary.byReason.low_confidence}
+      </div>
+
+      {offMapOpen && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {offMapEvents.length === 0 && (
+            <div style={{ fontSize: 10, color: '#64748B', padding: '2px 2px' }}>
+              No hidden events for current filters.
+            </div>
+          )}
+          {offMapEvents.map((event) => (
+            <button
+              key={event.id}
+              onClick={() => onSelectOffMapEvent(event.id)}
+              style={{
+                width: '100%',
+                textAlign: 'left',
+                background: 'rgba(255,255,255,0.02)',
+                border: '1px solid #1E293B',
+                borderRadius: 6,
+                padding: '7px 8px',
+                cursor: 'pointer',
+                color: '#CBD5E1',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: severityColor(event.severity), display: 'inline-block' }} />
+                <span style={{ fontSize: 9, color: '#64748B', textTransform: 'uppercase' }}>{event.reasonLabel}</span>
+                <span style={{ fontSize: 9, color: '#475569' }}>{formatAgo(event.lastSeenAt)}</span>
+              </div>
+              <div style={{ fontSize: 11, lineHeight: '14px', marginBottom: 2 }}>
+                {event.title}
+              </div>
+              <div style={{ fontSize: 9, color: '#475569', lineHeight: '12px' }}>
+                {event.geoReason}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div style={{ borderTop: '1px solid #1E293B', margin: '14px 0' }} />
 
