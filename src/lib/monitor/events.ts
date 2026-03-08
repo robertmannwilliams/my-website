@@ -410,6 +410,13 @@ function containsAnyPattern(text: string, patterns: RegExp[]): boolean {
   return patterns.some((pattern) => pattern.test(text));
 }
 
+function isQuestionLikeText(text: string): boolean {
+  const normalized = normalizeForSimilarity(text || '');
+  if (!normalized) return false;
+  if (text.includes('?')) return true;
+  return containsAnyPattern(normalized, SPECULATIVE_PATTERNS);
+}
+
 function inferStatusFromText(normalized: string): EventStatus {
   if (containsAnyPattern(normalized, SPECULATIVE_PATTERNS)) return 'speculative';
   if (containsAnyPattern(normalized, UPCOMING_PATTERNS)) return 'upcoming';
@@ -618,6 +625,13 @@ function toCandidate(headline: IngestedHeadline): EventCandidate | null {
   if (!normalized || isIrrelevant(normalized)) return null;
 
   const classification = inferRuleClassification(normalized, headline.sourceWeight);
+  if (
+    classification.status === 'speculative' &&
+    !classification.highImpact &&
+    headline.sourceWeight < 0.85
+  ) {
+    return null;
+  }
   if (classification.relevance < 5) return null;
 
   const geo = geocodeText(`${headline.title} ${headline.summary}`);
@@ -734,18 +748,38 @@ function chooseSeverity(cluster: EventCluster): EventSeverity {
 }
 
 function summarizeCluster(cluster: EventCluster): string {
-  const titles = cluster.candidates
-    .map((c) => c.headline.title)
-    .slice(0, 3);
-  if (titles.length === 0) return 'No summary available.';
-  if (titles.length === 1) return titles[0];
-  return `${titles[0]} Additional reporting: ${titles.slice(1).join(' | ')}`;
+  const ranked = [...cluster.candidates].sort(
+    (a, b) => (b.headline.sourceWeight + b.classification.confidence) - (a.headline.sourceWeight + a.classification.confidence),
+  );
+  const primary = ranked[0];
+  if (!primary) return 'No summary available.';
+
+  const primarySummary = (primary.headline.summary || primary.headline.title || '').trim();
+  if (!primarySummary) return 'No summary available.';
+
+  const supporting = ranked
+    .slice(1, 4)
+    .map((item) => (item.headline.summary || item.headline.title || '').trim())
+    .filter(Boolean);
+
+  if (supporting.length === 0) return primarySummary;
+  return `${primarySummary} Supporting reports indicate: ${supporting.slice(0, 2).join(' | ')}`;
 }
 
 function titleForCluster(cluster: EventCluster): string {
-  return cluster.candidates
-    .map((c) => c.headline.title)
-    .sort((a, b) => b.length - a.length)[0] || 'Global event';
+  const ranked = [...cluster.candidates].sort((a, b) => {
+    const aQuestionPenalty = isQuestionLikeText(a.headline.title) ? 0.45 : 0;
+    const bQuestionPenalty = isQuestionLikeText(b.headline.title) ? 0.45 : 0;
+    const aScore = a.headline.sourceWeight + a.classification.confidence - aQuestionPenalty;
+    const bScore = b.headline.sourceWeight + b.classification.confidence - bQuestionPenalty;
+    return bScore - aScore;
+  });
+
+  const bestNonQuestion = ranked.find((item) => !isQuestionLikeText(item.headline.title));
+  const best = bestNonQuestion || ranked[0];
+  if (!best) return 'Global event';
+
+  return best.headline.title.replace(/\?+\s*$/, '').trim();
 }
 
 function aggregateSources(cluster: EventCluster): { name: string; url: string }[] {
@@ -857,8 +891,10 @@ function shouldEscalateToLlm(
 ): boolean {
   const highImpactCluster = cluster.candidates.some((c) => c.classification.highImpact || c.classification.severity !== 'monitor');
   const categories = new Set(cluster.candidates.map((c) => c.classification.category));
+  const hasQuestionLikeHeadline = cluster.candidates.some((c) => isQuestionLikeText(c.headline.title));
 
-  if (cluster.candidates.length >= 3) return true;
+  if (hasQuestionLikeHeadline) return true;
+  if (cluster.candidates.length >= 2 && status !== 'speculative') return true;
   if (severity === 'critical') return true;
   if (status === 'upcoming') return true;
   if (statusDominance < 0.22) return true;
@@ -897,6 +933,8 @@ Rules:
 - "observed" means event occurred/ongoing.
 - "upcoming" means scheduled/expected future event.
 - "speculative" means hypothetical/question-like or prediction framing.
+- title MUST be declarative and factual, never a question, never start with "Will/Could/Might/May".
+- if inputs are mostly hypothetical/prediction framing, set status=speculative and use title prefix "Speculation:".
 - actors should be an array of 1-6 concrete entities (countries, organizations, leaders), empty array if unclear.
 - eventTime should be ISO timestamp if explicit in text, else null.`;
 
@@ -940,6 +978,13 @@ Rules:
     const actors = sanitizeActors(parsed.actors);
     const eventTime = parseEventTime(parsed.eventTime);
 
+    const fallbackTitle = titleForCluster(cluster);
+    const parsedTitle = (parsed.title || '').trim();
+    const llmTitle =
+      status !== 'speculative' && isQuestionLikeText(parsedTitle)
+        ? fallbackTitle
+        : (parsedTitle || fallbackTitle);
+
     const lat = Number(parsed.latitude);
     const lng = Number(parsed.longitude);
     const hasCoords =
@@ -949,7 +994,7 @@ Rules:
       Math.abs(lng) <= 180;
 
     return {
-      title: parsed.title,
+      title: llmTitle,
       summary: parsed.summary,
       category,
       severity,
@@ -1030,7 +1075,11 @@ function applyStatusPolicy(
   const normalized = normalizeForSimilarity(`${input.title} ${input.summary || ''}`);
   const questionLike = containsAnyPattern(normalized, SPECULATIVE_PATTERNS);
 
-  if (
+  if (questionLike && input.sourceCount <= 1) {
+    status = 'speculative';
+  } else if (questionLike && input.sourceCount <= 2 && !input.eventTime && input.confidence < 0.92) {
+    status = 'speculative';
+  } else if (
     questionLike &&
     input.sourceCount <= 2 &&
     input.severity === 'monitor' &&
@@ -1130,6 +1179,19 @@ export async function fetchClassifiedEvents(markets: PolymarketMarket[] = []): P
   await incrementMetric('events_candidates_after_rules', candidates.length);
 
   const clusters = clusterCandidates(candidates);
+  const clusterPriority = (cluster: EventCluster): number => {
+    const candidateCount = cluster.candidates.length;
+    const avgSourceWeight =
+      cluster.candidates.reduce((sum, item) => sum + item.headline.sourceWeight, 0) / Math.max(1, candidateCount);
+    const severityScore = cluster.candidates.some((item) => item.classification.severity === 'critical')
+      ? 4
+      : cluster.candidates.some((item) => item.classification.severity === 'watch')
+        ? 2
+        : 0;
+    const questionPenalty = cluster.candidates.some((item) => isQuestionLikeText(item.headline.title)) ? -0.75 : 0;
+    return candidateCount * 2 + avgSourceWeight * 3 + severityScore + questionPenalty;
+  };
+  clusters.sort((a, b) => clusterPriority(b) - clusterPriority(a));
   await incrementMetric('events_clusters', clusters.length);
 
   const runCalls = { value: 0 };
