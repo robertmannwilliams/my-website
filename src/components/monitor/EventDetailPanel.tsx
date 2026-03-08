@@ -720,43 +720,72 @@ function EventDetailPanel({
     >
       {item && (
         <>
-          {canBackToFanout && item.type !== 'fanout' && (
-            <div style={{ position: 'absolute', top: 12, left: 12, zIndex: 11 }}>
-              <button
-                onClick={onBackToFanout}
-                style={{
-                  background: 'rgba(13,23,43,0.9)',
-                  border: '1px solid #334155',
-                  color: '#9DB2CC',
-                  cursor: 'pointer',
-                  padding: '4px 8px',
-                  borderRadius: 4,
-                  fontSize: 11,
-                }}
-              >
-                Back to fan-out
-              </button>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 10,
+              padding: '10px 12px',
+              borderBottom: '1px solid #334155',
+              background: 'rgba(13,23,43,0.8)',
+              backdropFilter: 'blur(6px)',
+              flexShrink: 0,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              {canBackToFanout && item.type !== 'fanout' && (
+                <button
+                  onClick={onBackToFanout}
+                  style={{
+                    background: 'rgba(13,23,43,0.9)',
+                    border: '1px solid #334155',
+                    color: '#9DB2CC',
+                    cursor: 'pointer',
+                    padding: '4px 9px',
+                    borderRadius: 6,
+                    fontSize: 11,
+                    lineHeight: 1.3,
+                  }}
+                >
+                  Back to fan-out
+                </button>
+              )}
+              {canBackToSelection && item.type !== 'selection' && !canBackToFanout && (
+                <button
+                  onClick={onBackToSelection}
+                  style={{
+                    background: 'rgba(13,23,43,0.9)',
+                    border: '1px solid #334155',
+                    color: '#9DB2CC',
+                    cursor: 'pointer',
+                    padding: '4px 9px',
+                    borderRadius: 6,
+                    fontSize: 11,
+                    lineHeight: 1.3,
+                  }}
+                >
+                  Back
+                </button>
+              )}
+              {interactionMode !== 'idle' && (
+                <button
+                  onClick={onCollapseFanout}
+                  style={{
+                    background: 'rgba(13,23,43,0.9)',
+                    border: '1px solid #334155',
+                    color: '#9DB2CC',
+                    cursor: 'pointer',
+                    padding: '4px 9px',
+                    borderRadius: 6,
+                    fontSize: 11,
+                    lineHeight: 1.3,
+                  }}
+                >
+                  Collapse
+                </button>
+              )}
             </div>
-          )}
-          {interactionMode !== 'idle' && (
-            <div style={{ position: 'absolute', top: 12, left: canBackToFanout ? 124 : 12, zIndex: 11 }}>
-              <button
-                onClick={onCollapseFanout}
-                style={{
-                  background: 'rgba(13,23,43,0.9)',
-                  border: '1px solid #334155',
-                  color: '#9DB2CC',
-                  cursor: 'pointer',
-                  padding: '4px 8px',
-                  borderRadius: 4,
-                  fontSize: 11,
-                }}
-              >
-                Collapse
-              </button>
-            </div>
-          )}
-          <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 11 }}>
             <button
               onClick={onClose}
               style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: 4, fontSize: 18, lineHeight: 1 }}
@@ -764,7 +793,9 @@ function EventDetailPanel({
               ×
             </button>
           </div>
-          {panelBody}
+          <div style={{ minHeight: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
+            {panelBody}
+          </div>
         </>
       )}
     </div>

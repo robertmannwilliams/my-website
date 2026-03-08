@@ -56,12 +56,14 @@ const MARKET_SPIDERFY_LIMIT = 24;
 const EVENT_SPIDERFY_LIMIT = 28;
 const MARKET_SPIDERFY_MIN_ZOOM = 4.8;
 const EVENT_SPIDERFY_MIN_ZOOM = 4.4;
-const MARKET_SPIDERFY_BASE_RADIUS_PX = 54;
-const MARKET_SPIDERFY_RING_STEP_PX = 26;
-const MARKET_SPIDERFY_RING_CAPACITY = 10;
-const EVENT_SPIDERFY_BASE_RADIUS_PX = 52;
-const EVENT_SPIDERFY_RING_STEP_PX = 24;
-const EVENT_SPIDERFY_RING_CAPACITY = 10;
+const MARKET_SPIDERFY_BASE_RADIUS_PX = 36;
+const MARKET_SPIDERFY_RING_STEP_PX = 14;
+const MARKET_SPIDERFY_RING_CAPACITY = 12;
+const EVENT_SPIDERFY_BASE_RADIUS_PX = 34;
+const EVENT_SPIDERFY_RING_STEP_PX = 13;
+const EVENT_SPIDERFY_RING_CAPACITY = 12;
+const FANOUT_ANIMATION_DURATION_MS = 250;
+const FANOUT_STAGGER_MS = 34;
 
 type MarketSelectionCandidate = Extract<MapSelectionCandidate, { type: 'market' }>;
 type EventSelectionCandidate = Extract<MapSelectionCandidate, { type: 'event' }>;
@@ -84,6 +86,17 @@ interface ClusterChoiceState {
   x: number;
   y: number;
   options: ClusterChoiceOption[];
+}
+
+interface SpiderfyNode {
+  candidate: MarketSelectionCandidate | EventSelectionCandidate;
+  target: [number, number];
+}
+
+interface SpiderfyRenderData {
+  markers: GeoJSON.FeatureCollection;
+  legs: GeoJSON.FeatureCollection;
+  anchor: GeoJSON.FeatureCollection;
 }
 
 function inferRegion(lat: number, lng: number): string {
@@ -145,31 +158,66 @@ function pxOffsetToPoint(
   return destinationPoint(centerLat, centerLng, angleDeg, angularDistDeg);
 }
 
-function buildSpiderfyGeoJSON(
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function easeOutCubic(t: number): number {
+  const x = clamp(t, 0, 1);
+  return 1 - (1 - x) ** 3;
+}
+
+function buildSpiderfyNodes(
   signalType: FanoutSignalType,
   center: [number, number],
   candidates: Array<MarketSelectionCandidate | EventSelectionCandidate>,
   zoom: number,
-): GeoJSON.FeatureCollection {
+): SpiderfyNode[] {
   const [centerLng, centerLat] = center;
-  const markers: GeoJSON.Feature[] = [];
   const baseRadiusPx = signalType === 'markets' ? MARKET_SPIDERFY_BASE_RADIUS_PX : EVENT_SPIDERFY_BASE_RADIUS_PX;
   const ringStepPx = signalType === 'markets' ? MARKET_SPIDERFY_RING_STEP_PX : EVENT_SPIDERFY_RING_STEP_PX;
   const ringCapacity = signalType === 'markets' ? MARKET_SPIDERFY_RING_CAPACITY : EVENT_SPIDERFY_RING_CAPACITY;
+  const compactnessFactor = candidates.length <= 6 ? 0.88 : candidates.length <= 12 ? 0.93 : 1;
+  const out: SpiderfyNode[] = [];
 
   for (let i = 0; i < candidates.length; i++) {
     const ring = Math.floor(i / ringCapacity);
     const indexInRing = i % ringCapacity;
     const ringStart = ring * ringCapacity;
     const ringCount = Math.min(ringCapacity, candidates.length - ringStart);
-    const angleDeg = (360 * indexInRing) / Math.max(1, ringCount) + ring * 13;
-    const radiusPx = baseRadiusPx + ring * ringStepPx;
-    const [targetLng, targetLat] = pxOffsetToPoint(centerLng, centerLat, zoom, radiusPx, angleDeg);
-    const candidate = candidates[i];
+    const baseAngleDeg = -90 + (360 * indexInRing) / Math.max(1, ringCount);
+    const angleDeg = baseAngleDeg + ring * 11 + (i % 2 === 0 ? 4 : -4);
+    const radiusPx = (baseRadiusPx + ring * ringStepPx) * compactnessFactor;
+    const target = pxOffsetToPoint(centerLng, centerLat, zoom, radiusPx, angleDeg);
+    out.push({ candidate: candidates[i], target });
+  }
+
+  return out;
+}
+
+function buildSpiderfyRenderData(
+  signalType: FanoutSignalType,
+  center: [number, number],
+  nodes: SpiderfyNode[],
+  elapsedMs: number,
+): SpiderfyRenderData {
+  const [centerLng, centerLat] = center;
+  const markers: GeoJSON.Feature[] = [];
+  const legs: GeoJSON.Feature[] = [];
+
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    const startMs = i * FANOUT_STAGGER_MS;
+    const progress = easeOutCubic(clamp((elapsedMs - startMs) / FANOUT_ANIMATION_DURATION_MS, 0, 1));
+    const markerAlpha = clamp(progress * 1.2, 0, 1);
+    const lineAlpha = clamp((progress - 0.12) * 1.25, 0, 0.75);
+    const lng = centerLng + (node.target[0] - centerLng) * progress;
+    const lat = centerLat + (node.target[1] - centerLat) * progress;
+    const candidate = node.candidate;
 
     markers.push({
       type: 'Feature',
-      geometry: { type: 'Point', coordinates: [targetLng, targetLat] },
+      geometry: { type: 'Point', coordinates: [lng, lat] },
       properties: {
         id: candidate.id,
         title: candidate.title,
@@ -179,11 +227,47 @@ function buildSpiderfyGeoJSON(
         probability: candidate.type === 'market' ? Math.round(candidate.data.probability * 100) : null,
         volume: candidate.type === 'market' ? candidate.data.volume : null,
         signalScore: candidate.type === 'event' ? candidate.data.signalScore : candidate.data.signalScore,
+        alpha: markerAlpha,
+      },
+    });
+
+    legs.push({
+      type: 'Feature',
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [centerLng, centerLat],
+          [lng, lat],
+        ],
+      },
+      properties: {
+        id: `${candidate.id}-leg`,
+        signalType,
+        alpha: lineAlpha,
       },
     });
   }
 
-  return { type: 'FeatureCollection', features: markers };
+  const anchorProgress = clamp(elapsedMs / (FANOUT_ANIMATION_DURATION_MS * 0.6), 0, 1);
+  const anchor: GeoJSON.FeatureCollection = {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [centerLng, centerLat] },
+        properties: {
+          signalType,
+          alpha: anchorProgress,
+        },
+      },
+    ],
+  };
+
+  return {
+    markers: { type: 'FeatureCollection', features: markers },
+    legs: { type: 'FeatureCollection', features: legs },
+    anchor,
+  };
 }
 
 function circleToPolygon(centerLng: number, centerLat: number, radiusKm: number, steps: number = 48): [number, number][] {
@@ -584,6 +668,11 @@ function addEventLayers(m: mapboxgl.Map) {
     data: emptyCollection(),
   });
 
+  m.addSource('event-spider-legs', {
+    type: 'geojson',
+    data: emptyCollection(),
+  });
+
   m.addLayer({
     id: 'event-clusters',
     type: 'circle',
@@ -631,13 +720,24 @@ function addEventLayers(m: mapboxgl.Map) {
   });
 
   m.addLayer({
+    id: 'event-spider-legs',
+    type: 'line',
+    source: 'event-spider-legs',
+    paint: {
+      'line-color': 'rgba(140,170,214,0.58)',
+      'line-width': 1.15,
+      'line-opacity': ['coalesce', ['get', 'alpha'], 0.65],
+    },
+  });
+
+  m.addLayer({
     id: 'event-spider-points',
     type: 'circle',
     source: 'event-spider-points',
     paint: {
       'circle-color': EVENT_CATEGORY_COLOR,
       'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, 8, 6, 9, 10, 11],
-      'circle-opacity': 0.96,
+      'circle-opacity': ['*', 0.96, ['coalesce', ['get', 'alpha'], 1]],
       'circle-stroke-width': 1.4,
       'circle-stroke-color': 'rgba(255,255,255,0.55)',
     },
@@ -732,7 +832,7 @@ function addMarketLayers(m: mapboxgl.Map) {
     paint: {
       'line-color': 'rgba(139,161,208,0.45)',
       'line-width': 1.2,
-      'line-opacity': 0.8,
+      'line-opacity': ['coalesce', ['get', 'alpha'], 0.8],
     },
   });
 
@@ -748,7 +848,51 @@ function addMarketLayers(m: mapboxgl.Map) {
     },
     paint: {
       'icon-color': MARKET_CATEGORY_COLOR,
-      'icon-opacity': 0.96,
+      'icon-opacity': ['*', 0.96, ['coalesce', ['get', 'alpha'], 1]],
+    },
+  });
+}
+
+function addFanoutAnchorLayers(m: mapboxgl.Map) {
+  m.addSource('fanout-anchor', {
+    type: 'geojson',
+    data: emptyCollection(),
+  });
+
+  m.addLayer({
+    id: 'fanout-anchor-halo',
+    type: 'circle',
+    source: 'fanout-anchor',
+    paint: {
+      'circle-color': [
+        'match',
+        ['get', 'signalType'],
+        'markets',
+        '#8D7BFF',
+        '#5DA2FF',
+      ],
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 2, 9, 5, 12, 9, 15],
+      'circle-opacity': ['*', 0.16, ['coalesce', ['get', 'alpha'], 1]],
+      'circle-blur': 0.45,
+    },
+  });
+
+  m.addLayer({
+    id: 'fanout-anchor-core',
+    type: 'circle',
+    source: 'fanout-anchor',
+    paint: {
+      'circle-color': [
+        'match',
+        ['get', 'signalType'],
+        'markets',
+        '#8D7BFF',
+        '#5DA2FF',
+      ],
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 2, 2.4, 5, 3.2, 9, 4.2],
+      'circle-opacity': ['*', 0.88, ['coalesce', ['get', 'alpha'], 1]],
+      'circle-stroke-color': 'rgba(255,255,255,0.38)',
+      'circle-stroke-width': 1,
     },
   });
 }
@@ -895,7 +1039,7 @@ function addEarthquakeLayers(m: mapboxgl.Map) {
   });
 }
 
-const EVENT_LAYERS = ['event-clusters', 'event-cluster-count', 'event-points', 'event-spider-points'];
+const EVENT_LAYERS = ['event-clusters', 'event-cluster-count', 'event-points', 'event-spider-legs', 'event-spider-points'];
 const MARKET_LAYERS = [
   'market-clusters',
   'market-cluster-count',
@@ -1031,9 +1175,17 @@ function MonitorMap({
 
   const fanoutRef = useRef<FanoutInternalState | null>(null);
   const fanoutRequestRef = useRef(0);
+  const fanoutAnimationRef = useRef<number | null>(null);
   const hiddenMarketClusterIdRef = useRef<number | null>(null);
   const hiddenEventClusterIdRef = useRef<number | null>(null);
   const [clusterChoice, setClusterChoice] = useState<ClusterChoiceState | null>(null);
+
+  const cancelFanoutAnimation = useCallback(() => {
+    if (fanoutAnimationRef.current != null) {
+      cancelAnimationFrame(fanoutAnimationRef.current);
+      fanoutAnimationRef.current = null;
+    }
+  }, []);
 
   const openCandidate = useCallback((candidate: MapSelectionCandidate) => {
     setClusterChoice(null);
@@ -1180,43 +1332,53 @@ function MonitorMap({
     }
   }, []);
 
-  const setFanoutData = useCallback((signalType: FanoutSignalType | 'none', points: GeoJSON.FeatureCollection) => {
+  const setFanoutData = useCallback((signalType: FanoutSignalType | 'none', data?: SpiderfyRenderData) => {
     const m = map.current;
     if (!m) return;
 
     const marketLegsSource = m.getSource('market-spider-legs') as mapboxgl.GeoJSONSource | undefined;
-    if (marketLegsSource) marketLegsSource.setData(emptyCollection());
-
+    const eventLegsSource = m.getSource('event-spider-legs') as mapboxgl.GeoJSONSource | undefined;
     const marketMarkerSource = m.getSource('market-spider-markers') as mapboxgl.GeoJSONSource | undefined;
     const eventSpiderSource = m.getSource('event-spider-points') as mapboxgl.GeoJSONSource | undefined;
+    const anchorSource = m.getSource('fanout-anchor') as mapboxgl.GeoJSONSource | undefined;
 
-    if (signalType === 'markets') {
-      if (marketMarkerSource) marketMarkerSource.setData(points);
+    if (signalType === 'markets' && data) {
+      if (marketLegsSource) marketLegsSource.setData(data.legs);
+      if (eventLegsSource) eventLegsSource.setData(emptyCollection());
+      if (marketMarkerSource) marketMarkerSource.setData(data.markers);
       if (eventSpiderSource) eventSpiderSource.setData(emptyCollection());
+      if (anchorSource) anchorSource.setData(data.anchor);
       return;
     }
 
-    if (signalType === 'events') {
-      if (eventSpiderSource) eventSpiderSource.setData(points);
+    if (signalType === 'events' && data) {
+      if (eventLegsSource) eventLegsSource.setData(data.legs);
+      if (marketLegsSource) marketLegsSource.setData(emptyCollection());
+      if (eventSpiderSource) eventSpiderSource.setData(data.markers);
       if (marketMarkerSource) marketMarkerSource.setData(emptyCollection());
+      if (anchorSource) anchorSource.setData(data.anchor);
       return;
     }
 
+    if (marketLegsSource) marketLegsSource.setData(emptyCollection());
+    if (eventLegsSource) eventLegsSource.setData(emptyCollection());
     if (marketMarkerSource) marketMarkerSource.setData(emptyCollection());
     if (eventSpiderSource) eventSpiderSource.setData(emptyCollection());
+    if (anchorSource) anchorSource.setData(emptyCollection());
   }, []);
 
   const resetFanout = useCallback(() => {
     fanoutRequestRef.current += 1;
+    cancelFanoutAnimation();
     const hadFanout = Boolean(fanoutRef.current);
     fanoutRef.current = null;
     applyMarketClusterFilter(null);
     applyEventClusterFilter(null);
-    setFanoutData('none', emptyCollection());
+    setFanoutData('none');
     if (hadFanout) {
       onFanoutChangeRef.current?.(null);
     }
-  }, [applyEventClusterFilter, applyMarketClusterFilter, setFanoutData]);
+  }, [applyEventClusterFilter, applyMarketClusterFilter, cancelFanoutAnimation, setFanoutData]);
 
   const clearFanout = useCallback(() => {
     setClusterChoice(null);
@@ -1247,15 +1409,40 @@ function MonitorMap({
     return mix;
   }, []);
 
-  const renderFanout = useCallback((state: FanoutInternalState) => {
+  const renderFanout = useCallback((state: FanoutInternalState, options?: { animate?: boolean }) => {
     const m = map.current;
     if (!m) return;
     fanoutRef.current = state;
 
     applyMarketClusterFilter(state.signalType === 'markets' ? state.clusterId : null);
     applyEventClusterFilter(state.signalType === 'events' ? state.clusterId : null);
-    const points = buildSpiderfyGeoJSON(state.signalType, state.center, state.candidates, m.getZoom());
-    setFanoutData(state.signalType, points);
+    const nodes = buildSpiderfyNodes(state.signalType, state.center, state.candidates, m.getZoom());
+
+    const maxElapsedMs =
+      FANOUT_ANIMATION_DURATION_MS + FANOUT_STAGGER_MS * Math.max(0, nodes.length - 1);
+    const renderFrame = (elapsedMs: number) => {
+      const frame = buildSpiderfyRenderData(state.signalType, state.center, nodes, elapsedMs);
+      setFanoutData(state.signalType, frame);
+    };
+
+    cancelFanoutAnimation();
+    if (options?.animate) {
+      const startedAt = performance.now();
+      const step = (now: number) => {
+        if (!map.current) return;
+        const elapsedMs = now - startedAt;
+        renderFrame(elapsedMs);
+        if (elapsedMs < maxElapsedMs + 25) {
+          fanoutAnimationRef.current = requestAnimationFrame(step);
+        } else {
+          fanoutAnimationRef.current = null;
+          renderFrame(maxElapsedMs + 80);
+        }
+      };
+      fanoutAnimationRef.current = requestAnimationFrame(step);
+    } else {
+      renderFrame(maxElapsedMs + 80);
+    }
 
     const freshestTimestamp =
       state.candidates
@@ -1278,7 +1465,7 @@ function MonitorMap({
     };
 
     onFanoutChangeRef.current?.(fanout);
-  }, [applyEventClusterFilter, applyMarketClusterFilter, setFanoutData, themeMixFromCandidates]);
+  }, [applyEventClusterFilter, applyMarketClusterFilter, cancelFanoutAnimation, setFanoutData, themeMixFromCandidates]);
 
   const toEventCandidates = useCallback((
     leaves: Array<{ properties?: Record<string, unknown> | null }>,
@@ -1377,7 +1564,7 @@ function MonitorMap({
 
     const applySpider = () => {
       if (!map.current || fanoutRequestRef.current !== requestId) return;
-      renderFanout({ center, clusterId, signalType, candidates });
+      renderFanout({ center, clusterId, signalType, candidates }, { animate: true });
     };
 
     const minZoom = signalType === 'markets' ? MARKET_SPIDERFY_MIN_ZOOM : EVENT_SPIDERFY_MIN_ZOOM;
@@ -1467,6 +1654,7 @@ function MonitorMap({
       addWatchZoneLayers(m);
       addEventLayers(m);
       addMarketLayers(m);
+      addFanoutAnchorLayers(m);
       addNotamLayers(m);
       addShippingLayers(m);
       addElectionLayers(m);
@@ -1566,10 +1754,11 @@ function MonitorMap({
     });
 
     return () => {
+      cancelFanoutAnimation();
       map.current?.remove();
       map.current = null;
     };
-  }, [buildCandidates, clearFanout, openCandidate, openClusterFanout]);
+  }, [buildCandidates, cancelFanoutAnimation, clearFanout, openCandidate, openClusterFanout]);
 
   useEffect(() => {
     if (!mapContainer.current) return;
