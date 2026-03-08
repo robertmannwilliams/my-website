@@ -3,6 +3,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import type {
+  EventEvidence,
   EventScenario,
   GdeltEvent,
   GeopoliticalEventsPayload,
@@ -180,6 +181,7 @@ export default function MonitorPage() {
   const [activeRoom, setActiveRoom] = useState<SituationRoomConfig | null>(initialRoom);
   const [focusMode, setFocusMode] = useState<'global' | 'room'>(initialRoom ? 'room' : 'global');
   const [allEvents, setAllEvents] = useState<GdeltEvent[]>([]);
+  const [allEventEvidence, setAllEventEvidence] = useState<EventEvidence[]>([]);
   const [allEventScenarios, setAllEventScenarios] = useState<EventScenario[]>([]);
   const [allMarkets, setAllMarkets] = useState<PolymarketMarket[]>([]);
   const [allEarthquakes, setAllEarthquakes] = useState<UsgsEarthquake[]>([]);
@@ -429,14 +431,17 @@ export default function MonitorPage() {
             | GeopoliticalEventsPayload;
           if (Array.isArray(payload)) {
             setAllEvents(payload.map(normalizeEventShape));
+            setAllEventEvidence([]);
             setAllEventScenarios([]);
           } else {
             const payloadItems = 'items' in payload ? payload.items : payload;
             if (Array.isArray(payloadItems)) {
               setAllEvents(payloadItems.map(normalizeEventShape));
+              setAllEventEvidence([]);
               setAllEventScenarios([]);
             } else {
               setAllEvents((payloadItems.events || []).map(normalizeEventShape));
+              setAllEventEvidence(payloadItems.evidence || []);
               setAllEventScenarios(payloadItems.scenarios || []);
             }
             if ('meta' in payload) {
@@ -566,16 +571,33 @@ export default function MonitorPage() {
     watch_zones: watchZones.length,
   }), [allEvents, allMarkets.length, allEarthquakes.length, notamZones.length, shippingChokepoints.length, elections.length]);
 
+  const selectedEventEvidence = useMemo(() => {
+    if (selectedItem?.type !== 'event') return [];
+    const evidenceById = new Map(allEventEvidence.map((item) => [item.id, item] as const));
+    const fromIds = selectedItem.data.evidenceIds
+      .map((id) => evidenceById.get(id))
+      .filter((item): item is EventEvidence => Boolean(item));
+    if (fromIds.length > 0) return fromIds;
+    return allEventEvidence.filter((item) => item.eventId === selectedItem.data.id);
+  }, [selectedItem, allEventEvidence]);
+
+  const selectedEventScenarios = useMemo(() => {
+    if (selectedItem?.type !== 'event') return [];
+    const scenarioById = new Map(allEventScenarios.map((item) => [item.id, item] as const));
+    const fromIds = selectedItem.data.scenarioIds
+      .map((id) => scenarioById.get(id))
+      .filter((item): item is EventScenario => Boolean(item));
+    if (fromIds.length > 0) return fromIds;
+    return allEventScenarios.filter((item) => item.eventId === selectedItem.data.id);
+  }, [selectedItem, allEventScenarios]);
+
   const relatedMarkets = useMemo(() => {
     if (selectedItem?.type !== 'event') return [];
 
-    if (selectedItem.data.scenarioIds.length > 0 && allEventScenarios.length > 0) {
-      const scenarioById = new Map(allEventScenarios.map((scenario) => [scenario.id, scenario] as const));
+    if (selectedEventScenarios.length > 0) {
       const marketsById = new Map(allMarkets.map((market) => [market.id, market] as const));
       const linked: PolymarketMarket[] = [];
-      for (const scenarioId of selectedItem.data.scenarioIds) {
-        const scenario = scenarioById.get(scenarioId);
-        if (!scenario) continue;
+      for (const scenario of selectedEventScenarios) {
         const market = marketsById.get(scenario.marketId);
         if (!market) continue;
         linked.push({
@@ -589,7 +611,7 @@ export default function MonitorPage() {
     }
 
     return findRelatedMarkets(selectedItem.data, allMarkets);
-  }, [selectedItem, allMarkets, allEventScenarios]);
+  }, [selectedItem, allMarkets, selectedEventScenarios]);
 
   return (
     <div
@@ -661,6 +683,8 @@ export default function MonitorPage() {
           />
           <EventDetailPanel
             item={selectedItem}
+            eventEvidence={selectedEventEvidence}
+            eventScenarios={selectedEventScenarios}
             relatedMarkets={relatedMarkets}
             onSelectCandidate={handleSelectCandidate}
             canBackToSelection={Boolean(selectionContext && selectedItem?.type !== 'selection')}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, memo } from 'react';
-import type { GdeltEvent } from '@/lib/monitor/events';
+import type { EventEvidence, EventScenario, GdeltEvent } from '@/lib/monitor/events';
 import type { PolymarketMarket } from '@/lib/monitor/polymarket';
 import type { UsgsEarthquake } from '@/lib/monitor/usgs';
 import type {
@@ -16,6 +16,8 @@ import { categoryColor, marketCategoryColor } from '@/lib/monitor/themes';
 
 interface EventDetailPanelProps {
   item: MapItem | null;
+  eventEvidence?: EventEvidence[];
+  eventScenarios?: EventScenario[];
   relatedMarkets?: PolymarketMarket[];
   onSelectCandidate: (candidate: MapSelectionCandidate) => void;
   canBackToSelection: boolean;
@@ -68,9 +70,38 @@ function formatEndDate(ts: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function EventContent({ event, relatedMarkets }: { event: GdeltEvent; relatedMarkets?: PolymarketMarket[] }) {
+function EventContent({
+  event,
+  evidence = [],
+  scenarios = [],
+  relatedMarkets,
+}: {
+  event: GdeltEvent;
+  evidence?: EventEvidence[];
+  scenarios?: EventScenario[];
+  relatedMarkets?: PolymarketMarket[];
+}) {
   const sev = SEVERITY_CONFIG[event.severity];
   const statusConfig = STATUS_CONFIG[event.status] || STATUS_CONFIG.observed;
+  const evidenceRows = evidence.length > 0
+    ? evidence.map((item) => ({
+      id: item.id,
+      source: item.source,
+      url: item.url,
+      title: item.title,
+      summary: item.summary,
+      publishedAt: item.publishedAt,
+      weight: item.sourceWeight,
+    }))
+    : event.sources.map((src, index) => ({
+      id: `src-${index}`,
+      source: src.name,
+      url: src.url,
+      title: src.name,
+      summary: '',
+      publishedAt: event.lastSeenAt,
+      weight: 0,
+    }));
 
   return (
     <>
@@ -143,6 +174,9 @@ function EventContent({ event, relatedMarkets }: { event: GdeltEvent; relatedMar
           <div style={{ fontSize: 11, color: '#64748B', gridColumn: '1 / -1' }}>
             Geo: <span style={{ color: '#CBD5E1' }}>{event.geoValidity}</span> · <span style={{ color: '#94A3B8' }}>{event.geoReason}</span>
           </div>
+          <div style={{ fontSize: 11, color: '#64748B', gridColumn: '1 / -1' }}>
+            Dossier: <span style={{ color: '#CBD5E1' }}>{evidenceRows.length} evidence</span> · <span style={{ color: '#CBD5E1' }}>{scenarios.length} scenarios</span>
+          </div>
         </div>
 
         {event.actors.length > 0 && (
@@ -169,29 +203,103 @@ function EventContent({ event, relatedMarkets }: { event: GdeltEvent; relatedMar
           </div>
         )}
 
-        {event.sources.length > 0 && (
+        {evidenceRows.length > 0 && (
           <div style={{ marginBottom: 20 }}>
             <span style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, display: 'block', marginBottom: 8 }}>
-              Sources
+              Evidence
             </span>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {event.sources.map((src, i) => (
+              {evidenceRows.map((item) => (
                 <a
-                  key={i}
-                  href={src.url}
+                  key={item.id}
+                  href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ color: '#4A9EFF', fontSize: 12, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}
+                  style={{
+                    color: '#4A9EFF',
+                    fontSize: 12,
+                    textDecoration: 'none',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 4,
+                    border: '1px solid #334155',
+                    borderRadius: 6,
+                    padding: '8px 10px',
+                    background: 'rgba(255,255,255,0.02)',
+                  }}
                 >
-                  <span style={{ color: '#64748B' }}>{src.name}</span>
-                  <span style={{ color: '#4A9EFF' }}>→</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
+                    <span style={{ color: '#8FA7C4', fontSize: 11 }}>{item.source}</span>
+                    <span style={{ color: '#64748B', fontSize: 10 }}>{formatTimestamp(item.publishedAt)}</span>
+                    {item.weight > 0 && (
+                      <span style={{ marginLeft: 'auto', color: '#64748B', fontSize: 10 }}>
+                        w {item.weight.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                  <span style={{ color: '#CBD5E1', lineHeight: 1.35 }}>{item.title}</span>
+                  {item.summary && (
+                    <span style={{ color: '#8FA7C4', lineHeight: 1.3 }}>
+                      {item.summary.length > 140 ? `${item.summary.slice(0, 137)}...` : item.summary}
+                    </span>
+                  )}
                 </a>
               ))}
             </div>
           </div>
         )}
 
-        {relatedMarkets && relatedMarkets.length > 0 && (
+        {scenarios.length > 0 && (
+          <div>
+            <span style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, display: 'block', marginBottom: 8 }}>
+              Scenarios
+            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {scenarios.map((scenario) => (
+                <a
+                  key={scenario.id}
+                  href={scenario.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 8,
+                    padding: '8px 10px',
+                    borderRadius: 4,
+                    border: `1px solid ${marketCategoryColor(scenario.category)}33`,
+                    background: `${marketCategoryColor(scenario.category)}0D`,
+                    textDecoration: 'none',
+                    cursor: 'pointer',
+                    flexDirection: 'column',
+                  }}
+                >
+                  <div style={{ display: 'flex', width: '100%', gap: 10, alignItems: 'center' }}>
+                    <span style={{ color: marketCategoryColor(scenario.category), fontSize: 12, fontWeight: 700, fontFamily: 'monospace', minWidth: 38 }}>
+                      {Math.round(scenario.probability * 100)}%
+                    </span>
+                    <span style={{ color: '#CBD5E1', fontSize: 12, lineHeight: 1.35 }}>{scenario.title}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    <span style={{ fontSize: 10, color: '#A7B5CA', background: 'rgba(167,181,202,0.1)', padding: '2px 6px', borderRadius: 10 }}>
+                      vol {scenario.volume}
+                    </span>
+                    <span style={{ fontSize: 10, color: '#A7B5CA', background: 'rgba(167,181,202,0.1)', padding: '2px 6px', borderRadius: 10 }}>
+                      link {Math.round(scenario.linkConfidence * 100)}%
+                    </span>
+                    {(scenario.topicTags || []).slice(0, 3).map((tag) => (
+                      <span key={`${scenario.id}-${tag}`} style={{ fontSize: 10, color: '#8BC7FF', background: 'rgba(139,199,255,0.1)', padding: '2px 6px', borderRadius: 10 }}>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {scenarios.length === 0 && relatedMarkets && relatedMarkets.length > 0 && (
           <div>
             <span style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, display: 'block', marginBottom: 8 }}>
               Related Markets
@@ -229,7 +337,7 @@ function EventContent({ event, relatedMarkets }: { event: GdeltEvent; relatedMar
                       </span>
                     )}
                     {(m.topicTags || []).slice(0, 3).map((tag) => (
-                      <span key={tag} style={{ fontSize: 10, color: '#8BC7FF', background: 'rgba(139,199,255,0.1)', padding: '2px 6px', borderRadius: 10 }}>
+                      <span key={`${m.id}-${tag}`} style={{ fontSize: 10, color: '#8BC7FF', background: 'rgba(139,199,255,0.1)', padding: '2px 6px', borderRadius: 10 }}>
                         {tag}
                       </span>
                     ))}
@@ -576,6 +684,8 @@ function SelectionContent({
 
 function EventDetailPanel({
   item,
+  eventEvidence = [],
+  eventScenarios = [],
   relatedMarkets,
   onSelectCandidate,
   canBackToSelection,
@@ -601,7 +711,14 @@ function EventDetailPanel({
 
   const panelBody = item && (
     <>
-      {item.type === 'event' && <EventContent event={item.data} relatedMarkets={relatedMarkets} />}
+      {item.type === 'event' && (
+        <EventContent
+          event={item.data}
+          evidence={eventEvidence}
+          scenarios={eventScenarios}
+          relatedMarkets={relatedMarkets}
+        />
+      )}
       {item.type === 'market' && <MarketContent market={item.data} />}
       {item.type === 'earthquake' && <EarthquakeContent eq={item.data} />}
       {item.type === 'watch_zone' && <WatchZoneContent zone={item.data} />}
