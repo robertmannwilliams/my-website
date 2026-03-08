@@ -36,7 +36,7 @@ const PriceTicker = dynamic(() => import('@/components/monitor/PriceTicker'), {
   ssr: false,
 });
 
-const NewsTicker = dynamic(() => import('@/components/monitor/NewsTicker'), {
+const SituationBriefBar = dynamic(() => import('@/components/monitor/SituationBriefBar'), {
   ssr: false,
 });
 
@@ -625,7 +625,15 @@ export default function MonitorPage() {
         fontFamily: "'Inter', 'Neue Montreal', sans-serif",
       }}
     >
-      <NewsTicker />
+      <SituationBriefBar
+        focusMode={focusMode}
+        activeRoom={activeRoom}
+        events={allEvents}
+        markets={allMarkets}
+        earthquakes={allEarthquakes}
+        visibleThemes={visibleThemes}
+        visibleSignals={visibleSignals}
+      />
 
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         <FilterPanel
