@@ -35,7 +35,7 @@ interface RawHeadline {
   isBreaking: boolean;
 }
 
-const FEEDS: FeedSource[] = [
+const BASE_FEEDS: FeedSource[] = [
   { url: 'https://feeds.bbci.co.uk/news/world/rss.xml', source: 'BBC', tier: 'tier1', weight: 1.0 },
   { url: 'https://www.reuters.com/world/rss', source: 'Reuters', tier: 'tier1', weight: 1.0 },
   { url: 'https://www.aljazeera.com/xml/rss/all.xml', source: 'Al Jazeera', tier: 'tier1', weight: 0.95 },
@@ -43,6 +43,10 @@ const FEEDS: FeedSource[] = [
   { url: 'https://www.theguardian.com/world/rss', source: 'The Guardian', tier: 'tier1', weight: 0.9 },
   { url: 'https://www.france24.com/en/rss', source: 'France24', tier: 'tier1', weight: 0.88 },
   { url: 'https://feeds.npr.org/1004/rss.xml', source: 'NPR World', tier: 'tier1', weight: 0.85 },
+  { url: 'https://news.un.org/feed/subscribe/en/news/all/rss.xml', source: 'UN News', tier: 'tier1', weight: 0.9 },
+  { url: 'https://reliefweb.int/updates/rss.xml', source: 'ReliefWeb', tier: 'specialized', weight: 0.86 },
+  { url: 'https://www.crisisgroup.org/rss.xml', source: 'ICG', tier: 'specialized', weight: 0.82 },
+  { url: 'https://travel.state.gov/_res/rss/TAsTWs.xml', source: 'US State Dept Advisories', tier: 'specialized', weight: 0.8 },
   {
     url: 'https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRFp0Y1RjU0FtVnVHZ0pWVXlnQVAB?hl=en-US&gl=US&ceid=US:en',
     source: 'Google News World',
@@ -77,6 +81,51 @@ function canonicalizeUrl(raw: string): string {
   } catch {
     return raw;
   }
+}
+
+function parseTier(input: unknown): FeedSource['tier'] | null {
+  if (input === 'tier1' || input === 'regional' || input === 'specialized') return input;
+  return null;
+}
+
+function parseExtraFeedsFromEnv(): FeedSource[] {
+  const raw = process.env.MONITOR_EXTRA_FEEDS_JSON;
+  if (!raw || !raw.trim()) return [];
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+
+    const out: FeedSource[] = [];
+    for (const row of parsed) {
+      if (!row || typeof row !== 'object') continue;
+      const url = typeof row.url === 'string' ? row.url.trim() : '';
+      const source = typeof row.source === 'string' ? row.source.trim() : '';
+      const tier = parseTier((row as { tier?: unknown }).tier);
+      const weightRaw = Number((row as { weight?: unknown }).weight);
+      const weight = Number.isFinite(weightRaw) ? Math.max(0.1, Math.min(1.2, weightRaw)) : 0.72;
+      if (!url || !source || !tier) continue;
+      out.push({ url, source, tier, weight });
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+function getFeeds(): FeedSource[] {
+  const merged = [...BASE_FEEDS, ...parseExtraFeedsFromEnv()];
+  const deduped: FeedSource[] = [];
+  const seen = new Set<string>();
+
+  for (const feed of merged) {
+    const key = `${feed.source.toLowerCase()}|${canonicalizeUrl(feed.url).toLowerCase()}`;
+    if (!feed.url || !feed.source || seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(feed);
+  }
+
+  return deduped;
 }
 
 function normalizeText(text: string): string {
@@ -164,14 +213,21 @@ async function fetchFeed(feed: FeedSource): Promise<{ rows: RawHeadline[]; cover
 }
 
 function dedupeRawHeadlines(rows: RawHeadline[]): RawHeadline[] {
-  const seen = new Set<string>();
+  const seenByUrl = new Set<string>();
+  const seenByText = new Set<string>();
   const result: RawHeadline[] = [];
 
   for (const row of rows) {
     const titleKey = normalizeText(row.title).slice(0, 120);
-    const key = `${row.canonicalUrl}|${titleKey}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
+    const summaryKey = normalizeText(row.description).slice(0, 160);
+    const textKey = `${titleKey}|${summaryKey}`;
+    const urlKey = row.canonicalUrl || row.url;
+
+    if (urlKey && seenByUrl.has(urlKey)) continue;
+    if (seenByText.has(textKey)) continue;
+
+    if (urlKey) seenByUrl.add(urlKey);
+    seenByText.add(textKey);
     result.push(row);
   }
 
@@ -184,7 +240,8 @@ export interface HeadlinesIngestResult {
 }
 
 export async function fetchTieredHeadlines(limit: number = 120): Promise<HeadlinesIngestResult> {
-  const results = await Promise.all(FEEDS.map((feed) => fetchFeed(feed)));
+  const feeds = getFeeds();
+  const results = await Promise.all(feeds.map((feed) => fetchFeed(feed)));
   const coverage = results.map((r) => r.coverage);
   const raw = dedupeRawHeadlines(results.flatMap((r) => r.rows));
 

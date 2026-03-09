@@ -24,6 +24,33 @@ function enrich(items: ElectionItem[]): ElectionItem[] {
   });
 }
 
+async function fetchRemoteElections(): Promise<ElectionItem[] | null> {
+  const url = process.env.MONITOR_ELECTIONS_SOURCE_URL;
+  if (!url) return null;
+
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'GlobalMonitor/1.0' },
+      signal: AbortSignal.timeout(12_000),
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    const payload = await res.json();
+    if (!Array.isArray(payload)) return null;
+    return payload
+      .map((row) => row as ElectionItem)
+      .filter((row) => (
+        typeof row?.id === 'string' &&
+        typeof row?.country === 'string' &&
+        typeof row?.date === 'string' &&
+        Number.isFinite(row?.lat) &&
+        Number.isFinite(row?.lng)
+      ));
+  } catch {
+    return null;
+  }
+}
+
 export async function GET() {
   const cached = await readCachedPayload<ElectionItem[]>(RESOURCE, TTL_SECONDS);
   if (cached.payload && cached.fresh) {
@@ -32,8 +59,22 @@ export async function GET() {
     });
   }
 
-  const items = enrich(data as ElectionItem[]);
-  const sourceCoverage = [
+  const remoteItems = await fetchRemoteElections();
+  const fallbackItems = data as ElectionItem[];
+  const items = enrich(remoteItems && remoteItems.length > 0 ? remoteItems : fallbackItems);
+
+  const sourceCoverage = remoteItems
+    ? [
+      {
+        source: 'Remote elections source',
+        tier: 'specialized' as const,
+        weight: 0.9,
+        fetched: remoteItems.length,
+        accepted: items.length,
+        failed: false,
+      },
+    ]
+    : [
     {
       source: 'Curated election calendar',
       tier: 'specialized' as const,
@@ -42,7 +83,7 @@ export async function GET() {
       accepted: items.length,
       failed: false,
     },
-  ];
+    ];
 
   const stored = await writeCachedPayload(RESOURCE, items, sourceCoverage, TTL_SECONDS);
   return NextResponse.json(envelopeFromPayload(stored, 0, 'MISS'), {
