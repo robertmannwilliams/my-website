@@ -6,6 +6,7 @@ import {
   normalizeForSimilarity,
   type IngestedHeadline,
 } from './headlines';
+import { fetchStructuredSignals } from './structured-events';
 import { monitorGetJson, monitorSetJson } from './cache';
 import { getMetric, incrementMetric } from './metrics';
 import { findRelatedMarkets, type PolymarketMarket } from './polymarket';
@@ -349,6 +350,7 @@ interface EventCandidate {
   geo: GeoMatch | null;
   timestampMs: number;
   fingerprintSeed: string;
+  structuredEventTime: string | null;
 }
 
 interface EventCluster {
@@ -457,6 +459,18 @@ function isEventStatus(value: unknown): value is EventStatus {
   return value === 'observed' || value === 'upcoming' || value === 'speculative';
 }
 
+function isEventCategory(value: unknown): value is EventCategory {
+  return value === 'conflicts'
+    || value === 'elections'
+    || value === 'economy'
+    || value === 'disasters'
+    || value === 'infrastructure';
+}
+
+function isEventSeverity(value: unknown): value is EventSeverity {
+  return value === 'critical' || value === 'watch' || value === 'monitor';
+}
+
 function parseEventTime(value: unknown): string | null {
   if (typeof value !== 'string' || !value.trim()) return null;
   const date = new Date(value);
@@ -554,6 +568,11 @@ function extractRelativeEventTime(normalized: string, baseIso: string): string |
 
 function extractEventTimeFromCluster(cluster: EventCluster, status: EventStatus): string | null {
   if (status === 'observed') return null;
+
+  const structuredTime = cluster.candidates
+    .map((candidate) => candidate.structuredEventTime)
+    .find((value): value is string => Boolean(value));
+  if (structuredTime) return structuredTime;
 
   const bySourceWeight = [...cluster.candidates].sort((a, b) => b.headline.sourceWeight - a.headline.sourceWeight);
   for (const candidate of bySourceWeight) {
@@ -653,7 +672,26 @@ function toCandidate(headline: IngestedHeadline): EventCandidate | null {
   const normalized = normalizeForSimilarity(headlineTextForClassification(headline));
   if (!normalized || isIrrelevant(normalized)) return null;
 
-  const classification = inferRuleClassification(normalized, headline.sourceWeight);
+  let classification = inferRuleClassification(normalized, headline.sourceWeight);
+
+  if (headline.structured) {
+    classification = {
+      ...classification,
+      category: isEventCategory(headline.structured.category)
+        ? headline.structured.category
+        : classification.category,
+      severity: isEventSeverity(headline.structured.severity)
+        ? headline.structured.severity
+        : classification.severity,
+      status: isEventStatus(headline.structured.status)
+        ? headline.structured.status
+        : classification.status,
+      confidence: Math.max(classification.confidence, Math.min(0.98, headline.sourceWeight)),
+      relevance: Math.max(classification.relevance, 8),
+      highImpact: classification.highImpact || headline.structured.severity === 'critical',
+    };
+  }
+
   if (
     classification.status === 'speculative' &&
     !classification.highImpact &&
@@ -663,7 +701,10 @@ function toCandidate(headline: IngestedHeadline): EventCandidate | null {
   }
   if (classification.relevance < 5) return null;
 
-  const geo = geocodeText(`${headline.title} ${headline.summary}`);
+  const geoText = headline.structured?.locationHint
+    ? `${headline.title} ${headline.summary} ${headline.structured.locationHint}`
+    : `${headline.title} ${headline.summary}`;
+  const geo = geocodeText(geoText);
 
   const candidate: EventCandidate = {
     headline,
@@ -672,6 +713,7 @@ function toCandidate(headline: IngestedHeadline): EventCandidate | null {
     geo,
     timestampMs: new Date(headline.timestamp).getTime(),
     fingerprintSeed: '',
+    structuredEventTime: parseEventTime(headline.structured?.eventTime),
   };
   candidate.fingerprintSeed = headlineFingerprintSeed(candidate);
   return candidate;
@@ -1375,8 +1417,16 @@ export interface ClassifiedEventsResult {
 }
 
 export async function fetchClassifiedEvents(markets: PolymarketMarket[] = []): Promise<ClassifiedEventsResult> {
-  const { items: headlines, sourceCoverage } = await fetchTieredHeadlines(160);
-  await incrementMetric('events_headlines_received', headlines.length);
+  const [headlineResult, structuredResult] = await Promise.all([
+    fetchTieredHeadlines(160),
+    fetchStructuredSignals(56),
+  ]);
+
+  const headlines = [...headlineResult.items, ...structuredResult.items];
+  const sourceCoverage = [...headlineResult.sourceCoverage, ...structuredResult.sourceCoverage];
+  await incrementMetric('events_headlines_received', headlineResult.items.length);
+  await incrementMetric('events_structured_signals_received', structuredResult.items.length);
+  await incrementMetric('events_signals_total', headlines.length);
 
   const candidates = headlines
     .map(toCandidate)

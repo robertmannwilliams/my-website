@@ -14,6 +14,13 @@ export interface IngestedHeadline {
   timestamp: string;
   isBreaking: boolean;
   signalScore: number;
+  structured?: {
+    category?: 'conflicts' | 'elections' | 'economy' | 'disasters' | 'infrastructure';
+    severity?: 'critical' | 'watch' | 'monitor';
+    status?: 'observed' | 'upcoming' | 'speculative';
+    eventTime?: string | null;
+    locationHint?: string;
+  };
 }
 
 interface FeedSource {
