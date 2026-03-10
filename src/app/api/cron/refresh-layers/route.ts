@@ -33,14 +33,15 @@ export async function GET(request: Request) {
 
   const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
 
-  const [flights, notams, shipping, elections] = await Promise.all([
+  const [flights, notams, shipping, shippingLive, elections] = await Promise.all([
     refreshOne(baseUrl, '/api/layers/flights'),
     refreshOne(baseUrl, '/api/layers/notams'),
     refreshOne(baseUrl, '/api/layers/shipping'),
+    refreshOne(baseUrl, '/api/layers/shipping-live'),
     refreshOne(baseUrl, '/api/layers/elections'),
   ]);
 
-  const ok = flights.ok && notams.ok && shipping.ok && elections.ok;
+  const ok = flights.ok && notams.ok && shipping.ok && shippingLive.ok && elections.ok;
   const status = ok ? 200 : 500;
 
   return NextResponse.json({
@@ -48,6 +49,7 @@ export async function GET(request: Request) {
     flights,
     notams,
     shipping,
+    shippingLive,
     elections,
     refreshedAt: new Date().toISOString(),
   }, { status });

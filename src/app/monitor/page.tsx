@@ -18,6 +18,7 @@ import type {
   ElectionCalendarItem,
   EventConfidenceGate,
   FlightTrack,
+  LiveShippingTrack,
   MapInteractionMode,
   MapItem,
   MapSelectionCandidate,
@@ -92,6 +93,7 @@ function makeDefaultLayers(): Record<LayerKey, boolean> {
     flights: false,
     notams: true,
     shipping: true,
+    shipping_live: false,
     elections: true,
     watch_zones: true,
     prices: true,
@@ -112,6 +114,7 @@ function roomLayerVisibility(room: SituationRoomConfig): Record<LayerKey, boolea
     flights: false,
     notams: false,
     shipping: false,
+    shipping_live: false,
     elections: false,
     watch_zones: false,
     prices: false,
@@ -243,6 +246,7 @@ export default function MonitorPage() {
   const [allFlights, setAllFlights] = useState<FlightTrack[]>([]);
   const [notamZones, setNotamZones] = useState<NotamZone[]>([]);
   const [shippingChokepoints, setShippingChokepoints] = useState<ShippingChokepoint[]>([]);
+  const [allShippingLive, setAllShippingLive] = useState<LiveShippingTrack[]>([]);
   const [elections, setElections] = useState<ElectionCalendarItem[]>([]);
   const [eventsMeta, setEventsMeta] = useState<MonitorResponseMeta | null>(null);
   const [marketsMeta, setMarketsMeta] = useState<MonitorResponseMeta | null>(null);
@@ -251,11 +255,13 @@ export default function MonitorPage() {
     flights: MonitorResponseMeta | null;
     notams: MonitorResponseMeta | null;
     shipping: MonitorResponseMeta | null;
+    shippingLive: MonitorResponseMeta | null;
     elections: MonitorResponseMeta | null;
   }>({
     flights: null,
     notams: null,
     shipping: null,
+    shippingLive: null,
     elections: null,
   });
   const [visibleLayers, setVisibleLayers] = useState<Record<LayerKey, boolean>>(
@@ -633,6 +639,24 @@ export default function MonitorPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Fetch live shipping layer
+  useEffect(() => {
+    async function loadShippingLive() {
+      try {
+        const res = await fetch('/api/layers/shipping-live');
+        if (!res.ok) return;
+        const payload = (await res.json()) as MonitorResponse<LiveShippingTrack[]>;
+        setAllShippingLive(payload.items || []);
+        setLayersMeta((prev) => ({ ...prev, shippingLive: payload.meta || null }));
+      } catch {
+        // Silent fail
+      }
+    }
+    loadShippingLive();
+    const interval = setInterval(loadShippingLive, 5 * 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
   const layerCounts = useMemo(() => ({
     events: allEvents.filter((event) => event.status !== 'speculative').length,
     markets: allMarkets.length,
@@ -640,10 +664,11 @@ export default function MonitorPage() {
     flights: allFlights.length,
     notams: notamZones.length,
     shipping: shippingChokepoints.length,
+    shipping_live: allShippingLive.length,
     elections: elections.length,
     watch_zones: watchZones.length,
     prices: 7,
-  }), [allEvents, allMarkets.length, allEarthquakes.length, allFlights.length, notamZones.length, shippingChokepoints.length, elections.length]);
+  }), [allEvents, allMarkets.length, allEarthquakes.length, allFlights.length, notamZones.length, shippingChokepoints.length, allShippingLive.length, elections.length]);
 
   const eventGateStats = useMemo(() => {
     const speculative = allOffMap.filter((item) => item.reasonCode === 'speculative').length;
@@ -854,6 +879,7 @@ export default function MonitorPage() {
             flights: layersMeta.flights,
             notams: layersMeta.notams,
             shipping: layersMeta.shipping,
+            shippingLive: layersMeta.shippingLive,
             elections: layersMeta.elections,
           }}
         />
@@ -887,6 +913,7 @@ export default function MonitorPage() {
             flights={allFlights}
             notamZones={notamZones}
             shippingChokepoints={shippingChokepoints}
+            shippingLiveTracks={allShippingLive}
             elections={elections}
             watchZones={watchZones}
           />

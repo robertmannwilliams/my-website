@@ -12,6 +12,7 @@ import type {
   EventConfidenceGate,
   FanoutSignalType,
   FlightTrack,
+  LiveShippingTrack,
   MapSelectionCandidate,
   NotamZone,
   ShippingChokepoint,
@@ -48,6 +49,7 @@ interface MonitorMapProps {
   flights: FlightTrack[];
   notamZones: NotamZone[];
   shippingChokepoints: ShippingChokepoint[];
+  shippingLiveTracks: LiveShippingTrack[];
   elections: ElectionCalendarItem[];
   watchZones: WatchZone[];
 }
@@ -495,6 +497,30 @@ function shippingToGeoJSON(points: ShippingChokepoint[]): GeoJSON.FeatureCollect
         tankerCount: point.tankerCount,
         containerCount: point.containerCount,
         riskLevel: point.riskLevel,
+      },
+    })),
+  };
+}
+
+function shippingLiveToGeoJSON(items: LiveShippingTrack[], activeRoom: SituationRoomConfig | null): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: items.map((track) => ({
+      type: 'Feature' as const,
+      geometry: { type: 'Point' as const, coordinates: [track.lng, track.lat] },
+      properties: {
+        id: track.id,
+        mmsi: track.mmsi,
+        vesselName: track.vesselName,
+        sogKnots: track.sogKnots,
+        cog: track.cog,
+        heading: track.heading,
+        navStatus: track.navStatus,
+        lastSeen: track.lastSeen,
+        riskLevel: track.riskLevel,
+        region: track.region,
+        source: track.source,
+        dimmed: isDimmed(track.region, activeRoom),
       },
     })),
   };
@@ -1017,6 +1043,46 @@ function addShippingLayers(m: mapboxgl.Map) {
   });
 }
 
+function addShippingLiveLayers(m: mapboxgl.Map) {
+  m.addSource('shipping-live', {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: [] },
+  });
+
+  m.addLayer({
+    id: 'shipping-live-points',
+    type: 'circle',
+    source: 'shipping-live',
+    paint: {
+      'circle-color': ['match', ['get', 'riskLevel'], 'high', '#2DD4BF', 'watch', '#22D3EE', '#4ADE80'],
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 2, 2, 5, 3, 8, 4.5, 10, 6],
+      'circle-opacity': ['case', ['==', ['get', 'dimmed'], true], 0.3, 0.74],
+      'circle-stroke-width': 0.8,
+      'circle-stroke-color': 'rgba(255,255,255,0.25)',
+    },
+  });
+
+  m.addLayer({
+    id: 'shipping-live-labels',
+    type: 'symbol',
+    source: 'shipping-live',
+    filter: ['all', ['!=', ['get', 'vesselName'], ''], ['>', ['coalesce', ['get', 'sogKnots'], 0], 6]],
+    layout: {
+      'text-field': ['get', 'vesselName'],
+      'text-size': 9,
+      'text-font': ['DIN Pro Medium', 'Arial Unicode MS Regular'],
+      'text-offset': [0, 1.1],
+      'text-allow-overlap': false,
+    },
+    paint: {
+      'text-color': '#99F6E4',
+      'text-halo-color': '#0B1120',
+      'text-halo-width': 1,
+      'text-opacity': ['case', ['==', ['get', 'dimmed'], true], 0.25, 0.78],
+    },
+  });
+}
+
 function addElectionLayers(m: mapboxgl.Map) {
   m.addSource('elections', {
     type: 'geojson',
@@ -1141,6 +1207,7 @@ const EARTHQUAKE_LAYERS = ['earthquake-circles', 'earthquake-labels'];
 const FLIGHT_LAYERS = ['flight-points', 'flight-labels'];
 const NOTAM_LAYERS = ['notam-fill', 'notam-labels'];
 const SHIPPING_LAYERS = ['shipping-points', 'shipping-labels'];
+const SHIPPING_LIVE_LAYERS = ['shipping-live-points', 'shipping-live-labels'];
 const ELECTION_LAYERS = ['election-points', 'election-labels'];
 const WATCH_ZONE_LAYERS = ['watch-zone-fill', 'watch-zone-outline', 'watch-zone-labels'];
 
@@ -1168,6 +1235,7 @@ function MonitorMap({
   flights,
   notamZones,
   shippingChokepoints,
+  shippingLiveTracks,
   elections,
   watchZones,
 }: MonitorMapProps) {
@@ -1796,6 +1864,7 @@ function MonitorMap({
       addFanoutAnchorLayers(m);
       addNotamLayers(m);
       addShippingLayers(m);
+      addShippingLiveLayers(m);
       addElectionLayers(m);
       addFlightLayers(m);
       addEarthquakeLayers(m);
@@ -2097,11 +2166,15 @@ function MonitorMap({
     const shippingSource = m.getSource('shipping') as mapboxgl.GeoJSONSource | undefined;
     if (shippingSource) shippingSource.setData(shippingToGeoJSON(shippingChokepoints));
 
+    const shippingLiveSource = m.getSource('shipping-live') as mapboxgl.GeoJSONSource | undefined;
+    if (shippingLiveSource) shippingLiveSource.setData(shippingLiveToGeoJSON(shippingLiveTracks, activeRoom));
+
     const electionSource = m.getSource('elections') as mapboxgl.GeoJSONSource | undefined;
     if (electionSource) electionSource.setData(electionsToGeoJSON(elections));
 
     const showNotams = visibleLayers.notams;
     const showShipping = visibleLayers.shipping;
+    const showShippingLive = visibleLayers.shipping_live;
     const showElectionOverlay = visibleLayers.elections;
 
     for (const layerId of NOTAM_LAYERS) {
@@ -2120,6 +2193,14 @@ function MonitorMap({
       }
     }
 
+    for (const layerId of SHIPPING_LIVE_LAYERS) {
+      try {
+        m.setLayoutProperty(layerId, 'visibility', showShippingLive ? 'visible' : 'none');
+      } catch {
+        // Layer may not exist yet.
+      }
+    }
+
     for (const layerId of ELECTION_LAYERS) {
       try {
         m.setLayoutProperty(layerId, 'visibility', showElectionOverlay ? 'visible' : 'none');
@@ -2127,7 +2208,7 @@ function MonitorMap({
         // Layer may not exist yet.
       }
     }
-  }, [notamZones, shippingChokepoints, elections, visibleLayers.notams, visibleLayers.shipping, visibleLayers.elections, mapReady]);
+  }, [notamZones, shippingChokepoints, shippingLiveTracks, elections, visibleLayers.notams, visibleLayers.shipping, visibleLayers.shipping_live, visibleLayers.elections, activeRoom, mapReady]);
 
   useEffect(() => {
     if (!map.current || !layersReady.current) return;

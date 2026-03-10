@@ -10,6 +10,7 @@ export type LayerKey =
   | 'flights'
   | 'notams'
   | 'shipping'
+  | 'shipping_live'
   | 'elections'
   | 'watch_zones'
   | 'prices';
@@ -79,6 +80,22 @@ export interface ShippingChokepoint {
   tankerCount: number;
   containerCount: number;
   riskLevel: 'high' | 'watch' | 'monitor';
+}
+
+export interface LiveShippingTrack {
+  id: string;
+  mmsi: string;
+  vesselName: string;
+  lat: number;
+  lng: number;
+  sogKnots: number | null;
+  cog: number | null;
+  heading: number | null;
+  navStatus: string;
+  lastSeen: string;
+  riskLevel: 'high' | 'watch' | 'monitor';
+  region: string;
+  source: 'ais' | 'fallback';
 }
 
 export interface FlightTrack {

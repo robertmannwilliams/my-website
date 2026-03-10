@@ -53,6 +53,7 @@ interface FilterPanelProps {
     flights?: MonitorResponseMeta | null;
     notams?: MonitorResponseMeta | null;
     shipping?: MonitorResponseMeta | null;
+    shippingLive?: MonitorResponseMeta | null;
     elections?: MonitorResponseMeta | null;
   };
 }
@@ -64,6 +65,7 @@ const LAYER_CONFIG: Record<LayerKey, { label: string; color: string }> = {
   flights: { label: 'Flight Activity (ADS-B)', color: '#A78BFA' },
   notams: { label: 'NOTAM Airspace', color: '#FF8C42' },
   shipping: { label: 'Shipping Chokepoints', color: '#00DDCC' },
+  shipping_live: { label: 'Live AIS Shipping', color: '#14B8A6' },
   elections: { label: 'Election Calendar', color: '#7AB4FF' },
   watch_zones: { label: 'Watch Zones', color: '#8B9BB5' },
   prices: { label: 'Macro Price Ticker', color: '#2DD4BF' },
@@ -76,6 +78,7 @@ const LAYER_KEYS: LayerKey[] = [
   'flights',
   'notams',
   'shipping',
+  'shipping_live',
   'elections',
   'watch_zones',
   'prices',
@@ -244,6 +247,10 @@ function FilterPanel({
     {
       label: 'Shipping Overlay',
       detail: formatSourceDetail(sourceHealth?.shipping, 'Chokepoint activity'),
+    },
+    {
+      label: 'Shipping Live (AIS)',
+      detail: formatSourceDetail(sourceHealth?.shippingLive, 'Live vessel tracks'),
     },
     {
       label: 'Election Overlay',
