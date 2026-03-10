@@ -4,6 +4,7 @@ import { incrementMetric } from './metrics';
 
 export interface PolymarketMarket {
   id: string;
+  provider?: 'polymarket' | 'kalshi';
   title: string;
   category: MarketCategory;
   categoryNormalized: MarketCategory;
@@ -109,7 +110,7 @@ function isExcluded(question: string): boolean {
   return EXCLUDE_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
-function classifyCategory(question: string): MarketCategory | null {
+export function classifyCategory(question: string): MarketCategory | null {
   const lower = question.toLowerCase();
 
   for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS) as [MarketCategory, string[]][]) {
@@ -125,7 +126,7 @@ function classifyCategory(question: string): MarketCategory | null {
   return null;
 }
 
-function looksGeopolitical(question: string): boolean {
+export function looksGeopolitical(question: string): boolean {
   const lower = question.toLowerCase();
   return GEOPOLITICAL_HINTS.some((kw) => lower.includes(kw));
 }
@@ -180,7 +181,7 @@ async function fetchQuery(config: QueryConfig): Promise<GammaMarket[]> {
   return rows;
 }
 
-function geocodeForMarket(title: string, category: MarketCategory): {
+export function geocodeForMarket(title: string, category: MarketCategory): {
   lat: number;
   lng: number;
   geoConfidence: number;
@@ -268,7 +269,7 @@ export function marketSignalScore(market: PolymarketMarket): number {
   return volumeScore + liquidityScore + geoScore + geoBonus + categoryBonus;
 }
 
-function normalizedTokens(text: string): string[] {
+export function normalizedTokens(text: string): string[] {
   const tokens = text
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, ' ')
@@ -338,6 +339,7 @@ export async function fetchPolymarkets(): Promise<PolymarketMarket[]> {
 
     results.push({
       id: `poly_${m.id}`,
+      provider: 'polymarket',
       title: m.question,
       category: finalCategory,
       categoryNormalized: finalCategory,
