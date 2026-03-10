@@ -50,6 +50,7 @@ interface FilterPanelProps {
     events?: MonitorResponseMeta | null;
     markets?: MonitorResponseMeta | null;
     disasters?: MonitorResponseMeta | null;
+    flights?: MonitorResponseMeta | null;
     notams?: MonitorResponseMeta | null;
     shipping?: MonitorResponseMeta | null;
     elections?: MonitorResponseMeta | null;
@@ -60,6 +61,7 @@ const LAYER_CONFIG: Record<LayerKey, { label: string; color: string }> = {
   events: { label: 'Events', color: '#FF6666' },
   markets: { label: 'Prediction Markets', color: '#66AAFF' },
   disasters: { label: 'Disaster Sensors', color: '#FFAA33' },
+  flights: { label: 'Flight Activity (ADS-B)', color: '#A78BFA' },
   notams: { label: 'NOTAM Airspace', color: '#FF8C42' },
   shipping: { label: 'Shipping Chokepoints', color: '#00DDCC' },
   elections: { label: 'Election Calendar', color: '#7AB4FF' },
@@ -71,6 +73,7 @@ const LAYER_KEYS: LayerKey[] = [
   'events',
   'markets',
   'disasters',
+  'flights',
   'notams',
   'shipping',
   'elections',
@@ -229,6 +232,10 @@ function FilterPanel({
     {
       label: 'USGS',
       detail: formatSourceDetail(sourceHealth?.disasters, 'Earthquakes M4.5+'),
+    },
+    {
+      label: 'Flight Activity',
+      detail: formatSourceDetail(sourceHealth?.flights, 'OpenSky focused corridors'),
     },
     {
       label: 'NOTAM Overlay',

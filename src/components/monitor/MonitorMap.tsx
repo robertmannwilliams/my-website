@@ -11,6 +11,7 @@ import type {
   ElectionCalendarItem,
   EventConfidenceGate,
   FanoutSignalType,
+  FlightTrack,
   MapSelectionCandidate,
   NotamZone,
   ShippingChokepoint,
@@ -44,6 +45,7 @@ interface MonitorMapProps {
   events: GdeltEvent[];
   markets: PolymarketMarket[];
   earthquakes: UsgsEarthquake[];
+  flights: FlightTrack[];
   notamZones: NotamZone[];
   shippingChokepoints: ShippingChokepoint[];
   elections: ElectionCalendarItem[];
@@ -511,6 +513,30 @@ function electionsToGeoJSON(items: ElectionCalendarItem[]): GeoJSON.FeatureColle
         date: item.date,
         importance: item.importance,
         daysUntil: item.daysUntil ?? null,
+      },
+    })),
+  };
+}
+
+function flightsToGeoJSON(items: FlightTrack[], activeRoom: SituationRoomConfig | null): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: items.map((flight) => ({
+      type: 'Feature' as const,
+      geometry: { type: 'Point' as const, coordinates: [flight.lng, flight.lat] },
+      properties: {
+        id: flight.id,
+        callsign: flight.callsign,
+        originCountry: flight.originCountry,
+        altitudeMeters: flight.altitudeMeters,
+        speedMps: flight.speedMps,
+        heading: flight.heading,
+        onGround: flight.onGround,
+        lastContact: flight.lastContact,
+        riskLevel: flight.riskLevel,
+        region: flight.region,
+        source: flight.source,
+        dimmed: isDimmed(flight.region, activeRoom),
       },
     })),
   };
@@ -1028,6 +1054,46 @@ function addElectionLayers(m: mapboxgl.Map) {
   });
 }
 
+function addFlightLayers(m: mapboxgl.Map) {
+  m.addSource('flights', {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: [] },
+  });
+
+  m.addLayer({
+    id: 'flight-points',
+    type: 'circle',
+    source: 'flights',
+    paint: {
+      'circle-color': ['match', ['get', 'riskLevel'], 'high', '#C084FC', 'watch', '#A78BFA', '#8B5CF6'],
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 2, 2.5, 5, 4.2, 8, 6.2, 10, 7.2],
+      'circle-opacity': ['case', ['==', ['get', 'dimmed'], true], 0.35, 0.78],
+      'circle-stroke-width': 1,
+      'circle-stroke-color': 'rgba(255,255,255,0.3)',
+    },
+  });
+
+  m.addLayer({
+    id: 'flight-labels',
+    type: 'symbol',
+    source: 'flights',
+    filter: ['all', ['==', ['get', 'onGround'], false], ['!=', ['get', 'callsign'], 'UNKNOWN']],
+    layout: {
+      'text-field': ['get', 'callsign'],
+      'text-size': 10,
+      'text-font': ['DIN Pro Medium', 'Arial Unicode MS Regular'],
+      'text-offset': [0, 1.1],
+      'text-allow-overlap': false,
+    },
+    paint: {
+      'text-color': '#D8B4FE',
+      'text-halo-color': '#0B1120',
+      'text-halo-width': 1,
+      'text-opacity': ['case', ['==', ['get', 'dimmed'], true], 0.32, 0.82],
+    },
+  });
+}
+
 function addEarthquakeLayers(m: mapboxgl.Map) {
   m.addSource('earthquakes', {
     type: 'geojson',
@@ -1072,6 +1138,7 @@ const MARKET_LAYERS = [
   'market-spider-markers',
 ];
 const EARTHQUAKE_LAYERS = ['earthquake-circles', 'earthquake-labels'];
+const FLIGHT_LAYERS = ['flight-points', 'flight-labels'];
 const NOTAM_LAYERS = ['notam-fill', 'notam-labels'];
 const SHIPPING_LAYERS = ['shipping-points', 'shipping-labels'];
 const ELECTION_LAYERS = ['election-points', 'election-labels'];
@@ -1098,6 +1165,7 @@ function MonitorMap({
   events,
   markets,
   earthquakes,
+  flights,
   notamZones,
   shippingChokepoints,
   elections,
@@ -1729,6 +1797,7 @@ function MonitorMap({
       addNotamLayers(m);
       addShippingLayers(m);
       addElectionLayers(m);
+      addFlightLayers(m);
       addEarthquakeLayers(m);
       addTerminatorLayers(m);
       layersReady.current = true;
@@ -2001,6 +2070,22 @@ function MonitorMap({
       }
     }
   }, [earthquakes, visibleLayers.disasters, activeRoom, mapReady]);
+
+  useEffect(() => {
+    if (!map.current || !layersReady.current) return;
+    const m = map.current;
+    const source = m.getSource('flights') as mapboxgl.GeoJSONSource | undefined;
+    if (source) source.setData(flightsToGeoJSON(flights, activeRoom));
+
+    const showFlights = visibleLayers.flights;
+    for (const layerId of FLIGHT_LAYERS) {
+      try {
+        m.setLayoutProperty(layerId, 'visibility', showFlights ? 'visible' : 'none');
+      } catch {
+        // Layer may not exist yet.
+      }
+    }
+  }, [flights, visibleLayers.flights, activeRoom, mapReady]);
 
   useEffect(() => {
     if (!map.current || !layersReady.current) return;

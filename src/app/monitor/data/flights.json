@@ -1,0 +1,62 @@
+[
+  {
+    "id": "fallback-me1",
+    "callsign": "GULF431",
+    "originCountry": "United Arab Emirates",
+    "lat": 26.2,
+    "lng": 53.9,
+    "altitudeMeters": 10300,
+    "speedMps": 236,
+    "heading": 281,
+    "onGround": false,
+    "lastContact": "2026-03-09T12:00:00Z",
+    "riskLevel": "high",
+    "region": "middle_east",
+    "source": "fallback"
+  },
+  {
+    "id": "fallback-me2",
+    "callsign": "IRAQ772",
+    "originCountry": "Iraq",
+    "lat": 33.3,
+    "lng": 44.2,
+    "altitudeMeters": 8400,
+    "speedMps": 220,
+    "heading": 160,
+    "onGround": false,
+    "lastContact": "2026-03-09T12:00:00Z",
+    "riskLevel": "watch",
+    "region": "middle_east",
+    "source": "fallback"
+  },
+  {
+    "id": "fallback-ee1",
+    "callsign": "BLKSEA11",
+    "originCountry": "Romania",
+    "lat": 44.9,
+    "lng": 31.3,
+    "altitudeMeters": 9200,
+    "speedMps": 244,
+    "heading": 98,
+    "onGround": false,
+    "lastContact": "2026-03-09T12:00:00Z",
+    "riskLevel": "watch",
+    "region": "europe",
+    "source": "fallback"
+  },
+  {
+    "id": "fallback-asia1",
+    "callsign": "SCS901",
+    "originCountry": "Philippines",
+    "lat": 15.8,
+    "lng": 116.7,
+    "altitudeMeters": 9800,
+    "speedMps": 228,
+    "heading": 312,
+    "onGround": false,
+    "lastContact": "2026-03-09T12:00:00Z",
+    "riskLevel": "watch",
+    "region": "asia",
+    "source": "fallback"
+  }
+]

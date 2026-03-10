@@ -17,6 +17,7 @@ import type {
   ActiveFanout,
   ElectionCalendarItem,
   EventConfidenceGate,
+  FlightTrack,
   MapInteractionMode,
   MapItem,
   MapSelectionCandidate,
@@ -88,6 +89,7 @@ function makeDefaultLayers(): Record<LayerKey, boolean> {
     events: true,
     markets: true,
     disasters: true,
+    flights: false,
     notams: true,
     shipping: true,
     elections: true,
@@ -107,6 +109,7 @@ function roomLayerVisibility(room: SituationRoomConfig): Record<LayerKey, boolea
     events: false,
     markets: false,
     disasters: false,
+    flights: false,
     notams: false,
     shipping: false,
     elections: false,
@@ -237,6 +240,7 @@ export default function MonitorPage() {
   const [allOffMap, setAllOffMap] = useState<OffMapEventCandidate[]>([]);
   const [allMarkets, setAllMarkets] = useState<PolymarketMarket[]>([]);
   const [allEarthquakes, setAllEarthquakes] = useState<UsgsEarthquake[]>([]);
+  const [allFlights, setAllFlights] = useState<FlightTrack[]>([]);
   const [notamZones, setNotamZones] = useState<NotamZone[]>([]);
   const [shippingChokepoints, setShippingChokepoints] = useState<ShippingChokepoint[]>([]);
   const [elections, setElections] = useState<ElectionCalendarItem[]>([]);
@@ -244,10 +248,12 @@ export default function MonitorPage() {
   const [marketsMeta, setMarketsMeta] = useState<MonitorResponseMeta | null>(null);
   const [disastersMeta, setDisastersMeta] = useState<MonitorResponseMeta | null>(null);
   const [layersMeta, setLayersMeta] = useState<{
+    flights: MonitorResponseMeta | null;
     notams: MonitorResponseMeta | null;
     shipping: MonitorResponseMeta | null;
     elections: MonitorResponseMeta | null;
   }>({
+    flights: null,
     notams: null,
     shipping: null,
     elections: null,
@@ -557,6 +563,24 @@ export default function MonitorPage() {
 
   // Fetch NOTAM layer
   useEffect(() => {
+    async function loadFlights() {
+      try {
+        const res = await fetch('/api/layers/flights');
+        if (!res.ok) return;
+        const payload = (await res.json()) as MonitorResponse<FlightTrack[]>;
+        setAllFlights(payload.items || []);
+        setLayersMeta((prev) => ({ ...prev, flights: payload.meta || null }));
+      } catch {
+        // Silent fail
+      }
+    }
+    loadFlights();
+    const interval = setInterval(loadFlights, 5 * 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch NOTAM layer
+  useEffect(() => {
     async function loadNotams() {
       try {
         const res = await fetch('/api/layers/notams');
@@ -613,12 +637,13 @@ export default function MonitorPage() {
     events: allEvents.filter((event) => event.status !== 'speculative').length,
     markets: allMarkets.length,
     disasters: allEarthquakes.length,
+    flights: allFlights.length,
     notams: notamZones.length,
     shipping: shippingChokepoints.length,
     elections: elections.length,
     watch_zones: watchZones.length,
     prices: 7,
-  }), [allEvents, allMarkets.length, allEarthquakes.length, notamZones.length, shippingChokepoints.length, elections.length]);
+  }), [allEvents, allMarkets.length, allEarthquakes.length, allFlights.length, notamZones.length, shippingChokepoints.length, elections.length]);
 
   const eventGateStats = useMemo(() => {
     const speculative = allOffMap.filter((item) => item.reasonCode === 'speculative').length;
@@ -826,6 +851,7 @@ export default function MonitorPage() {
             events: eventsMeta,
             markets: marketsMeta,
             disasters: disastersMeta,
+            flights: layersMeta.flights,
             notams: layersMeta.notams,
             shipping: layersMeta.shipping,
             elections: layersMeta.elections,
@@ -858,6 +884,7 @@ export default function MonitorPage() {
             events={allEvents}
             markets={allMarkets}
             earthquakes={allEarthquakes}
+            flights={allFlights}
             notamZones={notamZones}
             shippingChokepoints={shippingChokepoints}
             elections={elections}

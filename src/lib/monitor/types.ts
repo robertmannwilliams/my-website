@@ -7,6 +7,7 @@ export type LayerKey =
   | 'events'
   | 'markets'
   | 'disasters'
+  | 'flights'
   | 'notams'
   | 'shipping'
   | 'elections'
@@ -78,6 +79,22 @@ export interface ShippingChokepoint {
   tankerCount: number;
   containerCount: number;
   riskLevel: 'high' | 'watch' | 'monitor';
+}
+
+export interface FlightTrack {
+  id: string;
+  callsign: string;
+  originCountry: string;
+  lat: number;
+  lng: number;
+  altitudeMeters: number | null;
+  speedMps: number | null;
+  heading: number | null;
+  onGround: boolean;
+  lastContact: string;
+  riskLevel: 'high' | 'watch' | 'monitor';
+  region: string;
+  source: 'opensky' | 'fallback';
 }
 
 export interface ElectionCalendarItem {
