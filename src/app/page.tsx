@@ -2,11 +2,16 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
+import { directorySections } from "@/content/site-sections";
+import { formatWritingDate, getPublishedWritings } from "@/content/writings";
 
 const ParticleField = dynamic(() => import("@/components/ParticleField"), {
   ssr: false,
 });
+
+const latestWriting = getPublishedWritings()[0];
 
 // Attempt at smoothstep easing
 function smoothstep(t: number) {
@@ -188,31 +193,60 @@ export default function Page() {
         style={{
           position: "fixed",
           top: "50%",
-          left: "8%",
+          left: "clamp(1rem, 8vw, 8%)",
+          right: "1rem",
           transform: "translateY(-50%)",
-          maxWidth: "38%",
+          maxWidth: "38rem",
+          maxHeight: "calc(100dvh - 8rem)",
           zIndex: 10,
           opacity: contentOpacity,
           pointerEvents: contentOpacity > 0.5 ? "auto" : "none",
+          overflowY: "auto",
+          paddingRight: "0.75rem",
         }}
       >
-        <p className="text-xs md:text-sm tracking-[0.25em] uppercase opacity-60 mb-6">
-          Under Construction
-        </p>
-        <p className="text-sm md:text-base leading-relaxed mb-4">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
-          eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
-          ad minim veniam, quis nostrud exercitation ullamco laboris.
-        </p>
-        <p className="text-sm md:text-base leading-relaxed mb-4">
-          Duis aute irure dolor in reprehenderit in voluptate velit esse
-          cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
-          cupidatat non proident, sunt in culpa qui officia deserunt mollit.
-        </p>
-        <p className="text-sm md:text-base leading-relaxed">
-          Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis
-          suscipit laboriosam, nisi ut aliquid ex ea commodi consequatur.
-        </p>
+        <div className="home-directory">
+          <p className="section-shell__eyebrow">Directory</p>
+          <p className="home-lede">
+            The landing page now points into separate rooms. Monitor stays live,
+            writings are filed chronologically, and the rest of the site can
+            expand without collapsing into one long block.
+          </p>
+
+          <div className="home-directory__grid">
+            {directorySections.map((section, index) => (
+              <Link className="directory-card" href={section.href} key={section.href}>
+                <div className="directory-card__top">
+                  <span className="directory-card__count">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <span className="directory-card__status">{section.status}</span>
+                </div>
+
+                <p className="directory-card__eyebrow">{section.eyebrow}</p>
+                <h2 className="directory-card__title">{section.title}</h2>
+                <p className="directory-card__body">{section.description}</p>
+              </Link>
+            ))}
+          </div>
+
+          <p className="home-note">
+            Writings are organized as a time series: essays, dispatches, and
+            notebooks all live in one dated archive so the sequence stays
+            visible.
+          </p>
+
+          {latestWriting ? (
+            <Link className="home-latest" href={`/writings/${latestWriting.slug}`}>
+              <span className="home-latest__eyebrow">Latest filing</span>
+              <strong>{latestWriting.title}</strong>
+              <span>
+                {formatWritingDate(latestWriting.publishedAt)} ·{" "}
+                {latestWriting.format}
+              </span>
+            </Link>
+          ) : null}
+        </div>
       </div>
 
       <ThemeToggle />
