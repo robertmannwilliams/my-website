@@ -1,0 +1,684 @@
+{
+  "stages": [
+    {
+      "id": "raw-materials",
+      "name": "Raw materials",
+      "order": 1,
+      "color": "#a08668",
+      "shortDescription": "Quartz, silicon metal, and the geologic inputs behind every wafer."
+    },
+    {
+      "id": "chemicals",
+      "name": "Chemicals",
+      "order": 2,
+      "color": "#8a9a5b",
+      "shortDescription": "Polysilicon, photoresists, specialty gases, and ultra-pure reagents."
+    },
+    {
+      "id": "wafers",
+      "name": "Wafers",
+      "order": 3,
+      "color": "#7a8b9a",
+      "shortDescription": "Ingot pulls and polished silicon wafers."
+    },
+    {
+      "id": "equipment",
+      "name": "Equipment",
+      "order": 4,
+      "color": "#5f9b95",
+      "shortDescription": "Lithography, etch, deposition, and metrology systems that build every chip."
+    },
+    {
+      "id": "eda",
+      "name": "EDA & IP",
+      "order": 5,
+      "color": "#8a7aa0",
+      "shortDescription": "Design automation software and licensable IP cores."
+    },
+    {
+      "id": "design",
+      "name": "Design",
+      "order": 6,
+      "color": "#6f7ab5",
+      "shortDescription": "Fabless designers — Nvidia, AMD, Apple, Broadcom — specifying the silicon."
+    },
+    {
+      "id": "fabrication",
+      "name": "Fabrication",
+      "order": 7,
+      "color": "#d99b5a",
+      "shortDescription": "The foundries that print leading-edge logic at sub-5nm nodes."
+    },
+    {
+      "id": "memory",
+      "name": "Memory",
+      "order": 8,
+      "color": "#c07a8a",
+      "shortDescription": "HBM stacks and DRAM that feed AI accelerators."
+    },
+    {
+      "id": "packaging",
+      "name": "Packaging",
+      "order": 9,
+      "color": "#7aa88c",
+      "shortDescription": "CoWoS, substrates, ABF — where chiplets become products."
+    },
+    {
+      "id": "networking",
+      "name": "Networking",
+      "order": 10,
+      "color": "#6f90b8",
+      "shortDescription": "Switches, NICs, and optical interconnects wiring AI clusters together."
+    },
+    {
+      "id": "assembly",
+      "name": "Assembly",
+      "order": 11,
+      "color": "#b07a5f",
+      "shortDescription": "Server and rack integration by Foxconn, Quanta, Wistron, and peers."
+    },
+    {
+      "id": "datacenter",
+      "name": "Datacenter",
+      "order": 12,
+      "color": "#7e8894",
+      "shortDescription": "Where the GPUs actually run — Ashburn, Dublin, Singapore."
+    },
+    {
+      "id": "power",
+      "name": "Power",
+      "order": 13,
+      "color": "#c36e5a",
+      "shortDescription": "Nuclear, gas, and grid capacity behind gigawatt-scale AI campuses."
+    },
+    {
+      "id": "connectivity",
+      "name": "Connectivity",
+      "order": 14,
+      "color": "#4a8a8f",
+      "shortDescription": "Submarine cables and fiber carrying traffic between regions."
+    }
+  ],
+  "nodes": [
+    {
+      "id": "applied-materials-santa-clara",
+      "name": "Applied Materials HQ",
+      "stage": "equipment",
+      "coordinates": [
+        -121.9552,
+        37.3541
+      ],
+      "company": "Applied Materials",
+      "country": "United States",
+      "region": "Santa Clara, California",
+      "tagline": "The largest semiconductor equipment maker by revenue.",
+      "summary": "Applied's Santa Clara campus is the design and engineering hub for the deposition, etch, CMP, and metrology tools that do most of the atom-level work between lithography steps.\n",
+      "body": "## The long story\n\nAlmost every process step between \"wafer arrives\" and \"wafer leaves\" touches\nan Applied tool: physical vapor deposition, chemical vapor deposition, etch,\nion implant, chemical-mechanical polish. The Santa Clara campus designs and\nintegrates those tools before they ship to fabs worldwide.\n\n## If this disappears\n\nLam Research and Tokyo Electron cover overlapping territory, but no single\nrival matches Applied's breadth. Fabs mid-ramp would stall on specific process\nsteps where Applied has few direct substitutes.",
+      "keyFacts": [
+        {
+          "label": "2024 revenue",
+          "value": "~$27B"
+        },
+        {
+          "label": "Global wafer-fab equipment share",
+          "value": "~20%"
+        }
+      ],
+      "chokepointRisk": 4,
+      "chokepointNarrative": "Where ASML is a monopoly, Applied is part of a three-way oligopoly with Lam Research and Tokyo Electron. A disruption shifts demand onto rivals with their own lead times and capacity ceilings rather than halting the industry outright.\n",
+      "status": "operating",
+      "establishedYear": 1967,
+      "heroImage": "/images/nodes/applied-materials-santa-clara.jpg",
+      "sources": [
+        {
+          "label": "Applied Materials 2024 10-K",
+          "url": "https://example.com/amat-10k-2024"
+        }
+      ]
+    },
+    {
+      "id": "arm-cambridge",
+      "name": "Arm Cambridge",
+      "stage": "eda",
+      "coordinates": [
+        0.0924,
+        52.1937
+      ],
+      "company": "Arm Holdings",
+      "country": "United Kingdom",
+      "region": "Cambridgeshire",
+      "tagline": "The CPU architecture inside nearly every phone, and increasingly every AI server.",
+      "summary": "Arm's Cambridge headquarters designs and licenses the CPU cores and interconnect IP that appear in roughly 280 billion chips shipped to date — including Nvidia's Grace and most hyperscaler custom silicon.\n",
+      "body": "## The long story\n\nEvery modern phone SoC, most laptop CPUs outside x86, and a fast-growing share\nof server silicon licenses Arm cores — Cortex and Neoverse lines — designed\nand maintained by the teams in Cambridge and Austin.\n\n## If this disappears\n\nExisting licenses survive, but the instruction-set roadmap freezes. Hyperscalers\nbuilding custom Arm server chips lose the tight partnership that has let them\ntape out on 18-month cadences.",
+      "keyFacts": [
+        {
+          "label": "Cumulative Arm-based chips shipped",
+          "value": "~280 billion"
+        },
+        {
+          "label": "Share of smartphone application processors",
+          "value": "> 99%"
+        }
+      ],
+      "chokepointRisk": 3,
+      "chokepointNarrative": "Arm is an IP vendor, not a factory — cores licensed years ago keep shipping even if Cambridge halts. But forward roadmap work, tool support, and new license negotiations stall, and the main alternative (RISC-V) trails by roughly a process generation in mature server IP.\n",
+      "status": "operating",
+      "establishedYear": 1990,
+      "heroImage": "/images/nodes/arm-cambridge.jpg",
+      "sources": [
+        {
+          "label": "Arm 2024 Annual Report",
+          "url": "https://example.com/arm-annual-2024"
+        }
+      ]
+    },
+    {
+      "id": "ashburn-dc-alley",
+      "name": "Ashburn Data Center Alley",
+      "stage": "datacenter",
+      "coordinates": [
+        -77.4874,
+        39.0437
+      ],
+      "company": "Multiple (AWS, Equinix, Digital Realty, QTS)",
+      "country": "United States",
+      "region": "Loudoun County, Virginia",
+      "tagline": "Roughly 70% of the world's internet traffic passes through one county.",
+      "summary": "Northern Virginia's \"Data Center Alley\" in Loudoun County hosts the densest concentration of hyperscaler and colocation capacity on the planet — the backbone of AWS's US-East-1 region and a hub for GPU fleets.\n",
+      "body": "## The long story\n\nMAE-East, one of the original internet exchange points, anchored the\nAshburn corridor in the 1990s. Three decades later, the combination of\nfiber, cheap land, and power-station access turned Loudoun County into the\ndefault location for US-East cloud regions.\n\n## If this disappears\n\nUS-East failover plans assume regional outages at Availability Zone scale,\nnot full-metro. A full Ashburn outage would push real load onto AWS US-West\nand peer regions, with commensurate queueing and latency cost.",
+      "keyFacts": [
+        {
+          "label": "Share of global internet traffic routed through",
+          "value": "~70%"
+        },
+        {
+          "label": "Installed datacenter capacity (Loudoun County)",
+          "value": "> 4 GW"
+        }
+      ],
+      "chokepointRisk": 4,
+      "chokepointNarrative": "The concentration reflects decades of network, fiber, and power build-out that cannot be replicated elsewhere in under a decade. A regional grid or fiber outage disproportionately affects global AI training and inference capacity.\n",
+      "status": "operating",
+      "establishedYear": 1998,
+      "heroImage": "/images/nodes/ashburn-dc-alley.jpg",
+      "sources": [
+        {
+          "label": "Loudoun County Economic Development reports",
+          "url": "https://example.com/loudoun-dc-2024"
+        }
+      ]
+    },
+    {
+      "id": "asml-veldhoven",
+      "name": "ASML Veldhoven",
+      "stage": "equipment",
+      "coordinates": [
+        5.4697,
+        51.4416
+      ],
+      "company": "ASML",
+      "country": "Netherlands",
+      "region": "North Brabant",
+      "tagline": "The only place on Earth that can build an EUV scanner.",
+      "summary": "ASML's headquarters and final-assembly campus for extreme ultraviolet lithography systems — the $200M+ machines every leading-edge fab depends on.\n",
+      "body": "## The long story\n\nA single EUV scanner contains roughly 100,000 parts from 800 suppliers. Final\nintegration happens in Veldhoven's clean rooms, where engineers coax 13.5nm\nlight out of tin-droplet plasma to expose each wafer.\n\n## If this disappears\n\nThe industry has no plan B. Canon's nanoimprint effort and prior-generation\nDUV tools cover older nodes, but nothing on the roadmap substitutes for EUV\nin the next decade.",
+      "keyFacts": [
+        {
+          "label": "Share of EUV lithography",
+          "value": "100%"
+        },
+        {
+          "label": "EUV systems shipped per year",
+          "value": "~50"
+        }
+      ],
+      "chokepointRisk": 5,
+      "chokepointNarrative": "EUV scanners are built nowhere else. Each one takes roughly 18 months to assemble and ships in pieces aboard chartered 747s. Any interruption to Veldhoven ripples across every leading-edge fab in the world within quarters.\n",
+      "status": "operating",
+      "establishedYear": 1984,
+      "heroImage": "/images/nodes/asml-veldhoven.jpg",
+      "sources": [
+        {
+          "label": "ASML 2024 Annual Report",
+          "url": "https://example.com/asml-annual-2024"
+        }
+      ]
+    },
+    {
+      "id": "foxconn-zhengzhou",
+      "name": "Foxconn Zhengzhou",
+      "stage": "assembly",
+      "coordinates": [
+        113.7175,
+        34.5237
+      ],
+      "company": "Foxconn",
+      "country": "China",
+      "region": "Henan",
+      "tagline": "The world's largest contract-assembly campus, at the scale of a small city.",
+      "summary": "Foxconn's Zhengzhou facility is best known as \"iPhone City\" but also integrates AI servers, GPU systems, and other hyperscaler hardware at enormous scale.\n",
+      "body": "## The long story\n\nThe Zhengzhou campus runs surface-mount lines, board assembly, final\nintegration, and packaging under one enormous roof. Completed server racks\nship by rail and air to hyperscaler datacenters across four continents.\n\n## If this disappears\n\nFoxconn's diversified footprint and peers like Quanta and Wistron pick up\nshare, but total industry throughput drops materially during the transition,\nexactly when AI hardware demand is at its peak.",
+      "keyFacts": [
+        {
+          "label": "Peak workforce",
+          "value": "~300,000"
+        },
+        {
+          "label": "Role in AI supply chain",
+          "value": "Rack assembly for Nvidia GB200 / HGX systems"
+        }
+      ],
+      "chokepointRisk": 3,
+      "chokepointNarrative": "Foxconn runs parallel sites in Taiwan, Vietnam, India, and Mexico. Zhengzhou's volume is unmatched, but the manufacturing playbook ports to other campuses given six to twelve months of ramp.\n",
+      "status": "operating",
+      "establishedYear": 2010,
+      "heroImage": "/images/nodes/foxconn-zhengzhou.jpg",
+      "sources": [
+        {
+          "label": "Foxconn / Hon Hai 2024 Annual Report",
+          "url": "https://example.com/foxconn-annual-2024"
+        }
+      ]
+    },
+    {
+      "id": "nvidia-santa-clara",
+      "name": "Nvidia HQ",
+      "stage": "design",
+      "coordinates": [
+        -121.9553,
+        37.3683
+      ],
+      "company": "Nvidia",
+      "country": "United States",
+      "region": "Santa Clara, California",
+      "tagline": "The design house that specified nearly every AI training accelerator in production.",
+      "summary": "Nvidia's Endeavor and Voyager campuses host the GPU architects, CUDA software teams, and systems engineers who define the Hopper, Blackwell, and follow-on product lines that dominate AI compute.\n",
+      "body": "## The long story\n\nNvidia's design flow — GPU architecture, NVLink fabric, CUDA libraries,\nsystems validation — all originates in Santa Clara. Silicon tape-outs ship\nto TSMC; packaging, HBM stacking, and board integration flow through a\nnetwork of partners that Nvidia coordinates from its headquarters.\n\n## If this disappears\n\nAMD's MI-series and a handful of custom accelerators (TPU, Trainium, MTIA)\nexist, but none have Nvidia's combined silicon-plus-software moat. An AI\ntraining build-out without Nvidia would slip 18-24 months.",
+      "keyFacts": [
+        {
+          "label": "Share of AI training accelerators",
+          "value": "> 90%"
+        },
+        {
+          "label": "2024 data-center revenue",
+          "value": "~$115B"
+        }
+      ],
+      "chokepointRisk": 5,
+      "chokepointNarrative": "Nvidia's share of AI training silicon sits above 90%. A disruption to Santa Clara would not stop already-taped-out parts from shipping, but forward roadmap, software tuning, and supply allocation all center on this single campus.\n",
+      "status": "operating",
+      "establishedYear": 1993,
+      "heroImage": "/images/nodes/nvidia-santa-clara.jpg",
+      "sources": [
+        {
+          "label": "Nvidia FY2024 10-K",
+          "url": "https://example.com/nvidia-10k-2024"
+        }
+      ]
+    },
+    {
+      "id": "shin-etsu-shirakawa",
+      "name": "Shin-Etsu Handotai Shirakawa",
+      "stage": "wafers",
+      "coordinates": [
+        140.211,
+        37.126
+      ],
+      "company": "Shin-Etsu Handotai",
+      "country": "Japan",
+      "region": "Fukushima",
+      "tagline": "Half of the world's 300mm silicon wafers start as ingots pulled here.",
+      "summary": "Shin-Etsu's Shirakawa site is the company's largest 300mm wafer operation, growing monocrystalline silicon ingots, slicing them to wafers, and polishing them for the logic, memory, and image-sensor industries.\n",
+      "body": "## The long story\n\nA 300mm wafer begins as a single silicon seed crystal dipped into molten\npolysilicon and slowly withdrawn, pulling a metre-long cylindrical boule of\nperfect crystal. The boule is sliced, lapped, etched, and mirror-polished\nbefore shipping to fabs.\n\n## If this disappears\n\nCapacity outside Shin-Etsu and SUMCO is thin — a few smaller Taiwanese,\nKorean, and Chinese suppliers produce at far lower volumes and tighter\nqualification scopes, few of them approved for the most demanding nodes.",
+      "keyFacts": [
+        {
+          "label": "Global 300mm wafer share (Shin-Etsu)",
+          "value": "~30%"
+        },
+        {
+          "label": "Monthly 300mm wafer output",
+          "value": "Hundreds of thousands of wafers"
+        }
+      ],
+      "chokepointRisk": 5,
+      "chokepointNarrative": "Shin-Etsu and SUMCO together supply the majority of the world's 300mm wafers. A prolonged outage at Shirakawa forces every leading-edge fab onto rationed supply within a quarter.\n",
+      "status": "operating",
+      "establishedYear": 1984,
+      "heroImage": "/images/nodes/shin-etsu-shirakawa.jpg",
+      "sources": [
+        {
+          "label": "Shin-Etsu Chemical 2024 Annual Report",
+          "url": "https://example.com/shinetsu-annual-2024"
+        }
+      ]
+    },
+    {
+      "id": "sk-hynix-icheon",
+      "name": "SK hynix M16",
+      "stage": "memory",
+      "coordinates": [
+        127.4167,
+        37.2792
+      ],
+      "company": "SK hynix",
+      "country": "South Korea",
+      "region": "Icheon, Gyeonggi",
+      "tagline": "The lead producer of HBM — the memory every AI accelerator waits on.",
+      "summary": "SK hynix's Icheon complex, anchored by the M16 fab, produces DRAM and the high-bandwidth memory (HBM) stacks that sit next to every current-generation AI accelerator.\n",
+      "body": "## The long story\n\nHBM stacks up to twelve DRAM dies vertically with through-silicon vias,\nthen bonds the whole assembly to a logic base die before shipment to\npackaging sites like TSMC for CoWoS integration with GPU logic dies.\n\n## If this disappears\n\nSamsung and Micron supply smaller volumes of HBM, but requalification for a\nNvidia or AMD platform takes quarters, and neither rival has matched\nSK hynix's yield on the most advanced stacks.",
+      "keyFacts": [
+        {
+          "label": "Share of HBM3E supply",
+          "value": "~50%"
+        },
+        {
+          "label": "Primary customer",
+          "value": "Nvidia (sole HBM3E qualified supplier through most of 2024)"
+        }
+      ],
+      "chokepointRisk": 5,
+      "chokepointNarrative": "SK hynix has held a clear lead in HBM3 and HBM3E with Nvidia's platforms designed around its supply. Samsung and Micron are closing in, but any prolonged Icheon disruption would constrain AI training roadmaps globally.\n",
+      "status": "operating",
+      "establishedYear": 2021,
+      "heroImage": "/images/nodes/sk-hynix-icheon.jpg",
+      "sources": [
+        {
+          "label": "SK hynix 2024 Annual Report",
+          "url": "https://example.com/skhynix-annual-2024"
+        }
+      ]
+    },
+    {
+      "id": "spruce-pine",
+      "name": "Spruce Pine quartz mine",
+      "stage": "raw-materials",
+      "coordinates": [
+        -82.0707,
+        35.9135
+      ],
+      "company": "Sibelco",
+      "country": "United States",
+      "region": "North Carolina",
+      "tagline": "A single Appalachian town supplies the purest quartz on Earth.",
+      "summary": "The Spruce Pine pegmatite district yields high-purity quartz used to make the crucibles that hold molten silicon during ingot pulls. No comparable deposit is mined at scale anywhere else.\n",
+      "body": "## The long story\n\nThe pegmatite ore around Spruce Pine formed 380 million years ago under\nconditions that left its quartz almost unbelievably pure. Sibelco and\ncompetitors mill and chemically refine it into the crucible-grade powder that\nnearly every silicon ingot in the world is pulled from.\n\n## If this disappears\n\nLower-grade quartz exists elsewhere, but using it forces ingot manufacturers\nto shorten pulls, lose yield, and replace crucibles more often — quietly\nraising the cost of every wafer.",
+      "keyFacts": [
+        {
+          "label": "Share of ultra-high-purity quartz",
+          "value": "Effectively 100%"
+        },
+        {
+          "label": "Primary use",
+          "value": "Quartz crucibles for ingot pulls"
+        }
+      ],
+      "chokepointRisk": 4,
+      "chokepointNarrative": "The quartz crucibles made from Spruce Pine ore are single-use consumables, and every monocrystalline silicon ingot touches one. A prolonged shutdown — as happened briefly after Hurricane Helene in 2024 — threatens wafer supply across the entire industry within months.\n",
+      "status": "operating",
+      "establishedYear": 1987,
+      "heroImage": "/images/nodes/spruce-pine.jpg",
+      "sources": [
+        {
+          "label": "USGS Minerals Yearbook — Silica",
+          "url": "https://example.com/usgs-silica"
+        }
+      ]
+    },
+    {
+      "id": "three-mile-island",
+      "name": "Three Mile Island Unit 1",
+      "stage": "power",
+      "coordinates": [
+        -76.7245,
+        40.1531
+      ],
+      "company": "Constellation Energy",
+      "country": "United States",
+      "region": "Middletown, Pennsylvania",
+      "tagline": "A closed nuclear reactor Microsoft is paying to restart for AI power.",
+      "summary": "TMI Unit 1 operated safely for decades — it's the neighboring Unit 2 that partially melted down in 1979. Unit 1 shut for economic reasons in 2019 and is now slated to restart as a dedicated power source for Microsoft AI datacenters.\n",
+      "body": "## The long story\n\nConstellation is relicensing Unit 1 with the NRC and rebuilding the\nturbine, generator, and cooling systems. Microsoft has signed a long-term\npower-purchase agreement to use the plant's output for datacenter\noperations in the Mid-Atlantic region.\n\n## If this disappears\n\nThe US has other reactivation candidates — Palisades in Michigan, potentially\nDuane Arnold in Iowa — but no combination of those matches TMI's speed,\nscale, or location near existing datacenter capacity.",
+      "keyFacts": [
+        {
+          "label": "Restart capacity",
+          "value": "835 MW"
+        },
+        {
+          "label": "Offtaker",
+          "value": "Microsoft (20-year PPA)"
+        }
+      ],
+      "chokepointRisk": 2,
+      "chokepointNarrative": "TMI is one of several nuclear reactivation and new-SMR deals. Any single project slipping is absorbable; the systemic risk sits in whether the wave of gigawatt-class AI sites can actually secure firm power on anything like its announced schedule.\n",
+      "status": "planned",
+      "establishedYear": 1974,
+      "commissioningYear": 2028,
+      "heroImage": "/images/nodes/three-mile-island.jpg",
+      "sources": [
+        {
+          "label": "Constellation Energy press releases",
+          "url": "https://example.com/constellation-tmi-2024"
+        }
+      ]
+    },
+    {
+      "id": "tsmc-arizona",
+      "name": "TSMC Fab 21",
+      "stage": "fabrication",
+      "coordinates": [
+        -112.128,
+        33.749
+      ],
+      "company": "TSMC",
+      "country": "United States",
+      "region": "Phoenix, Arizona",
+      "tagline": "The first leading-edge US fab capacity in more than a decade.",
+      "summary": "TSMC's Phoenix campus builds out multiple phases of N4 and eventually N3/N2 logic — the US-based backup to Hsinchu's concentration risk, and the cornerstone of the CHIPS Act investment case.\n",
+      "body": "## The long story\n\nPhase 1 was delayed by workforce and construction shortfalls before moving\ninto initial N4 production. Phase 2 and Phase 3 are planned to bring N3 and\neventually N2 online — contingent on continued CHIPS Act funding and\nworkforce availability.\n\n## If this disappears\n\nThe industry loses redundancy it is only just beginning to build. Hsinchu\ncarries the load for leading-edge logic for several more years regardless.",
+      "keyFacts": [
+        {
+          "label": "Planned capacity (Phase 1 + 2)",
+          "value": "~50,000 wafer-starts / month"
+        },
+        {
+          "label": "Target process nodes",
+          "value": "N4 initially, N3/N2 in later phases"
+        }
+      ],
+      "chokepointRisk": 2,
+      "chokepointNarrative": "As of 2025 the site is still ramping, with initial phases commissioning but nowhere near Hsinchu volumes. Its strategic value is future-tense: a second source for leading-edge logic inside the US industrial base.\n",
+      "status": "under-construction",
+      "establishedYear": 2020,
+      "commissioningYear": 2025,
+      "heroImage": "/images/nodes/tsmc-arizona.jpg",
+      "sources": [
+        {
+          "label": "TSMC 2024 Annual Report",
+          "url": "https://example.com/tsmc-annual-2024"
+        }
+      ]
+    },
+    {
+      "id": "tsmc-hsinchu",
+      "name": "TSMC Fab 18",
+      "stage": "fabrication",
+      "coordinates": [
+        120.9897,
+        24.7736
+      ],
+      "company": "TSMC",
+      "country": "Taiwan",
+      "region": "Hsinchu Science Park",
+      "tagline": "Where every leading-edge AI chip is actually made.",
+      "summary": "TSMC's flagship leading-edge facility, running N5, N4, and N3 process nodes. Every Nvidia H100 and H200 passes through it.\n",
+      "body": "## The long story\n\nFab 18 is where abstract chip designs become physical silicon. Multiple phases\nbuilt out between 2018 and 2023 now run N5, N4, and N3 processes side by side,\nfed by EUV scanners parked in adjacent clean rooms.\n\n## If this disappears\n\nNo other facility can absorb the volume. Samsung's leading-edge yields still\ntrail, and Intel Foundry's 18A ramp is years from matching Fab 18's throughput.",
+      "keyFacts": [
+        {
+          "label": "Share of ≤5nm capacity",
+          "value": "~92% globally"
+        },
+        {
+          "label": "Monthly wafer starts (Fab 18)",
+          "value": "~150,000"
+        }
+      ],
+      "chokepointRisk": 5,
+      "chokepointNarrative": "A disruption to Fab 18 halts production of nearly every leading-edge AI accelerator in the world. No substitute capacity comes online before 2026.\n",
+      "status": "operating",
+      "establishedYear": 2018,
+      "heroImage": "/images/nodes/tsmc-hsinchu.jpg",
+      "sources": [
+        {
+          "label": "TSMC 2024 Annual Report",
+          "url": "https://example.com/tsmc-annual-2024"
+        }
+      ]
+    },
+    {
+      "id": "wacker-burghausen",
+      "name": "Wacker Burghausen",
+      "stage": "chemicals",
+      "coordinates": [
+        12.8305,
+        48.1688
+      ],
+      "company": "Wacker Chemie",
+      "country": "Germany",
+      "region": "Bavaria",
+      "tagline": "One of the few Western polysilicon producers at leading-edge purity.",
+      "summary": "Wacker's Burghausen complex refines metallurgical silicon into electronic-grade polysilicon — the raw feedstock from which every silicon ingot is pulled.\n",
+      "body": "## The long story\n\nWacker's siemens-process reactors distill trichlorosilane gas onto heated rods\nof ultra-pure silicon, slowly growing polysilicon bars that later get crushed\ninto chunks and shipped to wafer makers in Japan, Taiwan, and Korea.\n\n## If this disappears\n\nFab-grade polysilicon has few substitutes. Ingot pullers could lean on Hemlock\nin Michigan and a few smaller producers, but lead times on new capacity run to\nyears.",
+      "keyFacts": [
+        {
+          "label": "Electronic-grade polysilicon capacity",
+          "value": "~20,000 tonnes / year"
+        },
+        {
+          "label": "Share of Western semiconductor polysilicon",
+          "value": "~40%"
+        }
+      ],
+      "chokepointRisk": 3,
+      "chokepointNarrative": "Chinese producers dominate solar-grade polysilicon, but the stricter electronic-grade market is supplied by a handful of Western plants. Burghausen is the most important of them; its loss would force fabs to compete for a much shallower global pool.\n",
+      "status": "operating",
+      "establishedYear": 1921,
+      "heroImage": "/images/nodes/wacker-burghausen.jpg",
+      "sources": [
+        {
+          "label": "Wacker Chemie 2024 Annual Report",
+          "url": "https://example.com/wacker-annual-2024"
+        }
+      ]
+    }
+  ],
+  "flows": [
+    {
+      "id": "spruce-pine-to-wacker",
+      "fromId": "spruce-pine",
+      "toId": "wacker-burghausen",
+      "material": "High-purity silica feedstock",
+      "weight": 1
+    },
+    {
+      "id": "spruce-pine-to-asml",
+      "fromId": "spruce-pine",
+      "toId": "asml-veldhoven",
+      "material": "High-purity quartz for optics and crucibles",
+      "notes": "Reaches ASML via multiple intermediaries; shown direct here.",
+      "weight": 1
+    },
+    {
+      "id": "wacker-to-shin-etsu",
+      "fromId": "wacker-burghausen",
+      "toId": "shin-etsu-shirakawa",
+      "material": "Electronic-grade polysilicon",
+      "weight": 2
+    },
+    {
+      "id": "shin-etsu-to-tsmc-hsinchu",
+      "fromId": "shin-etsu-shirakawa",
+      "toId": "tsmc-hsinchu",
+      "material": "300mm polished silicon wafers",
+      "weight": 3
+    },
+    {
+      "id": "shin-etsu-to-tsmc-arizona",
+      "fromId": "shin-etsu-shirakawa",
+      "toId": "tsmc-arizona",
+      "material": "300mm polished silicon wafers",
+      "weight": 2
+    },
+    {
+      "id": "asml-to-tsmc-hsinchu",
+      "fromId": "asml-veldhoven",
+      "toId": "tsmc-hsinchu",
+      "material": "EUV lithography scanners",
+      "notes": "Each machine ships in pieces aboard chartered 747s.",
+      "weight": 3
+    },
+    {
+      "id": "asml-to-tsmc-arizona",
+      "fromId": "asml-veldhoven",
+      "toId": "tsmc-arizona",
+      "material": "EUV and DUV lithography scanners",
+      "weight": 2
+    },
+    {
+      "id": "applied-to-tsmc-hsinchu",
+      "fromId": "applied-materials-santa-clara",
+      "toId": "tsmc-hsinchu",
+      "material": "Deposition, etch, and metrology tools",
+      "weight": 2
+    },
+    {
+      "id": "spruce-pine-to-tsmc",
+      "fromId": "spruce-pine",
+      "toId": "tsmc-hsinchu",
+      "material": "Quartz crucibles used to pull silicon ingots",
+      "weight": 1
+    },
+    {
+      "id": "arm-to-nvidia",
+      "fromId": "arm-cambridge",
+      "toId": "nvidia-santa-clara",
+      "material": "Arm CPU IP (Grace, Neoverse)",
+      "weight": 2
+    },
+    {
+      "id": "nvidia-to-tsmc-hsinchu",
+      "fromId": "nvidia-santa-clara",
+      "toId": "tsmc-hsinchu",
+      "material": "GPU tape-outs (Hopper, Blackwell, ...)",
+      "weight": 3
+    },
+    {
+      "id": "sk-hynix-to-tsmc",
+      "fromId": "sk-hynix-icheon",
+      "toId": "tsmc-hsinchu",
+      "material": "HBM stacks for CoWoS integration with GPU dies",
+      "weight": 3
+    },
+    {
+      "id": "tsmc-to-foxconn",
+      "fromId": "tsmc-hsinchu",
+      "toId": "foxconn-zhengzhou",
+      "material": "Packaged GPU modules for server integration",
+      "weight": 2
+    },
+    {
+      "id": "foxconn-to-ashburn",
+      "fromId": "foxconn-zhengzhou",
+      "toId": "ashburn-dc-alley",
+      "material": "Assembled GPU server racks",
+      "weight": 2
+    },
+    {
+      "id": "tmi-to-ashburn",
+      "fromId": "three-mile-island",
+      "toId": "ashburn-dc-alley",
+      "material": "Baseload nuclear power (planned)",
+      "notes": "TMI Unit 1 restart targets 2028 commissioning for Microsoft.",
+      "weight": 1
+    }
+  ]
+}

@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+/AIstack/
 
 # debug
 npm-debug.log*
