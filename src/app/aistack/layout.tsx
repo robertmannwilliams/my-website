@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import type { CSSProperties } from "react";
 import { Fraunces, Inter, Source_Serif_4 } from "next/font/google";
 import "@/features/aistack/styles.css";
+import { atlasStageCssVars } from "@/features/aistack/content/stages";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -53,6 +55,7 @@ export default function AIStackLayout({
   return (
     <div
       className={`aistack-theme ${fraunces.variable} ${sourceSerif.variable} ${inter.variable} antialiased`}
+      style={atlasStageCssVars as CSSProperties}
     >
       {children}
     </div>

@@ -2,6 +2,10 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Pause, Play, X } from "lucide-react";
+import {
+  getStageColorVar,
+  getStageTint,
+} from "@/features/aistack/content/stages";
 import type { Node, Stage } from "@/features/aistack/types/stack";
 
 interface Props {
@@ -55,14 +59,14 @@ export function TourNarration({
                 <span
                   className="font-ui inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.16em]"
                   style={{
-                    backgroundColor: `${stage.color}22`,
-                    borderColor: `${stage.color}55`,
-                    color: stage.color,
+                    backgroundColor: getStageTint(stage.id, 18),
+                    borderColor: getStageTint(stage.id, 42),
+                    color: getStageColorVar(stage.id),
                   }}
                 >
                   <span
                     className="h-1.5 w-1.5 rounded-full"
-                    style={{ background: stage.color }}
+                    style={{ background: getStageColorVar(stage.id) }}
                   />
                   {stage.name}
                 </span>

@@ -17,9 +17,9 @@ export default async function OpenGraphImage() {
           height: "100%",
           padding: "80px",
           background:
-            "radial-gradient(1200px 600px at 30% 40%, #1a1a1a 0%, #0a0a0a 60%)",
-          color: "#f5f5f5",
-          fontFamily: "system-ui, sans-serif",
+            "radial-gradient(1200px 640px at 24% 32%, #f5efe1 0%, #ece1ca 62%, #e7dbc1 100%)",
+          color: "#3a3026",
+          fontFamily: "Georgia, 'Times New Roman', serif",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -28,8 +28,8 @@ export default async function OpenGraphImage() {
               width: 14,
               height: 14,
               borderRadius: 9999,
-              background: "#d99b5a",
-              boxShadow: "0 0 0 8px rgba(217, 155, 90, 0.12)",
+              background: "#b8762e",
+              boxShadow: "0 0 0 8px rgba(184, 118, 46, 0.12)",
             }}
           />
           <div
@@ -37,7 +37,9 @@ export default async function OpenGraphImage() {
               fontSize: 18,
               letterSpacing: 2,
               textTransform: "uppercase",
-              color: "rgba(255,255,255,0.6)",
+              color: "rgba(84, 68, 52, 0.72)",
+              fontFamily:
+                "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
             }}
           >
             Physical AI Stack Atlas
@@ -51,7 +53,7 @@ export default async function OpenGraphImage() {
               fontWeight: 500,
               lineHeight: 1.05,
               maxWidth: 960,
-              color: "#fafafa",
+              color: "#33291f",
             }}
           >
             The physical supply chain of AI, on one map.
@@ -59,7 +61,7 @@ export default async function OpenGraphImage() {
           <div
             style={{
               fontSize: 28,
-              color: "rgba(255,255,255,0.55)",
+              color: "rgba(68, 56, 42, 0.76)",
               maxWidth: 960,
               lineHeight: 1.3,
             }}

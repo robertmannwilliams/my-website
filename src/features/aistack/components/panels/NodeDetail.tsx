@@ -3,6 +3,10 @@
 import { AlertTriangle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useState } from "react";
+import {
+  getStageColorVar,
+  getStageTint,
+} from "@/features/aistack/content/stages";
 import type { Node, Stage } from "@/features/aistack/types/stack";
 
 interface Props {
@@ -138,7 +142,7 @@ function Hero({ node, stage }: { node: Node; stage: Stage }) {
   return (
     <div
       className="relative h-44 w-full overflow-hidden"
-      style={{ background: stage.color }}
+      style={{ background: getStageColorVar(stage.id) }}
     >
       {showImage && node.heroImage && (
         /* eslint-disable-next-line @next/next/no-img-element */
@@ -149,13 +153,15 @@ function Hero({ node, stage }: { node: Node; stage: Stage }) {
           onError={() => setBroken(true)}
         />
       )}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(10,10,10,0) 40%, rgba(10,10,10,0.75) 100%)",
-        }}
-      />
+      {showImage && (
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(10,10,10,0) 40%, rgba(10,10,10,0.75) 100%)",
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -165,14 +171,14 @@ function StageBadge({ stage }: { stage: Stage }) {
     <span
       className="font-ui inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium uppercase tracking-[0.16em]"
       style={{
-        backgroundColor: `${stage.color}22`,
-        borderColor: `${stage.color}55`,
-        color: stage.color,
+        backgroundColor: getStageTint(stage.id, 18),
+        borderColor: getStageTint(stage.id, 42),
+        color: getStageColorVar(stage.id),
       }}
     >
       <span
         className="h-1.5 w-1.5 rounded-full"
-        style={{ background: stage.color }}
+        style={{ background: getStageColorVar(stage.id) }}
       />
       {stage.name}
     </span>

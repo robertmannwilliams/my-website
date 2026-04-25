@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
+import { getStageColorVar } from "@/features/aistack/content/stages";
 import type { Stage, StageId } from "@/features/aistack/types/stack";
 
 interface Props {
@@ -120,7 +121,7 @@ function StagePanelContents({
                   <span
                     className="inline-block h-3 w-3 flex-shrink-0 rounded-full border border-foreground/20 transition-opacity peer-checked:opacity-100"
                     style={{
-                      background: stage.color,
+                      background: getStageColorVar(stage.id),
                       opacity: isOn ? 1 : 0.35,
                     }}
                   />

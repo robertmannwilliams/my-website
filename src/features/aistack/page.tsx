@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
+import { atlasStages, getStageColorVar } from "@/features/aistack/content/stages";
 import stack from "@/features/aistack/data/stack.json";
 import type { Node, StackAtlas, StageId } from "@/features/aistack/types/stack";
 import { NodeDetail } from "@/features/aistack/components/panels/NodeDetail";
@@ -24,7 +25,7 @@ import { buildFlowFeatures, emptyFlowCollection } from "@/features/aistack/lib/f
 import { mainTour } from "@/features/aistack/lib/tour-sequences";
 import { useIsMobile } from "@/features/aistack/lib/useIsMobile";
 
-const atlas = stack as StackAtlas;
+const atlas = { ...(stack as StackAtlas), stages: atlasStages } satisfies StackAtlas;
 const stageById = new Map(atlas.stages.map((s) => [s.id, s]));
 const nodeById = new Map(atlas.nodes.map((n) => [n.id, n]));
 const allStageIds = atlas.stages.map((s) => s.id);
@@ -222,9 +223,6 @@ export default function Home() {
 
     const markers = markersRef.current;
     for (const node of atlas.nodes) {
-      const stage = stageById.get(node.stage);
-      const color = stage?.color ?? "#888";
-
       // Mapbox owns the outer element's `opacity` (it uses it for globe
       // occlusion fade). The inner button is where we apply chokepoint
       // dimming + pulse styling so the two don't fight.
@@ -237,7 +235,7 @@ export default function Home() {
       inner.style.height = "14px";
       inner.style.padding = "0";
       inner.style.borderRadius = "9999px";
-      inner.style.background = color;
+      inner.style.background = getStageColorVar(node.stage);
       inner.style.border = "1.5px solid rgba(68, 54, 37, 0.6)";
       inner.style.boxShadow =
         "0 0 0 1px rgba(246, 240, 225, 0.85), 0 4px 12px rgba(93, 75, 51, 0.12)";
