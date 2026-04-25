@@ -43,7 +43,7 @@ export function NodeDetail({
     <aside
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
-      className={`fixed z-30 flex flex-col overflow-y-auto border-white/10 bg-neutral-950/95 text-neutral-100 shadow-2xl backdrop-blur ${positionClasses}`}
+      className={`fixed z-30 flex flex-col overflow-y-auto border-border/80 bg-card/95 text-card-foreground shadow-[0_22px_60px_rgba(90,72,48,0.16)] backdrop-blur ${positionClasses}`}
       aria-label={`${node.name} detail`}
     >
       <CloseButton onClose={onClose} />
@@ -56,11 +56,11 @@ export function NodeDetail({
           />
         )}
         <StageBadge stage={stage} />
-        <h1 className="font-serif text-2xl leading-tight text-white">
+        <h1 className="font-display text-[2rem] leading-tight text-foreground">
           {node.name}
         </h1>
-        <p className="italic text-neutral-300">{node.tagline}</p>
-        <p className="text-neutral-200">{node.summary}</p>
+        <p className="font-display text-[1.1rem] italic text-foreground/72">{node.tagline}</p>
+        <p className="font-body text-[1.02rem] leading-7 text-foreground/82">{node.summary}</p>
         {node.keyFacts.length > 0 && <KeyFacts facts={node.keyFacts} />}
         <RiskMeter
           risk={node.chokepointRisk}
@@ -69,7 +69,7 @@ export function NodeDetail({
           }
         />
         {node.body && (
-          <article className="prose prose-sm prose-invert max-w-none prose-headings:font-serif prose-headings:text-white prose-p:text-neutral-300">
+          <article className="font-body prose prose-stone prose-sm max-w-none prose-headings:font-display prose-headings:text-foreground prose-p:text-foreground/78 prose-strong:text-foreground">
             <ReactMarkdown>{node.body}</ReactMarkdown>
           </article>
         )}
@@ -89,15 +89,15 @@ function ChokepointAlert({
   const isMax = risk === 5;
   const palette = isMax
     ? {
-        ring: "border-red-500/40 bg-red-500/10",
-        title: "text-red-200",
-        body: "text-red-100/80",
+        ring: "border-red-700/25 bg-red-500/10",
+        title: "text-red-800",
+        body: "text-red-900/75",
         label: "Critical chokepoint",
       }
     : {
-        ring: "border-amber-500/40 bg-amber-500/10",
-        title: "text-amber-200",
-        body: "text-amber-100/80",
+        ring: "border-amber-700/25 bg-amber-500/10",
+        title: "text-amber-800",
+        body: "text-amber-950/70",
         label: "Chokepoint",
       };
   return (
@@ -124,7 +124,7 @@ function CloseButton({ onClose }: { onClose: () => void }) {
       type="button"
       onClick={onClose}
       aria-label="Close"
-      className="absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-full bg-white/10 text-lg leading-none text-white transition-colors hover:bg-white/20"
+      className="font-ui absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-full bg-muted text-lg leading-none text-foreground transition-colors hover:bg-muted/80"
     >
       ×
     </button>
@@ -163,7 +163,7 @@ function Hero({ node, stage }: { node: Node; stage: Stage }) {
 function StageBadge({ stage }: { stage: Stage }) {
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium uppercase tracking-wide"
+      className="font-ui inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium uppercase tracking-[0.16em]"
       style={{
         backgroundColor: `${stage.color}22`,
         borderColor: `${stage.color}55`,
@@ -181,14 +181,16 @@ function StageBadge({ stage }: { stage: Stage }) {
 
 function KeyFacts({ facts }: { facts: { label: string; value: string }[] }) {
   return (
-    <dl className="divide-y divide-white/5 rounded border border-white/5 bg-white/[0.02]">
+    <dl className="divide-y divide-border/60 rounded border border-border/70 bg-background/50">
       {facts.map((f) => (
         <div
           key={f.label}
           className="flex items-baseline justify-between gap-4 px-3 py-2 text-sm"
         >
-          <dt className="text-neutral-400">{f.label}</dt>
-          <dd className="text-right font-medium text-neutral-100">{f.value}</dd>
+          <dt className="font-ui text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+            {f.label}
+          </dt>
+          <dd className="font-body text-right text-[0.98rem] text-foreground">{f.value}</dd>
         </div>
       ))}
     </dl>
@@ -206,7 +208,7 @@ function RiskMeter({
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-3">
-        <span className="text-xs uppercase tracking-wide text-neutral-400">
+        <span className="font-ui text-xs uppercase tracking-[0.16em] text-muted-foreground">
           Chokepoint risk
         </span>
         <div className="flex gap-1" aria-label={`Risk ${risk} of 5`}>
@@ -215,15 +217,16 @@ function RiskMeter({
               key={i}
               className="h-2 w-5 rounded-sm"
               style={{
-                background: i <= risk ? color : "rgba(255,255,255,0.08)",
+                background:
+                  i <= risk ? color : "color-mix(in srgb, var(--foreground) 10%, transparent)",
               }}
             />
           ))}
         </div>
-        <span className="text-xs text-neutral-400">{risk}/5</span>
+        <span className="font-body text-xs text-muted-foreground">{risk}/5</span>
       </div>
       {narrative && (
-        <p className="text-sm text-neutral-400">{narrative}</p>
+        <p className="font-body text-sm leading-6 text-foreground/68">{narrative}</p>
       )}
     </div>
   );
@@ -232,17 +235,17 @@ function RiskMeter({
 function Sources({ sources }: { sources: { label: string; url: string }[] }) {
   return (
     <div className="space-y-2">
-      <h2 className="text-xs uppercase tracking-wide text-neutral-400">
+      <h2 className="font-ui text-xs uppercase tracking-[0.16em] text-muted-foreground">
         Sources
       </h2>
-      <ul className="space-y-1 text-sm">
+      <ul className="font-body space-y-1 text-sm">
         {sources.map((s) => (
           <li key={s.url}>
             <a
               href={s.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-neutral-200 underline decoration-white/20 underline-offset-2 transition-colors hover:decoration-white/60"
+              className="text-foreground/82 underline decoration-foreground/20 underline-offset-2 transition-colors hover:decoration-foreground/60"
             >
               {s.label}
             </a>

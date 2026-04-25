@@ -10,21 +10,21 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
   return (
-    <main className="h-screen overflow-y-auto bg-neutral-950 text-neutral-100">
+    <main className="h-screen overflow-y-auto bg-background text-foreground">
       <div className="mx-auto max-w-2xl px-6 py-14">
         <Link
           href="/aistack"
-          className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wide text-neutral-400 transition-colors hover:text-neutral-100"
+          className="font-ui inline-flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           Back to the map
         </Link>
 
-        <article className="prose prose-invert mt-8 max-w-none prose-headings:font-serif prose-headings:text-white prose-a:text-neutral-100 prose-p:text-neutral-300 prose-li:text-neutral-300">
-          <h1 className="mb-2 font-serif text-4xl leading-tight">
+        <article className="font-body prose prose-stone mt-8 max-w-none prose-headings:font-display prose-headings:text-foreground prose-a:text-foreground prose-li:text-foreground/82 prose-p:text-foreground/80">
+          <h1 className="font-display mb-2 text-4xl leading-tight">
             About the atlas
           </h1>
-          <p className="!mt-2 text-neutral-400">
+          <p className="font-body !mt-2 text-foreground/62">
             An editorial map of the physical supply chain behind AI.
           </p>
 
@@ -123,7 +123,7 @@ export default function AboutPage() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Geist
+                Fraunces, Source Serif 4, and Inter
               </a>
             </li>
             <li>
@@ -147,7 +147,7 @@ export default function AboutPage() {
           <p className="!mt-12">
             <Link
               href="/aistack"
-              className="no-underline text-neutral-100 hover:text-neutral-300"
+              className="font-ui no-underline text-foreground transition-colors hover:text-foreground/65"
             >
               ← Return to the map
             </Link>

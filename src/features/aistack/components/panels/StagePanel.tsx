@@ -22,7 +22,7 @@ export function StagePanel(props: Props) {
   return (
     <>
       {/* Desktop rail */}
-      <aside className="fixed left-0 top-0 z-10 hidden h-full w-[280px] flex-col border-r border-white/10 bg-neutral-950/85 backdrop-blur md:flex">
+      <aside className="fixed left-0 top-0 z-10 hidden h-full w-[280px] flex-col border-r border-border/80 bg-card/88 text-card-foreground shadow-[12px_0_28px_rgba(90,72,48,0.08)] backdrop-blur md:flex">
         <StagePanelContents {...props} />
       </aside>
 
@@ -31,7 +31,7 @@ export function StagePanel(props: Props) {
         type="button"
         aria-label="Open stage filters"
         onClick={() => setMobileOpen(true)}
-        className="fixed left-3 top-3 z-20 grid h-10 w-10 place-items-center rounded-full bg-neutral-950/85 text-neutral-100 shadow-lg backdrop-blur md:hidden"
+        className="fixed left-3 top-3 z-20 grid h-10 w-10 place-items-center rounded-full border border-border/80 bg-card/92 text-foreground shadow-[0_14px_34px_rgba(90,72,48,0.14)] backdrop-blur md:hidden"
       >
         <Menu className="h-5 w-5" />
       </button>
@@ -47,7 +47,7 @@ export function StagePanel(props: Props) {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
               onClick={closeMobile}
-              className="fixed inset-0 z-20 bg-black/50 md:hidden"
+              className="fixed inset-0 z-20 bg-[rgba(60,46,31,0.2)] md:hidden"
             />
             <motion.aside
               key="drawer"
@@ -55,13 +55,13 @@ export function StagePanel(props: Props) {
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", stiffness: 320, damping: 34 }}
-              className="fixed left-0 top-0 z-30 flex h-full w-[280px] max-w-[85%] flex-col border-r border-white/10 bg-neutral-950/95 backdrop-blur md:hidden"
+              className="fixed left-0 top-0 z-30 flex h-full w-[280px] max-w-[85%] flex-col border-r border-border/80 bg-card/95 text-card-foreground shadow-[12px_0_28px_rgba(90,72,48,0.08)] backdrop-blur md:hidden"
             >
               <button
                 type="button"
                 aria-label="Close stage filters"
                 onClick={closeMobile}
-                className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-white/10 text-neutral-100 hover:bg-white/20"
+                className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-muted text-foreground transition-colors hover:bg-muted/80"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -86,12 +86,12 @@ function StagePanelContents({
 
   return (
     <>
-      <header className="flex items-baseline justify-between gap-2 border-b border-white/5 px-5 pb-3 pt-5">
-        <h2 className="font-serif text-lg text-white">Stages</h2>
+      <header className="flex items-baseline justify-between gap-2 border-b border-border/70 px-5 pb-3 pt-5">
+        <h2 className="font-display text-lg text-foreground">Stages</h2>
         <button
           type="button"
           onClick={onReset}
-          className="text-xs uppercase tracking-wide text-neutral-400 transition-colors hover:text-neutral-100"
+          className="font-ui text-xs uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground"
         >
           Reset
         </button>
@@ -105,8 +105,8 @@ function StagePanelContents({
           return (
             <li key={stage.id}>
               <div
-                className={`group flex items-center gap-2 px-5 py-2 text-sm transition-colors hover:bg-white/5 ${
-                  isOn ? "text-neutral-100" : "text-neutral-500"
+                className={`group flex items-center gap-2 px-5 py-2 text-sm transition-colors hover:bg-muted/70 ${
+                  isOn ? "text-foreground" : "text-foreground/52"
                 }`}
               >
                 <label className="flex flex-1 cursor-pointer items-center gap-3">
@@ -118,14 +118,14 @@ function StagePanelContents({
                     aria-label={`Toggle ${stage.name}`}
                   />
                   <span
-                    className="inline-block h-3 w-3 flex-shrink-0 rounded-full border border-black/40 transition-opacity peer-checked:opacity-100"
+                    className="inline-block h-3 w-3 flex-shrink-0 rounded-full border border-foreground/20 transition-opacity peer-checked:opacity-100"
                     style={{
                       background: stage.color,
                       opacity: isOn ? 1 : 0.35,
                     }}
                   />
-                  <span className="flex-1 truncate">{stage.name}</span>
-                  <span className="font-mono text-xs text-neutral-500">
+                  <span className="font-body flex-1 truncate">{stage.name}</span>
+                  <span className="font-ui text-xs text-muted-foreground">
                     {count}
                   </span>
                 </label>
@@ -133,10 +133,10 @@ function StagePanelContents({
                   type="button"
                   onClick={() => onSolo(stage.id)}
                   aria-pressed={isSolo}
-                  className={`rounded-sm border px-2 py-0.5 text-[10px] uppercase tracking-wide transition-colors ${
+                  className={`font-ui rounded-sm border px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] transition-colors ${
                     isSolo
-                      ? "border-white/30 bg-white/10 text-white"
-                      : "border-white/10 text-neutral-400 hover:border-white/30 hover:text-neutral-100"
+                      ? "border-primary/30 bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
                   }`}
                 >
                   Solo

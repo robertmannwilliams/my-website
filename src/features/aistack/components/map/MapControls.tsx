@@ -22,16 +22,16 @@ export function MapControls({
   chokepointCount,
 }: Props) {
   return (
-    <div className="fixed right-3 top-3 z-10 flex items-center gap-1 rounded-full border border-white/10 bg-neutral-950/85 p-1 text-neutral-100 shadow-lg backdrop-blur">
+    <div className="fixed right-3 top-3 z-10 flex items-center gap-1 rounded-full border border-border/80 bg-card/90 p-1 text-foreground shadow-[0_14px_34px_rgba(90,72,48,0.14)] backdrop-blur">
       <button
         type="button"
         onClick={onToggleFlows}
         aria-pressed={flowsVisible}
         aria-label={flowsVisible ? "Hide flows" : "Show flows"}
-        className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs uppercase tracking-wide transition-colors ${
+        className={`font-ui flex items-center gap-1.5 rounded-full px-3 py-1 text-xs uppercase tracking-[0.16em] transition-colors ${
           flowsVisible
-            ? "bg-white/10 text-white"
-            : "text-neutral-400 hover:bg-white/5 hover:text-neutral-100"
+            ? "bg-primary/12 text-primary"
+            : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
         }`}
       >
         {flowsVisible ? (
@@ -49,10 +49,10 @@ export function MapControls({
         aria-label={
           chokepointMode ? "Exit chokepoint view" : "Enter chokepoint view"
         }
-        className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs uppercase tracking-wide transition-colors ${
+        className={`font-ui flex items-center gap-1.5 rounded-full px-3 py-1 text-xs uppercase tracking-[0.16em] transition-colors ${
           chokepointMode
-            ? "bg-amber-500/15 text-amber-300"
-            : "text-neutral-400 hover:bg-white/5 hover:text-neutral-100"
+            ? "bg-accent/14 text-accent"
+            : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
         }`}
       >
         <AlertTriangle className="h-3.5 w-3.5" />
@@ -60,8 +60,8 @@ export function MapControls({
         <span
           className={`ml-1 rounded-full px-1.5 py-[1px] text-[10px] tabular-nums ${
             chokepointMode
-              ? "bg-amber-500/25 text-amber-100"
-              : "bg-white/5 text-neutral-400"
+              ? "bg-accent/18 text-accent"
+              : "bg-muted text-muted-foreground"
           }`}
           aria-label={`${chokepointCount} critical chokepoints`}
         >
@@ -74,7 +74,7 @@ export function MapControls({
         onClick={onStartTour}
         disabled={tourActive}
         aria-label="Start guided tour"
-        className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs uppercase tracking-wide text-neutral-400 transition-colors hover:bg-white/5 hover:text-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
+        className="font-ui flex items-center gap-1.5 rounded-full px-3 py-1 text-xs uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
       >
         <PlayCircle className="h-3.5 w-3.5" />
         <span className="hidden sm:inline">Start tour</span>

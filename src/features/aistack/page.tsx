@@ -213,7 +213,7 @@ export default function Home() {
 
     const map = new mapboxgl.Map({
       container: containerRef.current,
-      style: "mapbox://styles/mapbox/dark-v11",
+      style: "mapbox://styles/mapbox/light-v11",
       projection: "globe",
       center: INITIAL_VIEW.center,
       zoom: INITIAL_VIEW.zoom,
@@ -238,8 +238,9 @@ export default function Home() {
       inner.style.padding = "0";
       inner.style.borderRadius = "9999px";
       inner.style.background = color;
-      inner.style.border = "2px solid rgba(10, 10, 10, 0.85)";
-      inner.style.boxShadow = "0 0 0 1px rgba(255, 255, 255, 0.15)";
+      inner.style.border = "1.5px solid rgba(68, 54, 37, 0.6)";
+      inner.style.boxShadow =
+        "0 0 0 1px rgba(246, 240, 225, 0.85), 0 4px 12px rgba(93, 75, 51, 0.12)";
       inner.style.cursor = "pointer";
       inner.addEventListener("click", (event) => {
         event.stopPropagation();

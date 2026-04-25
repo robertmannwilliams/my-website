@@ -30,25 +30,25 @@ export class MapErrorBoundary extends Component<Props, State> {
   render() {
     if (!this.state.hasError) return this.props.children;
     return (
-      <div className="fixed inset-0 z-0 flex items-center justify-center bg-neutral-950 text-neutral-200">
+      <div className="fixed inset-0 z-0 flex items-center justify-center bg-background text-foreground">
         <div className="max-w-sm px-6 text-center">
-          <AlertTriangle className="mx-auto h-6 w-6 text-amber-400" />
-          <h2 className="mt-4 font-serif text-xl text-white">
+          <AlertTriangle className="mx-auto h-6 w-6 text-accent" />
+          <h2 className="font-display mt-4 text-xl text-foreground">
             The map couldn&rsquo;t load.
           </h2>
-          <p className="mt-2 text-sm text-neutral-400">
+          <p className="font-body mt-2 text-sm text-foreground/72">
             Something went wrong while rendering the map. Try again, or
             reload the page.
           </p>
           {this.state.message && (
-            <p className="mt-3 font-mono text-xs text-neutral-500">
+            <p className="font-ui mt-3 text-xs text-muted-foreground">
               {this.state.message}
             </p>
           )}
           <button
             type="button"
             onClick={this.handleRetry}
-            className="mt-5 rounded-full border border-white/20 px-4 py-1.5 text-sm text-neutral-100 transition-colors hover:bg-white/5"
+            className="font-ui mt-5 rounded-full border border-border px-4 py-1.5 text-sm text-foreground transition-colors hover:bg-muted/80"
           >
             Try again
           </button>
