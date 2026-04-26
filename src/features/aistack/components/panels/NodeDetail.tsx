@@ -213,7 +213,7 @@ function CloseButton({ onClose }: { onClose: () => void }) {
     <button
       type="button"
       onClick={onClose}
-      aria-label="Close"
+      aria-label="Close details"
       className="font-ui absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-full bg-muted text-lg leading-none text-foreground transition-colors hover:bg-muted/80"
     >
       ×
