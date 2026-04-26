@@ -63,6 +63,13 @@ const CLUSTER_COUNT_LAYER_ID = "stack-pin-cluster-count";
 const PIN_LAYER_ID = "stack-pin-points";
 const HTML_MARKER_MIN_ZOOM = 5;
 const INITIAL_VIEW = { center: [150, 25] as [number, number], zoom: 2 };
+const MAP_PALETTE = {
+  paper: "#ede4cf",
+  water: "#c5d2d8",
+  border: "#9a8e74",
+  ink: "#3a3228",
+  cityInk: "#6f6657",
+};
 
 export default function Home() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -290,6 +297,7 @@ export default function Home() {
 
     const installMapLayers = () => {
       if (flowLayerReadyRef.current) return;
+      applyPaperAtlasMapStyle(map);
       map.addSource(PIN_SOURCE_ID, {
         type: "geojson",
         data: buildPinCollection(enabledStagesRef.current),
@@ -576,6 +584,7 @@ export default function Home() {
       <MapErrorBoundary>
         <div className="fixed inset-0">
           <div ref={containerRef} className="h-full w-full" />
+          <div className="paper-texture" aria-hidden="true" />
         </div>
       </MapErrorBoundary>
       {!mapLoaded && <LoadingSkeleton />}
@@ -702,6 +711,132 @@ function getDisplayedFlows(showAllFlows: boolean, selectedId: string | null): Fl
     }
   }
   return [...flowsById.values()];
+}
+
+function applyPaperAtlasMapStyle(map: mapboxgl.Map) {
+  map.setFog({
+    color: "rgb(245, 240, 225)",
+    "high-color": "rgb(220, 210, 185)",
+    "horizon-blend": 0.2,
+    "space-color": "rgb(240, 232, 215)",
+    "star-intensity": 0,
+  });
+
+  for (const layer of map.getStyle().layers ?? []) {
+    const id = layer.id.toLowerCase();
+
+    if (layer.type === "background") {
+      setPaint(map, layer.id, "background-color", MAP_PALETTE.paper);
+      continue;
+    }
+
+    if (shouldHideMapLayer(id)) {
+      setLayout(map, layer.id, "visibility", "none");
+      continue;
+    }
+
+    if (id.includes("water")) {
+      if (layer.type === "fill") setPaint(map, layer.id, "fill-color", MAP_PALETTE.water);
+      if (layer.type === "line") setPaint(map, layer.id, "line-color", MAP_PALETTE.water);
+      if (layer.type === "symbol") setLayout(map, layer.id, "visibility", "none");
+      continue;
+    }
+
+    if (
+      id.includes("land") ||
+      id.includes("landuse") ||
+      id.includes("national-park")
+    ) {
+      if (layer.type === "fill") {
+        setPaint(map, layer.id, "fill-color", MAP_PALETTE.paper);
+        setPaint(map, layer.id, "fill-opacity", 0.8);
+      }
+      continue;
+    }
+
+    if (id.includes("admin") || id.includes("boundary")) {
+      if (layer.type === "line") {
+        setPaint(map, layer.id, "line-color", MAP_PALETTE.border);
+        setPaint(map, layer.id, "line-opacity", 0.42);
+        setPaint(map, layer.id, "line-width", 0.65);
+      }
+      continue;
+    }
+
+    if (layer.type === "symbol" && id.includes("country-label")) {
+      setPaint(map, layer.id, "text-color", MAP_PALETTE.ink);
+      setPaint(map, layer.id, "text-halo-color", "rgba(245, 240, 225, 0.55)");
+      setPaint(map, layer.id, "text-halo-width", 0.4);
+      continue;
+    }
+
+    if (layer.type === "symbol" && id.includes("settlement-major")) {
+      setPaint(map, layer.id, "text-color", MAP_PALETTE.cityInk);
+      setPaint(map, layer.id, "text-opacity", 0.62);
+      setPaint(map, layer.id, "text-halo-color", "rgba(245, 240, 225, 0.45)");
+      setPaint(map, layer.id, "text-halo-width", 0.3);
+    }
+  }
+}
+
+function shouldHideMapLayer(id: string): boolean {
+  return [
+    "road",
+    "motorway",
+    "street",
+    "tunnel",
+    "bridge",
+    "rail",
+    "transit",
+    "airport",
+    "aeroway",
+    "ferry",
+    "poi",
+    "building",
+    "housenum",
+    "water-label",
+    "marine-label",
+    "natural-line-label",
+    "settlement-subdivision",
+    "settlement-minor",
+    "state-label",
+  ].some((pattern) => id.includes(pattern));
+}
+
+function setPaint(
+  map: mapboxgl.Map,
+  layerId: string,
+  property: string,
+  value: unknown,
+) {
+  try {
+    const setPaintProperty = map.setPaintProperty.bind(map) as (
+      id: string,
+      key: string,
+      next: unknown,
+    ) => void;
+    setPaintProperty(layerId, property, value);
+  } catch {
+    // Mapbox style templates vary; unsupported paint keys can be skipped.
+  }
+}
+
+function setLayout(
+  map: mapboxgl.Map,
+  layerId: string,
+  property: string,
+  value: unknown,
+) {
+  try {
+    const setLayoutProperty = map.setLayoutProperty.bind(map) as (
+      id: string,
+      key: string,
+      next: unknown,
+    ) => void;
+    setLayoutProperty(layerId, property, value);
+  } catch {
+    // Mapbox style templates vary; unsupported layout keys can be skipped.
+  }
 }
 
 function escapeHtml(input: string): string {

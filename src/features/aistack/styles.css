@@ -207,6 +207,22 @@
   filter: drop-shadow(0 0.4px 0 color-mix(in srgb, var(--card) 45%, transparent));
 }
 
+.paper-texture {
+  position: absolute;
+  inset: 0;
+  opacity: 0.055;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  background-image:
+    radial-gradient(circle at 18% 22%, rgba(58, 50, 40, 0.26) 0 0.45px, transparent 0.8px),
+    radial-gradient(circle at 62% 38%, rgba(120, 102, 74, 0.2) 0 0.55px, transparent 0.95px),
+    linear-gradient(115deg, rgba(90, 72, 48, 0.08), transparent 42%);
+  background-size:
+    23px 29px,
+    31px 37px,
+    180px 180px;
+}
+
 @keyframes chokepoint-pulse-amber {
   0%,
   100% {
