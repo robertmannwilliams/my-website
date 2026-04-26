@@ -131,6 +131,82 @@
   color: color-mix(in srgb, var(--foreground) 62%, transparent);
 }
 
+.stack-html-marker {
+  pointer-events: auto;
+}
+
+.stage-pin {
+  --stage-pin-size: 32px;
+  --stage-pin-color: var(--foreground);
+  position: relative;
+  display: grid;
+  width: var(--stage-pin-size);
+  height: var(--stage-pin-size);
+  place-items: center;
+  border: 1.2px solid color-mix(in srgb, var(--foreground) 42%, transparent);
+  border-radius: 9999px;
+  background:
+    radial-gradient(
+      circle at 36% 28%,
+      color-mix(in srgb, var(--card) 98%, white 2%) 0,
+      color-mix(in srgb, var(--background) 88%, white 12%) 72%
+    );
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--card) 84%, transparent),
+    0 8px 18px rgba(93, 75, 51, 0.16);
+  color: var(--stage-pin-color);
+  cursor: pointer;
+  pointer-events: auto;
+  transform: translateZ(0);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    opacity 160ms ease,
+    transform 160ms ease,
+    width 160ms ease,
+    height 160ms ease;
+}
+
+.stage-pin::after {
+  position: absolute;
+  inset: 4px;
+  border: 1px solid color-mix(in srgb, var(--stage-pin-color) 24%, transparent);
+  border-radius: inherit;
+  content: "";
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.stage-pin:hover,
+.stage-pin:focus-visible,
+.stage-pin[data-active="true"] {
+  border-color: color-mix(in srgb, var(--foreground) 58%, transparent);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--foreground) 18%, transparent),
+    0 10px 24px rgba(93, 75, 51, 0.2);
+  outline: none;
+  transform: scale(1.08);
+}
+
+.stage-pin[data-dimmed="true"] {
+  opacity: 0.2;
+}
+
+.stage-pin__glyph {
+  display: grid;
+  width: 62%;
+  height: 62%;
+  place-items: center;
+}
+
+.stage-pin__glyph svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 0.4px 0 color-mix(in srgb, var(--card) 45%, transparent));
+}
+
 @keyframes chokepoint-pulse-amber {
   0%,
   100% {

@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
-import { getStageColorVar } from "@/features/aistack/content/stages";
 import stack from "@/features/aistack/data/stack.json";
 import type {
   ChokepointSeverity,
@@ -18,6 +17,10 @@ import { StagePanel } from "@/features/aistack/components/panels/StagePanel";
 import { MapControls } from "@/features/aistack/components/map/MapControls";
 import { MapErrorBoundary } from "@/features/aistack/components/map/MapErrorBoundary";
 import { LoadingSkeleton } from "@/features/aistack/components/map/LoadingSkeleton";
+import {
+  createStagePinLink,
+  setStagePinSize,
+} from "@/features/aistack/components/map/StagePin";
 import { WelcomeOverlay } from "@/features/aistack/components/WelcomeOverlay";
 import {
   buildHrefWithNode,
@@ -214,7 +217,7 @@ export default function Home() {
     const markers = markersRef.current;
     for (const node of atlas.nodes) {
       // Mapbox owns the outer element's `opacity` (it uses it for globe
-      // occlusion fade). The inner button is where we apply chokepoint
+      // occlusion fade). The inner link is where we apply chokepoint
       // dimming + pulse styling so the two don't fight.
       const wrapper = document.createElement("div");
       wrapper.className = "stack-html-marker";
@@ -224,21 +227,12 @@ export default function Home() {
       wrapper.addEventListener("click", (event) => {
         event.stopPropagation();
       });
-      const inner = document.createElement("a");
-      inner.href = `/aistack?node=${encodeURIComponent(node.id)}`;
-      inner.setAttribute("aria-label", node.name);
-      inner.dataset.nodeId = node.id;
-      inner.style.width = "14px";
-      inner.style.height = "14px";
-      inner.style.padding = "0";
-      inner.style.borderRadius = "9999px";
-      inner.style.background = getStageColorVar(node.stage);
-      inner.style.border = "1.5px solid rgba(68, 54, 37, 0.6)";
-      inner.style.boxShadow =
-        "0 0 0 1px rgba(246, 240, 225, 0.85), 0 4px 12px rgba(93, 75, 51, 0.12)";
-      inner.style.cursor = "pointer";
-      inner.style.display = "block";
-      inner.style.pointerEvents = "auto";
+      const inner = createStagePinLink({
+        stageId: node.stage,
+        label: node.name,
+        href: `/aistack?node=${encodeURIComponent(node.id)}`,
+        nodeId: node.id,
+      });
       inner.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -508,7 +502,7 @@ export default function Home() {
   }, [chokepointMode, enabledKey, enabledStages]);
 
   // Chokepoint mode — dim diversified pins; pulse monopoly pins. Target the
-  // inner button so Mapbox's globe-occlusion opacity on the outer element
+  // inner link so Mapbox's globe-occlusion opacity on the outer element
   // keeps working.
   useEffect(() => {
     const map = mapRef.current;
@@ -684,9 +678,8 @@ function syncHtmlMarkers(
 
     const isMonopoly = node.chokepointSeverity === "monopoly";
     const isDuopoly = node.chokepointSeverity === "duopoly";
-    const size = chokepointMode && isMonopoly ? 18 : chokepointMode && isDuopoly ? 16 : 14;
-    inner.style.width = `${size}px`;
-    inner.style.height = `${size}px`;
+    const size = chokepointMode && isMonopoly ? 38 : chokepointMode && isDuopoly ? 35 : 32;
+    setStagePinSize(inner, size);
 
     if (!chokepointMode) {
       inner.style.opacity = "";
