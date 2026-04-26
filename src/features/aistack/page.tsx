@@ -393,7 +393,16 @@ export default function Home() {
           paint: {
             "line-color": ["get", "color"],
             "line-opacity": ["get", "opacity"],
+            "line-opacity-transition": { duration: 150 },
             "line-width": ["get", "width"],
+            "line-width-transition": { duration: 150 },
+            "line-dasharray": [
+              "step",
+              ["zoom"],
+              ["literal", [0.8, 1.6]],
+              3,
+              ["literal", [1, 0]],
+            ],
           },
         },
         firstSymbol,

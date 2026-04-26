@@ -23,8 +23,8 @@ const EMPTY_COLLECTION: FlowFeatureCollection = {
 };
 
 const DEFAULT_ALPHA = 0.55;
-const FULL_ALPHA = 0.9;
-const DIM_ALPHA = 0.1;
+const FULL_ALPHA = 0.85;
+const DIM_ALPHA = 0.12;
 const SEGMENTS_PER_ARC = 48;
 
 export function emptyFlowCollection(): FlowFeatureCollection {
@@ -60,20 +60,21 @@ export function buildFlowFeatures(params: {
     if (!enabledStages.has(from.stage) || !enabledStages.has(to.stage)) continue;
 
     const fromColor = stageById.get(from.stage)?.color ?? "#888";
-    const toColor = stageById.get(to.stage)?.color ?? "#888";
     const points = greatCircle(from.coordinates, to.coordinates, SEGMENTS_PER_ARC);
+    const selectedTouches = Boolean(
+      selectedNodeId &&
+        (flow.fromId === selectedNodeId || flow.toId === selectedNodeId),
+    );
+    const hoveredTouches = Boolean(
+      hoveredNodeId &&
+        (flow.fromId === hoveredNodeId || flow.toId === hoveredNodeId),
+    );
 
     let opacity: number;
     if (selectedNodeId) {
-      opacity =
-        flow.fromId === selectedNodeId || flow.toId === selectedNodeId
-          ? FULL_ALPHA
-          : DIM_ALPHA;
+      opacity = selectedTouches ? FULL_ALPHA : DIM_ALPHA;
     } else if (hoveredNodeId) {
-      opacity =
-        flow.fromId === hoveredNodeId || flow.toId === hoveredNodeId
-          ? FULL_ALPHA
-          : DIM_ALPHA;
+      opacity = hoveredTouches ? FULL_ALPHA : DIM_ALPHA;
     } else if (chokepointMode && chokepointNodeIds) {
       const touchesChokepoint =
         chokepointNodeIds.has(flow.fromId) ||
@@ -82,14 +83,11 @@ export function buildFlowFeatures(params: {
     } else {
       opacity = DEFAULT_ALPHA;
     }
-    const touchesSelected = Boolean(
-      selectedNodeId &&
-        (flow.fromId === selectedNodeId || flow.toId === selectedNodeId),
-    );
-    const width = widthForCriticality(flow.criticality) + (touchesSelected ? 0.8 : 0);
+    const width =
+      widthForCriticality(flow.criticality) +
+      (selectedTouches || hoveredTouches ? 0.5 : 0);
 
     for (let i = 0; i < points.length - 1; i++) {
-      const tMid = (i + 0.5) / (points.length - 1);
       features.push({
         type: "Feature",
         id: `${flow.id}-${i}`,
@@ -101,7 +99,7 @@ export function buildFlowFeatures(params: {
           flowId: flow.id,
           material: flow.product,
           notes: "",
-          color: lerpColor(fromColor, toColor, tMid),
+          color: fromColor,
           opacity,
           width,
         },
@@ -113,9 +111,9 @@ export function buildFlowFeatures(params: {
 }
 
 function widthForCriticality(criticality: Flow["criticality"]): number {
-  if (criticality === "monopoly") return 3.6;
-  if (criticality === "duopoly") return 2.8;
-  return 2;
+  if (criticality === "monopoly") return 2.75;
+  if (criticality === "duopoly") return 2;
+  return 1.25;
 }
 
 /**
@@ -171,19 +169,4 @@ function greatCircle(
     while (points[i][0] - points[i - 1][0] < -180) points[i][0] += 360;
   }
   return points;
-}
-
-function lerpColor(hex1: string, hex2: string, t: number): string {
-  const [r1, g1, b1] = hexToRgb(hex1);
-  const [r2, g2, b2] = hexToRgb(hex2);
-  const r = Math.round(r1 + (r2 - r1) * t);
-  const g = Math.round(g1 + (g2 - g1) * t);
-  const b = Math.round(b1 + (b2 - b1) * t);
-  return `rgb(${r}, ${g}, ${b})`;
-}
-
-function hexToRgb(hex: string): [number, number, number] {
-  const clean = hex.replace("#", "");
-  const n = parseInt(clean, 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
