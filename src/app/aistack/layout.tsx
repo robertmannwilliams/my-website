@@ -27,8 +27,14 @@ const inter = Inter({
 
 const DESCRIPTION =
   "An interactive map that traces the physical supply chain of AI — from quartz sand in Spruce Pine to deployed inference in Ashburn.";
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : "https://my-website-robertmannwilliams.vercel.app");
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "Physical AI Stack Atlas",
     template: "%s · Physical AI Stack Atlas",
