@@ -22,7 +22,8 @@ const EMPTY_COLLECTION: FlowFeatureCollection = {
   features: [],
 };
 
-const FULL_ALPHA = 0.85;
+const DEFAULT_ALPHA = 0.55;
+const FULL_ALPHA = 0.9;
 const DIM_ALPHA = 0.1;
 const SEGMENTS_PER_ARC = 48;
 
@@ -36,6 +37,7 @@ export function buildFlowFeatures(params: {
   stageById: Map<StageId, Stage>;
   enabledStages: Set<StageId>;
   hoveredNodeId: string | null;
+  selectedNodeId?: string | null;
   chokepointMode?: boolean;
   chokepointNodeIds?: ReadonlySet<string>;
 }): FlowFeatureCollection {
@@ -45,6 +47,7 @@ export function buildFlowFeatures(params: {
     stageById,
     enabledStages,
     hoveredNodeId,
+    selectedNodeId = null,
     chokepointMode = false,
     chokepointNodeIds,
   } = params;
@@ -61,7 +64,12 @@ export function buildFlowFeatures(params: {
     const points = greatCircle(from.coordinates, to.coordinates, SEGMENTS_PER_ARC);
 
     let opacity: number;
-    if (hoveredNodeId) {
+    if (selectedNodeId) {
+      opacity =
+        flow.fromId === selectedNodeId || flow.toId === selectedNodeId
+          ? FULL_ALPHA
+          : DIM_ALPHA;
+    } else if (hoveredNodeId) {
       opacity =
         flow.fromId === hoveredNodeId || flow.toId === hoveredNodeId
           ? FULL_ALPHA
@@ -72,9 +80,13 @@ export function buildFlowFeatures(params: {
         chokepointNodeIds.has(flow.toId);
       opacity = touchesChokepoint ? FULL_ALPHA : DIM_ALPHA;
     } else {
-      opacity = FULL_ALPHA;
+      opacity = DEFAULT_ALPHA;
     }
-    const width = 1.2 + (flow.weight ?? 1) * 0.8;
+    const touchesSelected = Boolean(
+      selectedNodeId &&
+        (flow.fromId === selectedNodeId || flow.toId === selectedNodeId),
+    );
+    const width = widthForCriticality(flow.criticality) + (touchesSelected ? 0.8 : 0);
 
     for (let i = 0; i < points.length - 1; i++) {
       const tMid = (i + 0.5) / (points.length - 1);
@@ -87,8 +99,8 @@ export function buildFlowFeatures(params: {
         },
         properties: {
           flowId: flow.id,
-          material: flow.material,
-          notes: flow.notes ?? "",
+          material: flow.product,
+          notes: "",
           color: lerpColor(fromColor, toColor, tMid),
           opacity,
           width,
@@ -98,6 +110,12 @@ export function buildFlowFeatures(params: {
   }
 
   return { type: "FeatureCollection", features };
+}
+
+function widthForCriticality(criticality: Flow["criticality"]): number {
+  if (criticality === "monopoly") return 3.6;
+  if (criticality === "duopoly") return 2.8;
+  return 2;
 }
 
 /**

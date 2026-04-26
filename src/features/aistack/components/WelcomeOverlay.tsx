@@ -56,23 +56,18 @@ export function WelcomeOverlay() {
             className="relative w-full max-w-md rounded-[1.1rem] border border-border/80 bg-card/95 p-7 text-card-foreground shadow-[0_24px_60px_rgba(90,72,48,0.16)]"
           >
             <p className="font-ui text-xs uppercase tracking-[0.2em] text-muted-foreground">
-              Welcome
+              AI Stack Atlas
             </p>
             <h2
               id="welcome-title"
               className="font-display mt-2 text-2xl leading-tight text-foreground"
             >
-              The physical supply chain of AI, on one map.
+              Where AI actually lives.
             </h2>
             <p className="font-body mt-3 text-[1.02rem] leading-7 text-foreground/78">
-              Click any pin for detail. Toggle stages on the left. Hover a
-              pin to trace its flows. Switch to chokepoint view to see where
-              the stack is most concentrated.
-            </p>
-            <p className="font-body mt-3 text-[1.02rem] leading-7 text-foreground/68">
-              Prefer a curated walkthrough? Hit{" "}
-              <span className="font-display italic text-foreground">Start tour</span>{" "}
-              up top.
+              341 sites across 14 layers of the supply chain that builds AI.
+              Click a pin, trace its relationships, or use the filters to
+              explore by layer and chokepoint.
             </p>
             <div className="mt-6 flex items-center justify-between gap-3">
               <Link
@@ -87,7 +82,7 @@ export function WelcomeOverlay() {
                 onClick={dismiss}
                 className="font-ui rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
-                Explore the map
+                Enter the atlas
               </button>
             </div>
           </motion.div>

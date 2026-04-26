@@ -30,10 +30,10 @@ export default function AboutPage() {
 
           <h2>What you&rsquo;re looking at</h2>
           <p>
-            The atlas traces the materials, equipment, designs, and facilities
-            that together make modern AI compute possible — starting with
-            quartz sand in the Appalachian mountains and ending at the
-            server racks running GPUs in Loudoun County, Virginia.
+            Dataset v1 maps 341 sites and 2,279 supply relationships compiled
+            from public filings, news reports, company disclosures, and
+            industry databases. Confidence scores are intentionally visible:
+            this atlas is as interested in what we do not know as what we do.
           </p>
           <p>
             Each pin is a real facility, tagged to one stage of the stack
@@ -46,31 +46,32 @@ export default function AboutPage() {
 
           <h2>What the chokepoint score means</h2>
           <p>
-            Each node carries a <em>chokepointRisk</em> from 1 to 5, roughly:
+            Each site carries a chokepoint severity based on substitutability,
+            supplier concentration, and how quickly the rest of the stack could
+            route around a disruption:
           </p>
           <ul>
             <li>
-              <strong>1–2</strong> — substitutable; multiple suppliers, spare
-              capacity, or standard IP
+              <strong>Monopoly</strong> — effectively one producer or site class
+              controls a critical capability.
             </li>
             <li>
-              <strong>3</strong> — concentrated but with credible
-              alternatives on a sensible timeline
+              <strong>Duopoly</strong> — two credible producers or regions
+              dominate the capability, with limited fast substitutes.
             </li>
             <li>
-              <strong>4</strong> — substantially concentrated; disruption
-              meaningfully constrains the industry for months
+              <strong>Diversified</strong> — three or more credible sources
+              exist, though capacity may still be tight.
             </li>
             <li>
-              <strong>5</strong> — effectively a single point of failure for
-              the current leading-edge roadmap
+              <strong>N/A</strong> — the site matters, but the monopoly/duopoly
+              framing is not the right lens.
             </li>
           </ul>
           <p>
-            Scores are editorial judgement, not a model output. They should
-            be read as &ldquo;how much would an outage here hurt AI supply
-            today, given nothing else changes&rdquo; rather than a
-            probability of disruption.
+            The 1–5 risk meter is a compact visual derived from that severity
+            plus criticality tags. It is editorial judgement, not a model
+            output or a probability of disruption.
           </p>
 
           <h2>Sources and ethics</h2>

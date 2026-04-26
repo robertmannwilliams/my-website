@@ -1,13 +1,16 @@
 "use client";
 
 import { AlertTriangle } from "lucide-react";
-import ReactMarkdown from "react-markdown";
 import { useState } from "react";
 import {
   getStageColorVar,
   getStageTint,
 } from "@/features/aistack/content/stages";
-import type { Node, Stage } from "@/features/aistack/types/stack";
+import type {
+  ChokepointSeverity,
+  Node,
+  Stage,
+} from "@/features/aistack/types/stack";
 
 interface Props {
   node: Node | null;
@@ -28,16 +31,14 @@ const RISK_COLORS: Record<1 | 2 | 3 | 4 | 5, string> = {
 export function NodeDetail({
   node,
   stage,
-  chokepointMode,
   isMobile,
   onClose,
 }: Props) {
   if (!node || !stage) return null;
 
-  const showChokepointAlert =
-    chokepointMode &&
-    node.chokepointRisk >= 4 &&
-    !!node.chokepointNarrative;
+  const criticalSeverity = isCriticalSeverity(node.chokepointSeverity)
+    ? node.chokepointSeverity
+    : null;
 
   const positionClasses = isMobile
     ? "bottom-0 left-0 right-0 h-auto max-h-[85vh] rounded-t-xl border-t"
@@ -53,9 +54,9 @@ export function NodeDetail({
       <CloseButton onClose={onClose} />
       <Hero node={node} stage={stage} />
       <div className="space-y-5 px-6 pb-10 pt-5">
-        {showChokepointAlert && node.chokepointNarrative && (
+        {criticalSeverity && (
           <ChokepointAlert
-            risk={node.chokepointRisk}
+            severity={criticalSeverity}
             narrative={node.chokepointNarrative}
           />
         )}
@@ -64,59 +65,144 @@ export function NodeDetail({
           {node.name}
         </h1>
         <p className="font-display text-[1.1rem] italic text-foreground/72">{node.tagline}</p>
-        <p className="font-body text-[1.02rem] leading-7 text-foreground/82">{node.summary}</p>
+        <SiteMeta node={node} />
         {node.keyFacts.length > 0 && <KeyFacts facts={node.keyFacts} />}
-        <RiskMeter
-          risk={node.chokepointRisk}
-          narrative={
-            showChokepointAlert ? undefined : node.chokepointNarrative
-          }
-        />
-        {node.body && (
-          <article className="font-body prose prose-stone prose-sm max-w-none prose-headings:font-display prose-headings:text-foreground prose-p:text-foreground/78 prose-strong:text-foreground">
-            <ReactMarkdown>{node.body}</ReactMarkdown>
-          </article>
-        )}
+        <RiskMeter risk={node.chokepointRisk} />
         {node.sources.length > 0 && <Sources sources={node.sources} />}
       </div>
     </aside>
   );
 }
 
+function isCriticalSeverity(
+  severity: ChokepointSeverity,
+): severity is Extract<ChokepointSeverity, "monopoly" | "duopoly"> {
+  return severity === "monopoly" || severity === "duopoly";
+}
+
 function ChokepointAlert({
-  risk,
+  severity,
   narrative,
 }: {
-  risk: 4 | 5 | (1 | 2 | 3 | 4 | 5);
-  narrative: string;
+  severity: Extract<ChokepointSeverity, "monopoly" | "duopoly">;
+  narrative?: string;
 }) {
-  const isMax = risk === 5;
+  const isMax = severity === "monopoly";
   const palette = isMax
     ? {
-        ring: "border-red-700/25 bg-red-500/10",
-        title: "text-red-800",
-        body: "text-red-900/75",
+        ring: "border-accent/25 bg-accent/10",
+        title: "text-accent",
+        body: "text-foreground/76",
         label: "Critical chokepoint",
       }
     : {
-        ring: "border-amber-700/25 bg-amber-500/10",
+        ring: "border-amber-700/20 bg-amber-500/10",
         title: "text-amber-800",
-        body: "text-amber-950/70",
+        body: "text-foreground/72",
         label: "Chokepoint",
       };
   return (
     <div
       role="alert"
-      className={`flex items-start gap-3 rounded-md border px-3 py-3 ${palette.ring}`}
+      className={`border-t-2 px-3 py-3 ${palette.ring}`}
     >
-      <AlertTriangle className={`mt-0.5 h-4 w-4 flex-shrink-0 ${palette.title}`} />
-      <div className="space-y-1">
-        <p
-          className={`text-[10px] font-semibold uppercase tracking-wide ${palette.title}`}
+      <div className="flex items-start gap-3">
+        <AlertTriangle className={`mt-0.5 h-4 w-4 flex-shrink-0 ${palette.title}`} />
+        <div className="space-y-1">
+          <p
+            className={`font-ui text-[10px] font-semibold uppercase tracking-wide ${palette.title}`}
+          >
+            {palette.label} — {severity}
+          </p>
+          <p className={`font-body text-sm leading-snug ${palette.body}`}>
+            {narrative ??
+              `Public signals place this site in a ${severity} segment of the AI supply chain.`}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SiteMeta({ node }: { node: Node }) {
+  const location = [node.city, node.country].filter(Boolean).join(", ");
+  return (
+    <div className="font-body space-y-1 text-[1.02rem] leading-7 text-foreground/76">
+      <p>
+        Operated by <span className="text-foreground">{node.operator}</span>
+        {node.parentCompany ? (
+          <>
+            {" "}
+            under <span className="text-foreground">{node.parentCompany}</span>
+          </>
+        ) : null}
+      </p>
+      {location && <p>{location}</p>}
+      {node.subType && <p className="text-foreground/62">{node.subType}</p>}
+    </div>
+  );
+}
+
+function StageBadge({ stage }: { stage: Stage }) {
+  return (
+    <span
+      className="font-ui inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium uppercase tracking-[0.16em]"
+      style={{
+        backgroundColor: getStageTint(stage.id, 18),
+        borderColor: getStageTint(stage.id, 42),
+        color: getStageColorVar(stage.id),
+      }}
+    >
+      <span
+        className="h-1.5 w-1.5 rounded-full"
+        style={{ background: getStageColorVar(stage.id) }}
+      />
+      {stage.name}
+    </span>
+  );
+}
+
+function KeyFacts({ facts }: { facts: { label: string; value: string }[] }) {
+  return (
+    <dl className="divide-y divide-border/60 rounded border border-border/70 bg-background/50">
+      {facts.map((f) => (
+        <div
+          key={f.label}
+          className="flex items-baseline justify-between gap-4 px-3 py-2 text-sm"
         >
-          {palette.label} — risk {risk}/5
+          <dt className="font-ui text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+            {f.label}
+          </dt>
+          <dd className="font-body text-right text-[0.98rem] text-foreground">{f.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function RiskMeter({ risk }: { risk: 1 | 2 | 3 | 4 | 5 }) {
+  const color = RISK_COLORS[risk];
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-3">
+        <p
+          className="font-ui text-xs uppercase tracking-[0.16em] text-muted-foreground"
+        >
+          Chokepoint risk
         </p>
-        <p className={`text-sm leading-snug ${palette.body}`}>{narrative}</p>
+        <div className="flex gap-1" aria-label={`Risk ${risk} of 5`}>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <span
+              key={i}
+              className="h-2 w-5 rounded-sm"
+              style={{
+                background:
+                  i <= risk ? color : "color-mix(in srgb, var(--foreground) 10%, transparent)",
+              }}
+            />
+          ))}
+        </div>
+        <span className="font-body text-xs text-muted-foreground">{risk}/5</span>
       </div>
     </div>
   );
@@ -161,78 +247,6 @@ function Hero({ node, stage }: { node: Node; stage: Stage }) {
               "linear-gradient(180deg, rgba(10,10,10,0) 40%, rgba(10,10,10,0.75) 100%)",
           }}
         />
-      )}
-    </div>
-  );
-}
-
-function StageBadge({ stage }: { stage: Stage }) {
-  return (
-    <span
-      className="font-ui inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium uppercase tracking-[0.16em]"
-      style={{
-        backgroundColor: getStageTint(stage.id, 18),
-        borderColor: getStageTint(stage.id, 42),
-        color: getStageColorVar(stage.id),
-      }}
-    >
-      <span
-        className="h-1.5 w-1.5 rounded-full"
-        style={{ background: getStageColorVar(stage.id) }}
-      />
-      {stage.name}
-    </span>
-  );
-}
-
-function KeyFacts({ facts }: { facts: { label: string; value: string }[] }) {
-  return (
-    <dl className="divide-y divide-border/60 rounded border border-border/70 bg-background/50">
-      {facts.map((f) => (
-        <div
-          key={f.label}
-          className="flex items-baseline justify-between gap-4 px-3 py-2 text-sm"
-        >
-          <dt className="font-ui text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-            {f.label}
-          </dt>
-          <dd className="font-body text-right text-[0.98rem] text-foreground">{f.value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
-function RiskMeter({
-  risk,
-  narrative,
-}: {
-  risk: 1 | 2 | 3 | 4 | 5;
-  narrative?: string;
-}) {
-  const color = RISK_COLORS[risk];
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-3">
-        <span className="font-ui text-xs uppercase tracking-[0.16em] text-muted-foreground">
-          Chokepoint risk
-        </span>
-        <div className="flex gap-1" aria-label={`Risk ${risk} of 5`}>
-          {[1, 2, 3, 4, 5].map((i) => (
-            <span
-              key={i}
-              className="h-2 w-5 rounded-sm"
-              style={{
-                background:
-                  i <= risk ? color : "color-mix(in srgb, var(--foreground) 10%, transparent)",
-              }}
-            />
-          ))}
-        </div>
-        <span className="font-body text-xs text-muted-foreground">{risk}/5</span>
-      </div>
-      {narrative && (
-        <p className="font-body text-sm leading-6 text-foreground/68">{narrative}</p>
       )}
     </div>
   );

@@ -1,6 +1,27 @@
-import type { Stage, StageId } from "@/features/aistack/types/stack";
+import type {
+  MegaLayerId,
+  Stage,
+  StageId,
+} from "../types/stack";
 
 type StageCssVarName = `--stage-${StageId}`;
+
+const stageMegaLayers = {
+  "raw-materials": "inputs",
+  chemicals: "inputs",
+  wafers: "inputs",
+  equipment: "toolchain",
+  eda: "toolchain",
+  design: "silicon",
+  fabrication: "silicon",
+  memory: "silicon",
+  packaging: "silicon",
+  networking: "systems",
+  assembly: "systems",
+  datacenter: "deployment",
+  power: "deployment",
+  connectivity: "deployment",
+} satisfies Record<StageId, MegaLayerId>;
 
 const atlasStagePalette = {
   "raw-materials": "#8a6d4c",
@@ -23,6 +44,7 @@ export const atlasStages: Stage[] = [
   {
     id: "raw-materials",
     name: "Raw materials",
+    megaLayerId: stageMegaLayers["raw-materials"],
     order: 1,
     color: atlasStagePalette["raw-materials"],
     shortDescription:
@@ -31,6 +53,7 @@ export const atlasStages: Stage[] = [
   {
     id: "chemicals",
     name: "Chemicals",
+    megaLayerId: stageMegaLayers.chemicals,
     order: 2,
     color: atlasStagePalette.chemicals,
     shortDescription:
@@ -39,6 +62,7 @@ export const atlasStages: Stage[] = [
   {
     id: "wafers",
     name: "Wafers",
+    megaLayerId: stageMegaLayers.wafers,
     order: 3,
     color: atlasStagePalette.wafers,
     shortDescription: "Ingot pulls and polished silicon wafers.",
@@ -46,6 +70,7 @@ export const atlasStages: Stage[] = [
   {
     id: "equipment",
     name: "Equipment",
+    megaLayerId: stageMegaLayers.equipment,
     order: 4,
     color: atlasStagePalette.equipment,
     shortDescription:
@@ -54,6 +79,7 @@ export const atlasStages: Stage[] = [
   {
     id: "eda",
     name: "EDA & IP",
+    megaLayerId: stageMegaLayers.eda,
     order: 5,
     color: atlasStagePalette.eda,
     shortDescription:
@@ -62,6 +88,7 @@ export const atlasStages: Stage[] = [
   {
     id: "design",
     name: "Design",
+    megaLayerId: stageMegaLayers.design,
     order: 6,
     color: atlasStagePalette.design,
     shortDescription:
@@ -70,6 +97,7 @@ export const atlasStages: Stage[] = [
   {
     id: "fabrication",
     name: "Fabrication",
+    megaLayerId: stageMegaLayers.fabrication,
     order: 7,
     color: atlasStagePalette.fabrication,
     shortDescription:
@@ -78,6 +106,7 @@ export const atlasStages: Stage[] = [
   {
     id: "memory",
     name: "Memory",
+    megaLayerId: stageMegaLayers.memory,
     order: 8,
     color: atlasStagePalette.memory,
     shortDescription: "HBM stacks and DRAM that feed AI accelerators.",
@@ -85,6 +114,7 @@ export const atlasStages: Stage[] = [
   {
     id: "packaging",
     name: "Packaging",
+    megaLayerId: stageMegaLayers.packaging,
     order: 9,
     color: atlasStagePalette.packaging,
     shortDescription: "CoWoS, substrates, ABF — where chiplets become products.",
@@ -92,6 +122,7 @@ export const atlasStages: Stage[] = [
   {
     id: "networking",
     name: "Networking",
+    megaLayerId: stageMegaLayers.networking,
     order: 10,
     color: atlasStagePalette.networking,
     shortDescription:
@@ -100,6 +131,7 @@ export const atlasStages: Stage[] = [
   {
     id: "assembly",
     name: "Assembly",
+    megaLayerId: stageMegaLayers.assembly,
     order: 11,
     color: atlasStagePalette.assembly,
     shortDescription:
@@ -108,6 +140,7 @@ export const atlasStages: Stage[] = [
   {
     id: "datacenter",
     name: "Datacenter",
+    megaLayerId: stageMegaLayers.datacenter,
     order: 12,
     color: atlasStagePalette.datacenter,
     shortDescription: "Where the GPUs actually run — Ashburn, Dublin, Singapore.",
@@ -115,6 +148,7 @@ export const atlasStages: Stage[] = [
   {
     id: "power",
     name: "Power",
+    megaLayerId: stageMegaLayers.power,
     order: 13,
     color: atlasStagePalette.power,
     shortDescription:
@@ -123,6 +157,7 @@ export const atlasStages: Stage[] = [
   {
     id: "connectivity",
     name: "Connectivity",
+    megaLayerId: stageMegaLayers.connectivity,
     order: 14,
     color: atlasStagePalette.connectivity,
     shortDescription:

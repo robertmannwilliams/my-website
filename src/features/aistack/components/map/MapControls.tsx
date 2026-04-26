@@ -1,12 +1,12 @@
 "use client";
 
-import { AlertTriangle, PlayCircle, Spline, SplineIcon } from "lucide-react";
+import { AlertTriangle, Network, Spline, SplineIcon } from "lucide-react";
 
 interface Props {
   flowsVisible: boolean;
   onToggleFlows: () => void;
-  onStartTour: () => void;
-  tourActive: boolean;
+  showAllFlows: boolean;
+  onToggleAllFlows: () => void;
   chokepointMode: boolean;
   onToggleChokepoint: () => void;
   chokepointCount: number;
@@ -15,8 +15,8 @@ interface Props {
 export function MapControls({
   flowsVisible,
   onToggleFlows,
-  onStartTour,
-  tourActive,
+  showAllFlows,
+  onToggleAllFlows,
   chokepointMode,
   onToggleChokepoint,
   chokepointCount,
@@ -44,6 +44,27 @@ export function MapControls({
 
       <button
         type="button"
+        onClick={onToggleAllFlows}
+        aria-pressed={showAllFlows}
+        aria-label={
+          showAllFlows
+            ? "Show critical relationships only"
+            : "Show all supply relationships"
+        }
+        className={`font-ui flex items-center gap-1.5 rounded-full px-3 py-1 text-xs uppercase tracking-[0.16em] transition-colors ${
+          showAllFlows
+            ? "bg-secondary text-foreground"
+            : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+        }`}
+      >
+        <Network className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">
+          {showAllFlows ? "All links" : "Critical"}
+        </span>
+      </button>
+
+      <button
+        type="button"
         onClick={onToggleChokepoint}
         aria-pressed={chokepointMode}
         aria-label={
@@ -67,17 +88,6 @@ export function MapControls({
         >
           {chokepointCount}
         </span>
-      </button>
-
-      <button
-        type="button"
-        onClick={onStartTour}
-        disabled={tourActive}
-        aria-label="Start guided tour"
-        className="font-ui flex items-center gap-1.5 rounded-full px-3 py-1 text-xs uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        <PlayCircle className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">Start tour</span>
       </button>
     </div>
   );

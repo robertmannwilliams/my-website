@@ -1,0 +1,3144 @@
+[
+  {
+    "from": "asml-veldhoven-hq",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_equipment",
+    "product": "EUV lithography (NXE/EXE)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "ASML Veldhoven is the sole global producer of EUV scanners"
+  },
+  {
+    "from": "asml-veldhoven-hq",
+    "to": "tsmc-fab20-hsinchu",
+    "type": "supplies_equipment",
+    "product": "EUV lithography (NXE/EXE)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "ASML Veldhoven is the sole global producer of EUV scanners"
+  },
+  {
+    "from": "asml-veldhoven-hq",
+    "to": "tsmc-fab22-kaohsiung",
+    "type": "supplies_equipment",
+    "product": "EUV lithography (NXE/EXE)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "ASML Veldhoven is the sole global producer of EUV scanners"
+  },
+  {
+    "from": "asml-veldhoven-hq",
+    "to": "tsmc-fab21-arizona-ph1",
+    "type": "supplies_equipment",
+    "product": "EUV lithography (NXE/EXE)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "ASML Veldhoven is the sole global producer of EUV scanners"
+  },
+  {
+    "from": "asml-veldhoven-hq",
+    "to": "tsmc-fab21-arizona-ph2",
+    "type": "supplies_equipment",
+    "product": "EUV lithography (NXE/EXE)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "ASML Veldhoven is the sole global producer of EUV scanners"
+  },
+  {
+    "from": "asml-veldhoven-hq",
+    "to": "tsmc-fab21-arizona-ph3",
+    "type": "supplies_equipment",
+    "product": "EUV lithography (NXE/EXE)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "ASML Veldhoven is the sole global producer of EUV scanners"
+  },
+  {
+    "from": "asml-veldhoven-hq",
+    "to": "samsung-hwaseong-s1-s3-s5",
+    "type": "supplies_equipment",
+    "product": "EUV lithography (NXE/EXE)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "ASML Veldhoven is the sole global producer of EUV scanners"
+  },
+  {
+    "from": "asml-veldhoven-hq",
+    "to": "samsung-pyeongtaek-p1-p2-p3",
+    "type": "supplies_equipment",
+    "product": "EUV lithography (NXE/EXE)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "ASML Veldhoven is the sole global producer of EUV scanners"
+  },
+  {
+    "from": "asml-veldhoven-hq",
+    "to": "samsung-taylor-texas",
+    "type": "supplies_equipment",
+    "product": "EUV lithography (NXE/EXE)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "ASML Veldhoven is the sole global producer of EUV scanners"
+  },
+  {
+    "from": "asml-veldhoven-hq",
+    "to": "intel-d1x-hillsboro",
+    "type": "supplies_equipment",
+    "product": "EUV lithography (NXE/EXE)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "ASML Veldhoven is the sole global producer of EUV scanners"
+  },
+  {
+    "from": "asml-veldhoven-hq",
+    "to": "intel-fab34-leixlip",
+    "type": "supplies_equipment",
+    "product": "EUV lithography (NXE/EXE)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "ASML Veldhoven is the sole global producer of EUV scanners"
+  },
+  {
+    "from": "asml-veldhoven-hq",
+    "to": "intel-fab42-52-chandler",
+    "type": "supplies_equipment",
+    "product": "EUV lithography (NXE/EXE)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "ASML Veldhoven is the sole global producer of EUV scanners"
+  },
+  {
+    "from": "asml-veldhoven-hq",
+    "to": "intel-ohio-one",
+    "type": "supplies_equipment",
+    "product": "EUV lithography (NXE/EXE)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "ASML Veldhoven is the sole global producer of EUV scanners"
+  },
+  {
+    "from": "asml-veldhoven-hq",
+    "to": "intel-fab38-kiryat-gat",
+    "type": "supplies_equipment",
+    "product": "EUV lithography (NXE/EXE)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "ASML Veldhoven is the sole global producer of EUV scanners"
+  },
+  {
+    "from": "asml-veldhoven-hq",
+    "to": "rapidus-chitose-hokkaido",
+    "type": "supplies_equipment",
+    "product": "EUV lithography (NXE/EXE)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "ASML Veldhoven is the sole global producer of EUV scanners"
+  },
+  {
+    "from": "zeiss-smt-oberkochen",
+    "to": "asml-veldhoven-hq",
+    "type": "supplies_equipment",
+    "product": "EUV optics (projection & illumination)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "vdl-etg-eindhoven",
+    "to": "asml-veldhoven-hq",
+    "type": "supplies_equipment",
+    "product": "EUV frames/modules",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "trumpf-ditzingen",
+    "to": "asml-veldhoven-hq",
+    "type": "supplies_equipment",
+    "product": "CO2 drive laser for EUV",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "asml-cymer-san-diego",
+    "to": "asml-veldhoven-hq",
+    "type": "supplies_equipment",
+    "product": "EUV light source (LPP)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "tsmc-fab20-hsinchu",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "tsmc-fab22-kaohsiung",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "tsmc-fab15-taichung",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "tsmc-fab12-hsinchu",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "tsmc-fab21-arizona-ph1",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "tsmc-fab21-arizona-ph2",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "tsmc-fab21-arizona-ph3",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "tsmc-jasm-kumamoto-ph1",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "tsmc-jasm-kumamoto-ph2",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "tsmc-esmc-dresden",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "samsung-hwaseong-s1-s3-s5",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "samsung-pyeongtaek-p1-p2-p3",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "samsung-taylor-texas",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "intel-d1x-hillsboro",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "intel-fab34-leixlip",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "intel-fab42-52-chandler",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "intel-ohio-one",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "globalfoundries-malta-ny",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "globalfoundries-dresden",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "globalfoundries-singapore",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "smic-zhangjiang-shanghai",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "smic-beijing-b1-b2",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "smic-tianjin",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "umc-tainan-fab12a",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "tower-semi-migdal-haemek",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "rapidus-chitose-hokkaido",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "intel-fab38-kiryat-gat",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "smic-shenzhen",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "smic-lingang-advanced",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "hua-hong-wuxi",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "nexchip-hefei",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "umc-singapore-new",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "samsung-austin-s2",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "psmc-tongluo",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "globalfoundries-stmicro-essonne",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "vanguard-singapore",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "skhynix-m16-icheon",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "skhynix-m15x-cheongju",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "skhynix-m17-yongin",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "skhynix-west-lafayette-indiana",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "samsung-memory-hwaseong-hbm",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "samsung-xian-nand",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "micron-boise-idaho",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "micron-hiroshima-japan",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "micron-clay-ny",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "kioxia-yokkaichi",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "kioxia-kitakami",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "ymtc-wuhan",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "cxmt-hefei-dram",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "micron-taichung-taiwan",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "skhynix-wuxi-dram",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "micron-manassas-virginia",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "skhynix-dalian-nand",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "kla-milpitas-hq",
+    "to": "micron-xian-backend",
+    "type": "supplies_equipment",
+    "product": "Process control & metrology",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "arm-cambridge-hq",
+    "to": "apple-silicon-cupertino",
+    "type": "supplies_ip",
+    "product": "Arm CPU IP (Neoverse/Cortex)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Arm Cambridge designs Neoverse \u2014 the de facto standard for datacenter CPU IP outside x86"
+  },
+  {
+    "from": "arm-cambridge-hq",
+    "to": "nvidia-hq-santa-clara",
+    "type": "supplies_ip",
+    "product": "Arm CPU IP (Neoverse/Cortex)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Arm Cambridge designs Neoverse \u2014 the de facto standard for datacenter CPU IP outside x86"
+  },
+  {
+    "from": "arm-cambridge-hq",
+    "to": "nvidia-austin",
+    "type": "supplies_ip",
+    "product": "Arm CPU IP (Neoverse/Cortex)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Arm Cambridge designs Neoverse \u2014 the de facto standard for datacenter CPU IP outside x86"
+  },
+  {
+    "from": "arm-cambridge-hq",
+    "to": "aws-trainium-austin",
+    "type": "supplies_ip",
+    "product": "Arm CPU IP (Neoverse/Cortex)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Arm Cambridge designs Neoverse \u2014 the de facto standard for datacenter CPU IP outside x86"
+  },
+  {
+    "from": "arm-cambridge-hq",
+    "to": "microsoft-silicon-redmond",
+    "type": "supplies_ip",
+    "product": "Arm CPU IP (Neoverse/Cortex)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Arm Cambridge designs Neoverse \u2014 the de facto standard for datacenter CPU IP outside x86"
+  },
+  {
+    "from": "arm-cambridge-hq",
+    "to": "qualcomm-san-diego-hq",
+    "type": "supplies_ip",
+    "product": "Arm CPU IP (Neoverse/Cortex)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Arm Cambridge designs Neoverse \u2014 the de facto standard for datacenter CPU IP outside x86"
+  },
+  {
+    "from": "arm-cambridge-hq",
+    "to": "mediatek-hsinchu-hq",
+    "type": "supplies_ip",
+    "product": "Arm CPU IP (Neoverse/Cortex)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Arm Cambridge designs Neoverse \u2014 the de facto standard for datacenter CPU IP outside x86"
+  },
+  {
+    "from": "arm-cambridge-hq",
+    "to": "google-tpu-mountain-view",
+    "type": "supplies_ip",
+    "product": "Arm CPU IP (Neoverse/Cortex)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Arm Cambridge designs Neoverse \u2014 the de facto standard for datacenter CPU IP outside x86"
+  },
+  {
+    "from": "arm-cambridge-hq",
+    "to": "meta-silicon-menlo-park",
+    "type": "supplies_ip",
+    "product": "Arm CPU IP (Neoverse/Cortex)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Arm Cambridge designs Neoverse \u2014 the de facto standard for datacenter CPU IP outside x86"
+  },
+  {
+    "from": "arm-cambridge-hq",
+    "to": "amd-hq-santa-clara",
+    "type": "supplies_ip",
+    "product": "Arm CPU IP (Neoverse/Cortex)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Arm Cambridge designs Neoverse \u2014 the de facto standard for datacenter CPU IP outside x86"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "tsmc-fab20-hsinchu",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "tsmc-fab22-kaohsiung",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "tsmc-fab15-taichung",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "tsmc-fab12-hsinchu",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "tsmc-fab21-arizona-ph1",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "tsmc-fab21-arizona-ph2",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "tsmc-fab21-arizona-ph3",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "tsmc-jasm-kumamoto-ph1",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "tsmc-jasm-kumamoto-ph2",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "tsmc-esmc-dresden",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "samsung-hwaseong-s1-s3-s5",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "samsung-pyeongtaek-p1-p2-p3",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "samsung-taylor-texas",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "intel-d1x-hillsboro",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "intel-fab34-leixlip",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "intel-fab42-52-chandler",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "intel-ohio-one",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "globalfoundries-malta-ny",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "globalfoundries-dresden",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "globalfoundries-singapore",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "smic-zhangjiang-shanghai",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "smic-beijing-b1-b2",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "smic-tianjin",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "umc-tainan-fab12a",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "tower-semi-migdal-haemek",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "rapidus-chitose-hokkaido",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "intel-fab38-kiryat-gat",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "smic-shenzhen",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "smic-lingang-advanced",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "hua-hong-wuxi",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "nexchip-hefei",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "umc-singapore-new",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "samsung-austin-s2",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "psmc-tongluo",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "globalfoundries-stmicro-essonne",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "vanguard-singapore",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "skhynix-m16-icheon",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "skhynix-m15x-cheongju",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "skhynix-m17-yongin",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "skhynix-west-lafayette-indiana",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "samsung-memory-hwaseong-hbm",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "samsung-xian-nand",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "micron-boise-idaho",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "micron-hiroshima-japan",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "micron-clay-ny",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "kioxia-yokkaichi",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "kioxia-kitakami",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "ymtc-wuhan",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "cxmt-hefei-dram",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "micron-taichung-taiwan",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "skhynix-wuxi-dram",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "micron-manassas-virginia",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "skhynix-dalian-nand",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "sk-materials-sangju-nf3",
+    "to": "micron-xian-backend",
+    "type": "supplies_material",
+    "product": "Electronic specialty gases (NF3/WF6/SiH4/etc)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "tsmc-fab20-hsinchu",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "tsmc-fab22-kaohsiung",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "tsmc-fab15-taichung",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "tsmc-fab12-hsinchu",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "tsmc-fab21-arizona-ph1",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "tsmc-fab21-arizona-ph2",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "tsmc-fab21-arizona-ph3",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "tsmc-jasm-kumamoto-ph1",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "tsmc-jasm-kumamoto-ph2",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "tsmc-esmc-dresden",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "samsung-hwaseong-s1-s3-s5",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "samsung-pyeongtaek-p1-p2-p3",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "samsung-taylor-texas",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "intel-d1x-hillsboro",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "intel-fab34-leixlip",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "intel-fab42-52-chandler",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "intel-ohio-one",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "globalfoundries-malta-ny",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "globalfoundries-dresden",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "globalfoundries-singapore",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "smic-zhangjiang-shanghai",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "smic-beijing-b1-b2",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "smic-tianjin",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "umc-tainan-fab12a",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "tower-semi-migdal-haemek",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "rapidus-chitose-hokkaido",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "intel-fab38-kiryat-gat",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "smic-shenzhen",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "smic-lingang-advanced",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "hua-hong-wuxi",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "nexchip-hefei",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "umc-singapore-new",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "samsung-austin-s2",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "psmc-tongluo",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "globalfoundries-stmicro-essonne",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "vanguard-singapore",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "skhynix-m16-icheon",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "skhynix-m15x-cheongju",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "skhynix-m17-yongin",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "skhynix-west-lafayette-indiana",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "samsung-memory-hwaseong-hbm",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "samsung-xian-nand",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "micron-boise-idaho",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "micron-hiroshima-japan",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "micron-clay-ny",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "kioxia-yokkaichi",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "kioxia-kitakami",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "ymtc-wuhan",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "cxmt-hefei-dram",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "micron-taichung-taiwan",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "skhynix-wuxi-dram",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "micron-manassas-virginia",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "skhynix-dalian-nand",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "jx-advanced-metals-isohara-sputter",
+    "to": "micron-xian-backend",
+    "type": "supplies_material",
+    "product": "Sputter targets (Cu/Ti/Ta/W)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "iceblick-odesa-neon",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_material",
+    "product": "Semi-grade neon (laser gas)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Odesa historically supplied 50\u201370% of global semi neon; war disrupted supply"
+  },
+  {
+    "from": "iceblick-odesa-neon",
+    "to": "tsmc-fab20-hsinchu",
+    "type": "supplies_material",
+    "product": "Semi-grade neon (laser gas)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Odesa historically supplied 50\u201370% of global semi neon; war disrupted supply"
+  },
+  {
+    "from": "iceblick-odesa-neon",
+    "to": "tsmc-fab22-kaohsiung",
+    "type": "supplies_material",
+    "product": "Semi-grade neon (laser gas)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Odesa historically supplied 50\u201370% of global semi neon; war disrupted supply"
+  },
+  {
+    "from": "iceblick-odesa-neon",
+    "to": "tsmc-fab21-arizona-ph1",
+    "type": "supplies_material",
+    "product": "Semi-grade neon (laser gas)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Odesa historically supplied 50\u201370% of global semi neon; war disrupted supply"
+  },
+  {
+    "from": "iceblick-odesa-neon",
+    "to": "tsmc-fab21-arizona-ph2",
+    "type": "supplies_material",
+    "product": "Semi-grade neon (laser gas)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Odesa historically supplied 50\u201370% of global semi neon; war disrupted supply"
+  },
+  {
+    "from": "iceblick-odesa-neon",
+    "to": "tsmc-fab21-arizona-ph3",
+    "type": "supplies_material",
+    "product": "Semi-grade neon (laser gas)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Odesa historically supplied 50\u201370% of global semi neon; war disrupted supply"
+  },
+  {
+    "from": "iceblick-odesa-neon",
+    "to": "samsung-hwaseong-s1-s3-s5",
+    "type": "supplies_material",
+    "product": "Semi-grade neon (laser gas)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Odesa historically supplied 50\u201370% of global semi neon; war disrupted supply"
+  },
+  {
+    "from": "iceblick-odesa-neon",
+    "to": "samsung-pyeongtaek-p1-p2-p3",
+    "type": "supplies_material",
+    "product": "Semi-grade neon (laser gas)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Odesa historically supplied 50\u201370% of global semi neon; war disrupted supply"
+  },
+  {
+    "from": "iceblick-odesa-neon",
+    "to": "samsung-taylor-texas",
+    "type": "supplies_material",
+    "product": "Semi-grade neon (laser gas)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Odesa historically supplied 50\u201370% of global semi neon; war disrupted supply"
+  },
+  {
+    "from": "iceblick-odesa-neon",
+    "to": "intel-d1x-hillsboro",
+    "type": "supplies_material",
+    "product": "Semi-grade neon (laser gas)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Odesa historically supplied 50\u201370% of global semi neon; war disrupted supply"
+  },
+  {
+    "from": "iceblick-odesa-neon",
+    "to": "intel-fab34-leixlip",
+    "type": "supplies_material",
+    "product": "Semi-grade neon (laser gas)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Odesa historically supplied 50\u201370% of global semi neon; war disrupted supply"
+  },
+  {
+    "from": "iceblick-odesa-neon",
+    "to": "intel-fab42-52-chandler",
+    "type": "supplies_material",
+    "product": "Semi-grade neon (laser gas)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Odesa historically supplied 50\u201370% of global semi neon; war disrupted supply"
+  },
+  {
+    "from": "iceblick-odesa-neon",
+    "to": "intel-ohio-one",
+    "type": "supplies_material",
+    "product": "Semi-grade neon (laser gas)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Odesa historically supplied 50\u201370% of global semi neon; war disrupted supply"
+  },
+  {
+    "from": "iceblick-odesa-neon",
+    "to": "intel-fab38-kiryat-gat",
+    "type": "supplies_material",
+    "product": "Semi-grade neon (laser gas)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Odesa historically supplied 50\u201370% of global semi neon; war disrupted supply"
+  },
+  {
+    "from": "iceblick-odesa-neon",
+    "to": "rapidus-chitose-hokkaido",
+    "type": "supplies_material",
+    "product": "Semi-grade neon (laser gas)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Odesa historically supplied 50\u201370% of global semi neon; war disrupted supply"
+  },
+  {
+    "from": "iceblick-odesa-neon",
+    "to": "smic-zhangjiang-shanghai",
+    "type": "supplies_material",
+    "product": "Semi-grade neon (laser gas)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Odesa historically supplied 50\u201370% of global semi neon; war disrupted supply"
+  },
+  {
+    "from": "iceblick-odesa-neon",
+    "to": "smic-beijing-b1-b2",
+    "type": "supplies_material",
+    "product": "Semi-grade neon (laser gas)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Odesa historically supplied 50\u201370% of global semi neon; war disrupted supply"
+  },
+  {
+    "from": "iceblick-odesa-neon",
+    "to": "smic-shenzhen",
+    "type": "supplies_material",
+    "product": "Semi-grade neon (laser gas)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Odesa historically supplied 50\u201370% of global semi neon; war disrupted supply"
+  },
+  {
+    "from": "iceblick-odesa-neon",
+    "to": "smic-lingang-advanced",
+    "type": "supplies_material",
+    "product": "Semi-grade neon (laser gas)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Odesa historically supplied 50\u201370% of global semi neon; war disrupted supply"
+  },
+  {
+    "from": "iceblick-odesa-neon",
+    "to": "hua-hong-wuxi",
+    "type": "supplies_material",
+    "product": "Semi-grade neon (laser gas)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Odesa historically supplied 50\u201370% of global semi neon; war disrupted supply"
+  },
+  {
+    "from": "iceblick-odesa-neon",
+    "to": "nexchip-hefei",
+    "type": "supplies_material",
+    "product": "Semi-grade neon (laser gas)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Odesa historically supplied 50\u201370% of global semi neon; war disrupted supply"
+  },
+  {
+    "from": "iceblick-odesa-neon",
+    "to": "psmc-tongluo",
+    "type": "supplies_material",
+    "product": "Semi-grade neon (laser gas)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Odesa historically supplied 50\u201370% of global semi neon; war disrupted supply"
+  },
+  {
+    "from": "chalco-gallium-china",
+    "to": "sumco-kyushu-imari-wafer",
+    "type": "supplies_material",
+    "product": "Primary gallium (GaAs wafers)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "China controls ~99% of primary gallium; Dec 2024 export ban to US"
+  },
+  {
+    "from": "nvidia-hq-santa-clara",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_chips",
+    "product": "AI GPUs (H100/B200/GB200/Rubin) \u2014 N3/N2 wafer starts",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "NVIDIA's AI GPUs are manufactured exclusively at TSMC leading-edge"
+  },
+  {
+    "from": "nvidia-hq-santa-clara",
+    "to": "tsmc-fab20-hsinchu",
+    "type": "supplies_chips",
+    "product": "AI GPUs \u2014 N2 wafer starts",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "nvidia-austin",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_chips",
+    "product": "AI GPUs (H100/B200/GB200/Rubin) \u2014 N3/N2 wafer starts",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "NVIDIA's AI GPUs are manufactured exclusively at TSMC leading-edge"
+  },
+  {
+    "from": "nvidia-austin",
+    "to": "tsmc-fab20-hsinchu",
+    "type": "supplies_chips",
+    "product": "AI GPUs \u2014 N2 wafer starts",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "nvidia-durham",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_chips",
+    "product": "AI GPUs (H100/B200/GB200/Rubin) \u2014 N3/N2 wafer starts",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "NVIDIA's AI GPUs are manufactured exclusively at TSMC leading-edge"
+  },
+  {
+    "from": "nvidia-durham",
+    "to": "tsmc-fab20-hsinchu",
+    "type": "supplies_chips",
+    "product": "AI GPUs \u2014 N2 wafer starts",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "nvidia-tel-aviv",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_chips",
+    "product": "AI GPUs (H100/B200/GB200/Rubin) \u2014 N3/N2 wafer starts",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "NVIDIA's AI GPUs are manufactured exclusively at TSMC leading-edge"
+  },
+  {
+    "from": "nvidia-tel-aviv",
+    "to": "tsmc-fab20-hsinchu",
+    "type": "supplies_chips",
+    "product": "AI GPUs \u2014 N2 wafer starts",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "nvidia-yokneam",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_chips",
+    "product": "AI GPUs (H100/B200/GB200/Rubin) \u2014 N3/N2 wafer starts",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "NVIDIA's AI GPUs are manufactured exclusively at TSMC leading-edge"
+  },
+  {
+    "from": "nvidia-yokneam",
+    "to": "tsmc-fab20-hsinchu",
+    "type": "supplies_chips",
+    "product": "AI GPUs \u2014 N2 wafer starts",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "nvidia-hyderabad",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_chips",
+    "product": "AI GPUs (H100/B200/GB200/Rubin) \u2014 N3/N2 wafer starts",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "NVIDIA's AI GPUs are manufactured exclusively at TSMC leading-edge"
+  },
+  {
+    "from": "nvidia-hyderabad",
+    "to": "tsmc-fab20-hsinchu",
+    "type": "supplies_chips",
+    "product": "AI GPUs \u2014 N2 wafer starts",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "nvidia-bangalore",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_chips",
+    "product": "AI GPUs (H100/B200/GB200/Rubin) \u2014 N3/N2 wafer starts",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "NVIDIA's AI GPUs are manufactured exclusively at TSMC leading-edge"
+  },
+  {
+    "from": "nvidia-bangalore",
+    "to": "tsmc-fab20-hsinchu",
+    "type": "supplies_chips",
+    "product": "AI GPUs \u2014 N2 wafer starts",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "nvidia-taipei",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_chips",
+    "product": "AI GPUs (H100/B200/GB200/Rubin) \u2014 N3/N2 wafer starts",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "NVIDIA's AI GPUs are manufactured exclusively at TSMC leading-edge"
+  },
+  {
+    "from": "nvidia-taipei",
+    "to": "tsmc-fab20-hsinchu",
+    "type": "supplies_chips",
+    "product": "AI GPUs \u2014 N2 wafer starts",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "nvidia-shanghai-design",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_chips",
+    "product": "AI GPUs (H100/B200/GB200/Rubin) \u2014 N3/N2 wafer starts",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "NVIDIA's AI GPUs are manufactured exclusively at TSMC leading-edge"
+  },
+  {
+    "from": "nvidia-shanghai-design",
+    "to": "tsmc-fab20-hsinchu",
+    "type": "supplies_chips",
+    "product": "AI GPUs \u2014 N2 wafer starts",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "amd-hq-santa-clara",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_chips",
+    "product": "MI300/MI400 AI accelerators \u2014 N3/N2",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "amd-austin",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_chips",
+    "product": "MI300/MI400 AI accelerators \u2014 N3/N2",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "amd-markham",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_chips",
+    "product": "MI300/MI400 AI accelerators \u2014 N3/N2",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "amd-bangalore",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_chips",
+    "product": "MI300/MI400 AI accelerators \u2014 N3/N2",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "apple-silicon-cupertino",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_chips",
+    "product": "A-series / M-series SoC \u2014 N3/N2",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "apple-silicon-munich",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_chips",
+    "product": "A-series / M-series SoC \u2014 N3/N2",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "apple-silicon-herzliya",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_chips",
+    "product": "A-series / M-series SoC \u2014 N3/N2",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "apple-silicon-bangalore",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_chips",
+    "product": "A-series / M-series SoC \u2014 N3/N2",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "google-tpu-mountain-view",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_chips",
+    "product": "TPU v5/v6 \u2014 N3/N2",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "google-tpu-madison",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_chips",
+    "product": "TPU v5/v6 \u2014 N3/N2",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "aws-trainium-austin",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_chips",
+    "product": "Trainium2 \u2014 N3/N2",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "aws-trainium-tel-aviv",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_chips",
+    "product": "Trainium2 \u2014 N3/N2",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "microsoft-silicon-redmond",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_chips",
+    "product": "Maia AI accelerator \u2014 N3/N2",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "meta-silicon-menlo-park",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_chips",
+    "product": "MTIA inference accelerator \u2014 N3/N2",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "broadcom-palo-alto-hq",
+    "to": "tsmc-fab18-tainan",
+    "type": "supplies_chips",
+    "product": "Custom AI ASICs (Google TPU, Meta MTIA partner) \u2014 N3/N2",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "huawei-hisilicon-shenzhen",
+    "to": "smic-lingang-advanced",
+    "type": "supplies_chips",
+    "product": "Chinese AI accelerators (Ascend/Biren/etc)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Under US export controls, Chinese AI chips must use domestic SMIC N+2/N+1"
+  },
+  {
+    "from": "biren-moore-threads-shanghai",
+    "to": "smic-lingang-advanced",
+    "type": "supplies_chips",
+    "product": "Chinese AI accelerators (Ascend/Biren/etc)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Under US export controls, Chinese AI chips must use domestic SMIC N+2/N+1"
+  },
+  {
+    "from": "cambricon-beijing",
+    "to": "smic-lingang-advanced",
+    "type": "supplies_chips",
+    "product": "Chinese AI accelerators (Ascend/Biren/etc)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Under US export controls, Chinese AI chips must use domestic SMIC N+2/N+1"
+  },
+  {
+    "from": "alibaba-thead-hangzhou",
+    "to": "smic-lingang-advanced",
+    "type": "supplies_chips",
+    "product": "Chinese AI accelerators (Ascend/Biren/etc)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "Under US export controls, Chinese AI chips must use domestic SMIC N+2/N+1"
+  },
+  {
+    "from": "tsmc-fab18-tainan",
+    "to": "tsmc-ap3-longtan",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab18-tainan",
+    "to": "tsmc-ap6-zhunan",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab18-tainan",
+    "to": "tsmc-ap7-chiayi",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab18-tainan",
+    "to": "tsmc-ap5-taichung",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab18-tainan",
+    "to": "tsmc-ap8-tainan",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab20-hsinchu",
+    "to": "tsmc-ap3-longtan",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab20-hsinchu",
+    "to": "tsmc-ap6-zhunan",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab20-hsinchu",
+    "to": "tsmc-ap7-chiayi",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab20-hsinchu",
+    "to": "tsmc-ap5-taichung",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab20-hsinchu",
+    "to": "tsmc-ap8-tainan",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab22-kaohsiung",
+    "to": "tsmc-ap3-longtan",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab22-kaohsiung",
+    "to": "tsmc-ap6-zhunan",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab22-kaohsiung",
+    "to": "tsmc-ap7-chiayi",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab22-kaohsiung",
+    "to": "tsmc-ap5-taichung",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab22-kaohsiung",
+    "to": "tsmc-ap8-tainan",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab15-taichung",
+    "to": "tsmc-ap3-longtan",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab15-taichung",
+    "to": "tsmc-ap6-zhunan",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab15-taichung",
+    "to": "tsmc-ap7-chiayi",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab15-taichung",
+    "to": "tsmc-ap5-taichung",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab15-taichung",
+    "to": "tsmc-ap8-tainan",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab12-hsinchu",
+    "to": "tsmc-ap3-longtan",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab12-hsinchu",
+    "to": "tsmc-ap6-zhunan",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab12-hsinchu",
+    "to": "tsmc-ap7-chiayi",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab12-hsinchu",
+    "to": "tsmc-ap5-taichung",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab12-hsinchu",
+    "to": "tsmc-ap8-tainan",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab21-arizona-ph1",
+    "to": "tsmc-ap3-longtan",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab21-arizona-ph1",
+    "to": "tsmc-ap6-zhunan",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab21-arizona-ph1",
+    "to": "tsmc-ap7-chiayi",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab21-arizona-ph1",
+    "to": "tsmc-ap5-taichung",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab21-arizona-ph1",
+    "to": "tsmc-ap8-tainan",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab21-arizona-ph2",
+    "to": "tsmc-ap3-longtan",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab21-arizona-ph2",
+    "to": "tsmc-ap6-zhunan",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab21-arizona-ph2",
+    "to": "tsmc-ap7-chiayi",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab21-arizona-ph2",
+    "to": "tsmc-ap5-taichung",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab21-arizona-ph2",
+    "to": "tsmc-ap8-tainan",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab21-arizona-ph3",
+    "to": "tsmc-ap3-longtan",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab21-arizona-ph3",
+    "to": "tsmc-ap6-zhunan",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab21-arizona-ph3",
+    "to": "tsmc-ap7-chiayi",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab21-arizona-ph3",
+    "to": "tsmc-ap5-taichung",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-fab21-arizona-ph3",
+    "to": "tsmc-ap8-tainan",
+    "type": "supplies_chips",
+    "product": "Logic dies for CoWoS/SoIC",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC advanced packaging (CoWoS) is the bottleneck for NVIDIA/AMD/etc AI GPU output"
+  },
+  {
+    "from": "tsmc-ap3-longtan",
+    "to": "foxconn-houston-ai-server",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap3-longtan",
+    "to": "foxconn-guadalajara-ai-server",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap3-longtan",
+    "to": "foxconn-chennai-ai-server",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap3-longtan",
+    "to": "quanta-taoyuan-hq",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap3-longtan",
+    "to": "quanta-la-vergne-tennessee",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap3-longtan",
+    "to": "wiwynn-johor-malaysia",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap3-longtan",
+    "to": "wiwynn-socorro-texas",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap3-longtan",
+    "to": "wistron-hsinchu-ai-server",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap3-longtan",
+    "to": "supermicro-san-jose",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap3-longtan",
+    "to": "supermicro-bade-taiwan",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap3-longtan",
+    "to": "dell-round-rock-ai-factory",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap3-longtan",
+    "to": "hpe-cray-chippewa-falls",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap3-longtan",
+    "to": "inventec-blucina-czech",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap6-zhunan",
+    "to": "foxconn-houston-ai-server",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap6-zhunan",
+    "to": "foxconn-guadalajara-ai-server",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap6-zhunan",
+    "to": "foxconn-chennai-ai-server",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap6-zhunan",
+    "to": "quanta-taoyuan-hq",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap6-zhunan",
+    "to": "quanta-la-vergne-tennessee",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap6-zhunan",
+    "to": "wiwynn-johor-malaysia",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap6-zhunan",
+    "to": "wiwynn-socorro-texas",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap6-zhunan",
+    "to": "wistron-hsinchu-ai-server",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap6-zhunan",
+    "to": "supermicro-san-jose",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap6-zhunan",
+    "to": "supermicro-bade-taiwan",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap6-zhunan",
+    "to": "dell-round-rock-ai-factory",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap6-zhunan",
+    "to": "hpe-cray-chippewa-falls",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap6-zhunan",
+    "to": "inventec-blucina-czech",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap7-chiayi",
+    "to": "foxconn-houston-ai-server",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap7-chiayi",
+    "to": "foxconn-guadalajara-ai-server",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap7-chiayi",
+    "to": "foxconn-chennai-ai-server",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap7-chiayi",
+    "to": "quanta-taoyuan-hq",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap7-chiayi",
+    "to": "quanta-la-vergne-tennessee",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap7-chiayi",
+    "to": "wiwynn-johor-malaysia",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap7-chiayi",
+    "to": "wiwynn-socorro-texas",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap7-chiayi",
+    "to": "wistron-hsinchu-ai-server",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap7-chiayi",
+    "to": "supermicro-san-jose",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap7-chiayi",
+    "to": "supermicro-bade-taiwan",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap7-chiayi",
+    "to": "dell-round-rock-ai-factory",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap7-chiayi",
+    "to": "hpe-cray-chippewa-falls",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap7-chiayi",
+    "to": "inventec-blucina-czech",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap5-taichung",
+    "to": "foxconn-houston-ai-server",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap5-taichung",
+    "to": "foxconn-guadalajara-ai-server",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap5-taichung",
+    "to": "foxconn-chennai-ai-server",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap5-taichung",
+    "to": "quanta-taoyuan-hq",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap5-taichung",
+    "to": "quanta-la-vergne-tennessee",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap5-taichung",
+    "to": "wiwynn-johor-malaysia",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap5-taichung",
+    "to": "wiwynn-socorro-texas",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap5-taichung",
+    "to": "wistron-hsinchu-ai-server",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap5-taichung",
+    "to": "supermicro-san-jose",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap5-taichung",
+    "to": "supermicro-bade-taiwan",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap5-taichung",
+    "to": "dell-round-rock-ai-factory",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap5-taichung",
+    "to": "hpe-cray-chippewa-falls",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap5-taichung",
+    "to": "inventec-blucina-czech",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap8-tainan",
+    "to": "foxconn-houston-ai-server",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap8-tainan",
+    "to": "foxconn-guadalajara-ai-server",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap8-tainan",
+    "to": "foxconn-chennai-ai-server",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap8-tainan",
+    "to": "quanta-taoyuan-hq",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap8-tainan",
+    "to": "quanta-la-vergne-tennessee",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap8-tainan",
+    "to": "wiwynn-johor-malaysia",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap8-tainan",
+    "to": "wiwynn-socorro-texas",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap8-tainan",
+    "to": "wistron-hsinchu-ai-server",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap8-tainan",
+    "to": "supermicro-san-jose",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap8-tainan",
+    "to": "supermicro-bade-taiwan",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap8-tainan",
+    "to": "dell-round-rock-ai-factory",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap8-tainan",
+    "to": "hpe-cray-chippewa-falls",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "tsmc-ap8-tainan",
+    "to": "inventec-blucina-czech",
+    "type": "supplies_chips",
+    "product": "NVIDIA AI GPU modules (GB200/B200/H200)",
+    "criticality": "monopoly",
+    "confidence": "high",
+    "note": "TSMC CoWoS \u2192 server/rack integrator pipeline"
+  },
+  {
+    "from": "nvidia-mellanox-yokneam",
+    "to": "foxconn-houston-ai-server",
+    "type": "supplies_chips",
+    "product": "AI networking switches/NICs (InfiniBand/Ethernet/NVLink)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "nvidia-mellanox-yokneam",
+    "to": "foxconn-guadalajara-ai-server",
+    "type": "supplies_chips",
+    "product": "AI networking switches/NICs (InfiniBand/Ethernet/NVLink)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "nvidia-mellanox-yokneam",
+    "to": "foxconn-chennai-ai-server",
+    "type": "supplies_chips",
+    "product": "AI networking switches/NICs (InfiniBand/Ethernet/NVLink)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "nvidia-mellanox-yokneam",
+    "to": "quanta-taoyuan-hq",
+    "type": "supplies_chips",
+    "product": "AI networking switches/NICs (InfiniBand/Ethernet/NVLink)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "nvidia-mellanox-yokneam",
+    "to": "quanta-la-vergne-tennessee",
+    "type": "supplies_chips",
+    "product": "AI networking switches/NICs (InfiniBand/Ethernet/NVLink)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "nvidia-mellanox-yokneam",
+    "to": "wiwynn-johor-malaysia",
+    "type": "supplies_chips",
+    "product": "AI networking switches/NICs (InfiniBand/Ethernet/NVLink)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "nvidia-mellanox-yokneam",
+    "to": "wiwynn-socorro-texas",
+    "type": "supplies_chips",
+    "product": "AI networking switches/NICs (InfiniBand/Ethernet/NVLink)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "nvidia-mellanox-yokneam",
+    "to": "wistron-hsinchu-ai-server",
+    "type": "supplies_chips",
+    "product": "AI networking switches/NICs (InfiniBand/Ethernet/NVLink)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "nvidia-mellanox-yokneam",
+    "to": "supermicro-san-jose",
+    "type": "supplies_chips",
+    "product": "AI networking switches/NICs (InfiniBand/Ethernet/NVLink)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "nvidia-mellanox-yokneam",
+    "to": "supermicro-bade-taiwan",
+    "type": "supplies_chips",
+    "product": "AI networking switches/NICs (InfiniBand/Ethernet/NVLink)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "nvidia-mellanox-yokneam",
+    "to": "dell-round-rock-ai-factory",
+    "type": "supplies_chips",
+    "product": "AI networking switches/NICs (InfiniBand/Ethernet/NVLink)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "nvidia-mellanox-yokneam",
+    "to": "hpe-cray-chippewa-falls",
+    "type": "supplies_chips",
+    "product": "AI networking switches/NICs (InfiniBand/Ethernet/NVLink)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  },
+  {
+    "from": "nvidia-mellanox-yokneam",
+    "to": "inventec-blucina-czech",
+    "type": "supplies_chips",
+    "product": "AI networking switches/NICs (InfiniBand/Ethernet/NVLink)",
+    "criticality": "monopoly",
+    "confidence": "high"
+  }
+]
