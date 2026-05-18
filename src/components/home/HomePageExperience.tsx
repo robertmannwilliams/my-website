@@ -39,8 +39,15 @@ export default function HomePageExperience({
     setEntered(true);
 
     window.requestAnimationFrame(() => {
+      const prefersReducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+
       indexRef.current?.focus({ preventScroll: true });
-      indexRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      indexRef.current?.scrollIntoView({
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+        block: "start",
+      });
     });
   }
 
