@@ -1,0 +1,343 @@
+.home {
+  min-height: 100svh;
+  background: #f1efe7;
+  color: #203548;
+  font-family: var(--font-sans, inherit);
+}
+
+.home * {
+  box-sizing: border-box;
+}
+
+.entered .threshold {
+  min-height: 84svh;
+}
+
+.threshold {
+  position: relative;
+  display: grid;
+  min-height: 100svh;
+  overflow: hidden;
+  padding: clamp(1.25rem, 3vw, 3rem);
+  border-bottom: 1px solid color-mix(in srgb, #203548 18%, transparent);
+  isolation: isolate;
+}
+
+.thresholdGrid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 0.94fr) minmax(18rem, 1.06fr);
+  gap: clamp(2rem, 6vw, 6rem);
+  align-items: center;
+  width: min(100%, 1180px);
+  margin: 0 auto;
+}
+
+.brandBlock {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: clamp(1rem, 2vw, 1.5rem);
+  min-height: 54svh;
+}
+
+.entryKicker,
+.smallLabel,
+.linkEyebrow,
+.latestMeta,
+.secondaryDescription,
+.footer {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.entryKicker,
+.smallLabel,
+.linkEyebrow,
+.latestMeta,
+.secondaryDescription {
+  color: color-mix(in srgb, #203548 66%, transparent);
+}
+
+.name {
+  max-width: 11ch;
+  margin: 0;
+  font-size: clamp(4.75rem, 12vw, 11.5rem);
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 0.86;
+}
+
+.enterButton {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 7rem;
+  min-height: 3rem;
+  padding: 0.8rem 1.25rem;
+  border: 1px solid #203548;
+  border-radius: 999px;
+  background: transparent;
+  color: #203548;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition:
+    background 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.enterButton:hover,
+.enterButton:focus-visible {
+  background: #203548;
+  color: #f1efe7;
+  transform: translateY(-1px);
+}
+
+.enterButton:focus-visible,
+.linkCard:focus-visible,
+.latestLink:focus-visible,
+.secondaryLink:focus-visible {
+  outline: 2px solid #203548;
+  outline-offset: 4px;
+}
+
+.panoramaWrap {
+  display: grid;
+  align-items: center;
+  min-height: 55svh;
+  color: color-mix(in srgb, #203548 84%, transparent);
+}
+
+.panorama {
+  width: min(100%, 48rem);
+  height: auto;
+  opacity: 0.86;
+}
+
+.index {
+  position: relative;
+  display: grid;
+  gap: clamp(3rem, 7vw, 6rem);
+  width: min(100% - 2rem, 1120px);
+  margin: 0 auto;
+  padding: clamp(4rem, 9vw, 8rem) 0 clamp(2rem, 5vw, 4rem);
+}
+
+.intro {
+  display: grid;
+  grid-template-columns: minmax(0, 0.72fr) minmax(14rem, 0.28fr);
+  gap: clamp(1.5rem, 5vw, 5rem);
+  align-items: end;
+}
+
+.note {
+  max-width: 47rem;
+  margin: 0;
+  font-size: clamp(1.55rem, 3.4vw, 3rem);
+  line-height: 1.08;
+}
+
+.vignette {
+  width: min(100%, 18rem);
+  height: auto;
+  justify-self: end;
+  color: color-mix(in srgb, #203548 58%, transparent);
+}
+
+.linksGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid color-mix(in srgb, #203548 22%, transparent);
+  border-left: 1px solid color-mix(in srgb, #203548 22%, transparent);
+}
+
+.linkCard {
+  display: grid;
+  align-content: start;
+  gap: 0.9rem;
+  min-height: 18rem;
+  padding: clamp(1.1rem, 2.5vw, 1.65rem);
+  border-right: 1px solid color-mix(in srgb, #203548 22%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, #203548 22%, transparent);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    background 180ms ease,
+    transform 180ms ease;
+}
+
+.linkCard:hover {
+  background: color-mix(in srgb, #203548 5%, transparent);
+  transform: translateY(-2px);
+}
+
+.linkTitle,
+.latestTitle {
+  margin: 0;
+  font-size: clamp(1.7rem, 3vw, 2.65rem);
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 0.98;
+}
+
+.linkBody {
+  max-width: 18rem;
+  margin: auto 0 0;
+  color: color-mix(in srgb, #203548 78%, transparent);
+  font-size: 0.98rem;
+  line-height: 1.55;
+}
+
+.latest {
+  display: grid;
+  grid-template-columns: minmax(0, 0.7fr) minmax(14rem, 0.3fr);
+  gap: clamp(1.5rem, 5vw, 5rem);
+  align-items: center;
+  padding: clamp(2rem, 5vw, 4rem) 0;
+  border-top: 1px solid color-mix(in srgb, #203548 22%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, #203548 22%, transparent);
+}
+
+.latestLink {
+  display: grid;
+  gap: 0.9rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.latestLink:hover .latestTitle {
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.12em;
+}
+
+.latestTitle {
+  max-width: 14ch;
+}
+
+.secondary {
+  display: grid;
+  gap: 1.2rem;
+}
+
+.secondaryList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: color-mix(in srgb, #203548 22%, transparent);
+  border: 1px solid color-mix(in srgb, #203548 22%, transparent);
+}
+
+.secondaryLink {
+  display: grid;
+  gap: 0.45rem;
+  min-height: 8rem;
+  padding: clamp(1rem, 2vw, 1.4rem);
+  background: #f1efe7;
+  color: inherit;
+  text-decoration: none;
+}
+
+.secondaryLink:hover {
+  background: color-mix(in srgb, #203548 5%, #f1efe7);
+}
+
+.secondaryDescription {
+  letter-spacing: 0.08em;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: clamp(1rem, 3vw, 2rem);
+  border-top: 1px solid color-mix(in srgb, #203548 18%, transparent);
+  color: color-mix(in srgb, #203548 58%, transparent);
+}
+
+@media (max-width: 760px) {
+  .threshold {
+    padding: 1rem;
+  }
+
+  .thresholdGrid,
+  .intro,
+  .latest {
+    grid-template-columns: 1fr;
+  }
+
+  .thresholdGrid {
+    align-content: center;
+    gap: 1rem;
+  }
+
+  .brandBlock {
+    min-height: auto;
+    padding-top: 9svh;
+  }
+
+  .name {
+    font-size: clamp(4rem, 22vw, 7rem);
+  }
+
+  .panoramaWrap {
+    min-height: auto;
+  }
+
+  .panorama {
+    width: min(110%, 34rem);
+    margin-left: -5%;
+  }
+
+  .index {
+    width: min(100% - 1.5rem, 1120px);
+    gap: 3rem;
+    padding-top: 3rem;
+  }
+
+  .linksGrid,
+  .secondaryList {
+    grid-template-columns: 1fr;
+  }
+
+  .linkCard {
+    min-height: 12rem;
+  }
+
+  .vignette {
+    justify-self: start;
+    width: min(72%, 16rem);
+  }
+
+  .footer {
+    display: grid;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enterButton,
+  .linkCard,
+  .secondaryLink {
+    transition: none;
+  }
+
+  .enterButton:hover,
+  .linkCard:hover {
+    transform: none;
+  }
+
+  .home {
+    scroll-behavior: auto;
+  }
+}
