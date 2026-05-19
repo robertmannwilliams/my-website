@@ -180,7 +180,7 @@ function SituationBriefBar({
           color: '#64748B',
           fontSize: 10,
           flexShrink: 0,
-          fontFamily: "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace",
+          fontFamily: "var(--font-monitor-mono), 'IBM Plex Mono', 'SF Mono', monospace",
         }}
       >
         <span>C {criticalCount}</span>

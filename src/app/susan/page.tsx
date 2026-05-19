@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import * as THREE from "three";
 import { Pacifico } from "next/font/google";
 
@@ -13,25 +13,27 @@ const pacifico = Pacifico({ weight: "400", subsets: ["latin"] });
 
 const HEART_COUNT = 18;
 
+type FloatingHeart = {
+  id: number;
+  left: number;
+  size: number;
+  duration: number;
+  delay: number;
+  opacity: number;
+  color: string;
+};
+
+const HEARTS: FloatingHeart[] = Array.from({ length: HEART_COUNT }, (_, i) => ({
+  id: i,
+  left: (i * 37) % 100,
+  size: 14 + ((i * 11) % 22),
+  duration: 8 + ((i * 7) % 10),
+  delay: (i * 13) % 18,
+  opacity: 0.2 + (((i * 17) % 45) / 100),
+  color: i % 2 === 0 ? "#FF69B4" : "#FF1493",
+}));
+
 function FloatingHearts() {
-  const [hearts, setHearts] = useState<
-    { id: number; left: number; size: number; duration: number; delay: number; opacity: number; color: string }[]
-  >([]);
-
-  useEffect(() => {
-    setHearts(
-      Array.from({ length: HEART_COUNT }, (_, i) => ({
-        id: i,
-        left: Math.random() * 100,
-        size: 14 + Math.random() * 22,
-        duration: 8 + Math.random() * 10,
-        delay: Math.random() * 18,
-        opacity: 0.2 + Math.random() * 0.45,
-        color: Math.random() > 0.5 ? "#FF69B4" : "#FF1493",
-      }))
-    );
-  }, []);
-
   return (
     <div
       style={{
@@ -42,7 +44,7 @@ function FloatingHearts() {
         zIndex: 0,
       }}
     >
-      {hearts.map((h) => (
+      {HEARTS.map((h) => (
         <div
           key={h.id}
           style={
@@ -71,6 +73,7 @@ function FloatingHearts() {
 
 function Portrait() {
   const pointsRef = useRef<THREE.Points>(null!);
+  const shaderMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
 
   const shaderMaterial = useMemo(
     () =>
@@ -124,6 +127,14 @@ function Portrait() {
       }),
     []
   );
+
+  useEffect(() => {
+    shaderMaterialRef.current = shaderMaterial;
+    return () => {
+      shaderMaterialRef.current = null;
+      shaderMaterial.dispose();
+    };
+  }, [shaderMaterial]);
 
   useEffect(() => {
     async function processImage() {
@@ -205,10 +216,14 @@ function Portrait() {
   }, []);
 
   useFrame(({ clock }) => {
-    shaderMaterial.uniforms.uTime.value = clock.getElapsedTime();
+    const elapsedTime = clock.getElapsedTime();
+    const material = shaderMaterialRef.current;
+    if (material) {
+      material.uniforms.uTime.value = elapsedTime;
+    }
     if (pointsRef.current) {
       pointsRef.current.rotation.y =
-        Math.sin(clock.getElapsedTime() * 0.15) * 0.04;
+        Math.sin(elapsedTime * 0.15) * 0.04;
     }
   });
 

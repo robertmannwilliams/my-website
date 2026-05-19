@@ -1,51 +1,60 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
-function applyDark() {
-  document.documentElement.style.setProperty("--background", "#344a34");
-  document.documentElement.style.setProperty("--foreground", "#f5dcc8");
-  document.documentElement.classList.add("dark");
+type ThemeName = "dark" | "light";
+
+const THEME_EVENT = "rw-theme-change";
+
+function getServerSnapshot(): ThemeName {
+  return "dark";
 }
 
-function applyLight() {
-  document.documentElement.style.setProperty("--background", "#f5dcc8");
-  document.documentElement.style.setProperty("--foreground", "#344a34");
-  document.documentElement.classList.remove("dark");
+function getSnapshot(): ThemeName {
+  if (typeof document === "undefined") return "dark";
+  return document.documentElement.classList.contains("dark") ? "dark" : "light";
+}
+
+function subscribe(callback: () => void) {
+  window.addEventListener(THEME_EVENT, callback);
+  return () => window.removeEventListener(THEME_EVENT, callback);
+}
+
+function applyTheme(theme: ThemeName, persist = true) {
+  document.documentElement.style.setProperty(
+    "--background",
+    theme === "dark" ? "#344a34" : "#f5dcc8",
+  );
+  document.documentElement.style.setProperty(
+    "--foreground",
+    theme === "dark" ? "#f5dcc8" : "#344a34",
+  );
+  document.documentElement.classList.toggle("dark", theme === "dark");
+
+  if (persist) {
+    localStorage.setItem("theme", theme);
+  }
+
+  window.dispatchEvent(new Event(THEME_EVENT));
 }
 
 export default function ThemeToggle() {
-  const [dark, setDark] = useState(true);
-  const [mounted, setMounted] = useState(false);
+  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const dark = theme === "dark";
 
   useEffect(() => {
     const saved = localStorage.getItem("theme");
-    // Default to dark if no preference saved
-    const isDark = saved !== "light";
-    setDark(isDark);
-    if (isDark) applyDark();
-    else applyLight();
-    setMounted(true);
+    applyTheme(saved === "light" ? "light" : "dark", false);
   }, []);
 
   const toggle = () => {
-    const next = !dark;
-    setDark(next);
-    if (next) {
-      applyDark();
-      localStorage.setItem("theme", "dark");
-    } else {
-      applyLight();
-      localStorage.setItem("theme", "light");
-    }
+    applyTheme(dark ? "light" : "dark");
   };
-
-  if (!mounted) return null;
 
   return (
     <button
-      onClick={toggle}
       aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+      onClick={toggle}
       style={{
         position: "fixed",
         top: "1.5rem",
@@ -66,8 +75,13 @@ export default function ThemeToggle() {
         fontSize: "14px",
         padding: 0,
       }}
-      onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
-      onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.3")}
+      onMouseEnter={(event) => {
+        event.currentTarget.style.opacity = "0.8";
+      }}
+      onMouseLeave={(event) => {
+        event.currentTarget.style.opacity = "0.3";
+      }}
+      type="button"
     >
       {dark ? "\u2600\uFE0E" : "\u263E"}
     </button>
