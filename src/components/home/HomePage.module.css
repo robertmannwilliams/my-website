@@ -134,6 +134,10 @@
   padding: clamp(4rem, 9vw, 8rem) 0 clamp(2rem, 5vw, 4rem);
 }
 
+.index:focus {
+  outline: none;
+}
+
 .intro {
   display: grid;
   grid-template-columns: minmax(0, 0.72fr) minmax(14rem, 0.28fr);
