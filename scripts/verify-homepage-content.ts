@@ -1,9 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  homeProjectLinks,
   homepageCopy,
-  primaryHomeLinks,
-  secondaryHomeLinks,
 } from "../src/content/homepage";
 
 const projectRoot = process.cwd();
@@ -15,9 +14,7 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 function assertUniqueHrefs() {
-  const hrefs = [...primaryHomeLinks, ...secondaryHomeLinks].map(
-    (link) => link.href,
-  );
+  const hrefs = homeProjectLinks.map((link) => link.href);
   assert(
     new Set(hrefs).size === hrefs.length,
     `Homepage links must use unique hrefs. Received: ${hrefs.join(", ")}`,
@@ -25,25 +22,24 @@ function assertUniqueHrefs() {
 }
 
 function assertLinks() {
-  const primaryLabels = primaryHomeLinks.map((link) => link.label);
+  const projectLabels = homeProjectLinks.map((link) => link.label);
   assert(
-    JSON.stringify(primaryLabels) === JSON.stringify(["Writings", "About", "Work"]),
-    `Primary homepage links must be Writings, About, Work. Received: ${primaryLabels.join(", ")}`,
+    JSON.stringify(projectLabels) === JSON.stringify(["Data Center Thing", "Global Monitor"]),
+    `Homepage project links must be Data Center Thing, Global Monitor. Received: ${projectLabels.join(", ")}`,
   );
 
-  const secondaryLabels = secondaryHomeLinks.map((link) => link.label);
+  const projectHrefs = homeProjectLinks.map((link) => link.href);
   assert(
-    JSON.stringify(secondaryLabels) === JSON.stringify(["Monitor", "AI Stack"]),
-    `Secondary homepage links must be Monitor, AI Stack. Received: ${secondaryLabels.join(", ")}`,
+    JSON.stringify(projectHrefs) === JSON.stringify(["/aistack", "/monitor"]),
+    `Homepage project links must point to /aistack and /monitor. Received: ${projectHrefs.join(", ")}`,
   );
 
-  for (const link of [...primaryHomeLinks, ...secondaryHomeLinks]) {
+  for (const link of homeProjectLinks) {
     assert(
       link.href.startsWith("/") && !link.href.startsWith("//"),
       `${link.label} href must be root-relative`,
     );
-    assert(link.eyebrow.length > 0, `${link.label} must include an eyebrow`);
-    assert(link.description.length >= 24, `${link.label} description is too short`);
+    assert(link.status === "Work in progress", `${link.label} must show work-in-progress status`);
   }
 
   assertUniqueHrefs();
@@ -52,14 +48,14 @@ function assertLinks() {
 function assertCopy() {
   assert(homepageCopy.entryCue === "Enter", "Entry cue must be Enter");
   assert(
-    homepageCopy.note.length >= 90 && homepageCopy.note.length <= 220,
-    `Homepage note should read like a concise plaque. Current length: ${homepageCopy.note.length}`,
+    homepageCopy.intro.length >= 120 && homepageCopy.intro.length <= 220,
+    `Homepage intro should be a small under-construction note. Current length: ${homepageCopy.intro.length}`,
   );
   assert(
-    homepageCopy.note.includes("systems") &&
-      homepageCopy.note.includes("capital") &&
-      homepageCopy.note.includes("technology"),
-    "Homepage note must include systems, capital, and technology",
+    homepageCopy.intro.includes("Hi, I'm Robert") &&
+      homepageCopy.intro.includes("under construction") &&
+      homepageCopy.intro.includes("AI coding tools"),
+    "Homepage intro must include Robert, under construction, and AI coding tools language",
   );
 }
 
@@ -190,11 +186,12 @@ function assertThresholdLayout() {
     "Homepage must gate the index behind Enter instead of allowing scroll-through access",
   );
   assert(
-    homeExperience.includes("directoryLinks") &&
+    homeExperience.includes("projectLinks") &&
       homeExperience.includes("styles.mainGrid") &&
       homeExperience.includes("styles.mainIntro") &&
-      homeExperience.includes("styles.directoryList"),
-    "Post-enter homepage must use a simple text-left, links-right layout",
+      homeExperience.includes("styles.projectNav") &&
+      homeExperience.includes("styles.projectList"),
+    "Post-enter homepage must use a simple text-left, bullet-links-right layout",
   );
 
   const homeStyles = readFileSync(
@@ -211,10 +208,11 @@ function assertThresholdLayout() {
   );
   assert(
     homeStyles.includes(".mainGrid") &&
-      homeStyles.includes(".directoryList") &&
-      homeStyles.includes(".directoryLink") &&
+      homeStyles.includes(".constructionNote") &&
+      homeStyles.includes(".projectList") &&
+      homeStyles.includes("list-style: disc") &&
       homeStyles.includes("grid-template-columns: minmax(0, 0.86fr) minmax(19rem, 0.74fr)"),
-    "Index styles must define the post-enter two-column directory layout",
+    "Index styles must define the post-enter two-column note and bullet-link layout",
   );
   assert(
     homeStyles.includes("bottom: clamp(2.75rem, 7.5svh, 5.25rem)") &&
@@ -230,9 +228,14 @@ function assertRootPageIntegration() {
   const rootPage = readFileSync(rootPagePath, "utf8");
   assert(!rootPage.includes("\"use client\""), "Root page should be a server component");
   assert(!rootPage.includes("ParticleField"), "Root page must not import ParticleField");
+  assert(!rootPage.includes("getPublishedWritings"), "Root page must not pull writing into the temporary homepage");
   assert(
     rootPage.includes("HomePageExperience"),
     "Root page must render HomePageExperience",
+  );
+  assert(
+    rootPage.includes("homeProjectLinks"),
+    "Root page must pass only the temporary project links",
   );
 }
 

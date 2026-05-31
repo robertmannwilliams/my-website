@@ -6,47 +6,20 @@ import type { HomeLink } from "@/content/homepage";
 import EntryPanorama from "@/components/home/EntryPanorama";
 import styles from "./HomePage.module.css";
 
-interface LatestWriting {
-  href: string;
-  title: string;
-  summary: string;
-  meta: string;
-}
-
 interface HomePageExperienceProps {
   copy: {
     entryCue: string;
-    note: string;
-    latestLabel: string;
-    secondaryLabel: string;
+    intro: string;
   };
-  primaryLinks: HomeLink[];
-  secondaryLinks: HomeLink[];
-  latestWriting?: LatestWriting | null;
+  projectLinks: HomeLink[];
 }
 
 export default function HomePageExperience({
   copy,
-  primaryLinks,
-  secondaryLinks,
-  latestWriting,
+  projectLinks,
 }: HomePageExperienceProps) {
   const [entered, setEntered] = useState(false);
   const indexRef = useRef<HTMLElement>(null);
-  const directoryLinks = [
-    ...(latestWriting
-      ? [
-          {
-            href: latestWriting.href,
-            label: latestWriting.title,
-            eyebrow: copy.latestLabel,
-            description: latestWriting.summary,
-          },
-        ]
-      : []),
-    ...primaryLinks,
-    ...secondaryLinks,
-  ];
 
   function handleEnter() {
     setEntered(true);
@@ -81,22 +54,21 @@ export default function HomePageExperience({
         aria-label="Homepage index"
       >
         <div className={styles.mainGrid}>
-          <section className={styles.mainIntro} aria-labelledby="homepage-main-title">
-            <p className={styles.smallLabel}>Robert Williams</p>
-            <h2 className={styles.mainTitle} id="homepage-main-title">
-              Systems, capital, technology.
-            </h2>
-            <p className={styles.note}>{copy.note}</p>
+          <section className={styles.mainIntro} aria-label="Introductory note">
+            <p className={styles.constructionNote}>{copy.intro}</p>
           </section>
 
-          <nav className={styles.directoryList} aria-label="Homepage links">
-            {directoryLinks.map((link) => (
-              <Link className={styles.directoryLink} href={link.href} key={link.href}>
-                <span className={styles.linkEyebrow}>{link.eyebrow}</span>
-                <span className={styles.linkTitle}>{link.label}</span>
-                <span className={styles.linkBody}>{link.description}</span>
-              </Link>
-            ))}
+          <nav className={styles.projectNav} aria-label="Work in progress projects">
+            <ul className={styles.projectList}>
+              {projectLinks.map((link) => (
+                <li className={styles.projectItem} key={link.href}>
+                  <Link className={styles.projectLink} href={link.href}>
+                    {link.label}
+                  </Link>
+                  <span className={styles.projectStatus}>{link.status}</span>
+                </li>
+              ))}
+            </ul>
           </nav>
         </div>
       </section>

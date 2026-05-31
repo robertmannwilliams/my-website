@@ -150,6 +150,7 @@
 }
 
 .enterButton:focus-visible,
+.projectLink:focus-visible,
 .linkCard:focus-visible,
 .latestLink:focus-visible,
 .secondaryLink:focus-visible {
@@ -211,6 +212,58 @@
   display: grid;
   gap: clamp(1.1rem, 2vw, 1.65rem);
   max-width: 42rem;
+}
+
+.constructionNote {
+  max-width: 32rem;
+  margin: 0;
+  font-size: clamp(0.82rem, 1vw, 0.95rem);
+  line-height: 1.62;
+}
+
+.projectNav {
+  align-self: start;
+  justify-self: start;
+}
+
+.projectList {
+  display: grid;
+  gap: 1.35rem;
+  margin: 0;
+  padding-left: 1.2rem;
+  list-style: disc;
+}
+
+.projectItem {
+  padding-left: 0.2rem;
+}
+
+.projectItem::marker {
+  color: color-mix(in srgb, #0A2540 58%, transparent);
+  font-size: 0.86em;
+}
+
+.projectLink {
+  color: inherit;
+  font-size: clamp(1rem, 1.4vw, 1.28rem);
+  line-height: 1.35;
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+
+.projectLink:hover {
+  color: #0A2540;
+  text-decoration: underline;
+  text-decoration-thickness: 0.06em;
+  text-underline-offset: 0.18em;
+}
+
+.projectStatus {
+  display: block;
+  margin-top: 0.24rem;
+  color: color-mix(in srgb, #0A2540 60%, transparent);
+  font-size: 0.78rem;
+  line-height: 1.4;
 }
 
 .mainTitle {
@@ -468,6 +521,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .enterButton,
+  .projectLink,
   .linkCard,
   .secondaryLink {
     transition: none;
