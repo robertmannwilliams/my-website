@@ -78,7 +78,7 @@ function PriceTicker() {
         paddingRight: 16,
         gap: 0,
         overflow: 'hidden',
-        fontFamily: "'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', monospace",
+        fontFamily: "var(--font-monitor-mono), 'IBM Plex Mono', 'SF Mono', monospace",
       }}
     >
       {/* Price items */}

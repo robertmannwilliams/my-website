@@ -837,7 +837,7 @@ export default function MonitorPage() {
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        fontFamily: "'Inter', 'Neue Montreal', sans-serif",
+        fontFamily: "var(--font-monitor-sans), 'Neue Montreal', sans-serif",
       }}
     >
       <SituationBriefBar
