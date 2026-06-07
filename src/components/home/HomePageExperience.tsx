@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import type { HomeLink } from "@/content/homepage";
@@ -10,6 +11,12 @@ interface HomePageExperienceProps {
   copy: {
     entryCue: string;
     intro: string;
+    introImage: {
+      src: string;
+      alt: string;
+      width: number;
+      height: number;
+    };
   };
   projectLinks: HomeLink[];
 }
@@ -54,22 +61,36 @@ export default function HomePageExperience({
         aria-label="Homepage index"
       >
         <div className={styles.mainGrid}>
-          <section className={styles.mainIntro} aria-label="Introductory note">
-            <p className={styles.constructionNote}>{copy.intro}</p>
-          </section>
+          <div className={styles.mainColumn}>
+            <section className={styles.mainIntro} aria-label="Introductory note">
+              <p className={styles.constructionNote}>{copy.intro}</p>
+            </section>
 
-          <nav className={styles.projectNav} aria-label="Work in progress projects">
-            <ul className={styles.projectList}>
-              {projectLinks.map((link) => (
-                <li className={styles.projectItem} key={link.href}>
-                  <Link className={styles.projectLink} href={link.href}>
-                    {link.label}
-                  </Link>
-                  <span className={styles.projectStatus}>{link.status}</span>
-                </li>
-              ))}
-            </ul>
-          </nav>
+            <nav className={styles.projectNav} aria-label="Work in progress projects">
+              <ul className={styles.projectList}>
+                {projectLinks.map((link) => (
+                  <li className={styles.projectItem} key={link.href}>
+                    <Link className={styles.projectLink} href={link.href}>
+                      {link.label}
+                    </Link>
+                    <span className={styles.projectStatus}>{link.status}</span>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
+
+          <div className={styles.introImageWrap}>
+            <Image
+              className={styles.introImage}
+              src={copy.introImage.src}
+              alt={copy.introImage.alt}
+              width={copy.introImage.width}
+              height={copy.introImage.height}
+              sizes="(max-width: 760px) 100vw, 30rem"
+              priority
+            />
+          </div>
         </div>
       </section>
     </main>
