@@ -63,10 +63,28 @@ Rob can open on his phone.
 - [x] Progress affordance: slim chapter rail (Plex Mono numbers) for orientation/jumping.
 - [x] Acceptance: full story scroll works start to finish with placeholder plates.
 
+## Phase 3.5 — Restructure (Rob's reflection, 2026-06-10)
+
+- [x] Copy rewritten at the plain-spoken register (style contract: short declaratives,
+      concrete nouns, jargon defined inline, no rhetorical colons/triplets). 39 beats,
+      ~2,450 words. Opening folded — no double prologue; transitions live in prose.
+- [x] Chapters removed: one continuous flow (section files kept as authoring units;
+      no headers, kickers, or numbered rail rendered). Progress thread + ATLAS link.
+- [x] Stamps reduced to ONE — ASML "ONE COMPANY". Concentration otherwise woven into
+      sentences. Atlas keeps chokepoint data as filters.
+- [x] One persistent story map: camera travels site-to-site (flights capped ~2.6s),
+      faint dashed journey line accumulates behind the reader, active pins 35% larger
+      with bigger italic labels. Continuous scroll kept (no snap) with slide-like beat
+      presentation.
+- [ ] Acceptance: Rob scrolls the rewritten flow on his phone; red-pens the copy.
+
 ## Phase 4 — Plates
 
-- [ ] Rob generates the 13 plates with the locked prompt (DESIGN.md plate list);
-      art-direction is his, batching for consistency.
+- [ ] Rob generates the 8 plates with the locked prompt (DESIGN.md plate list);
+      art-direction is his, batching for consistency. (Was 13: gpu-grid,
+      cable-nervous-system, and training-room are in-code diagrams; two-seconds and
+      the-atlas have no plate slots in the flow. Generate AFTER the Phase 3.5 copy
+      is approved.)
 - [ ] Post-process pass: normalize cream background, match ink levels, shared grain
       (scriptable in the repo: sharp or ImageMagick).
 - [ ] Drop into `/public/plates/{key}.png`, responsive sizes via next/image, alt text
@@ -75,7 +93,7 @@ Rob can open on his phone.
 
 ## Phase 5 — Polish & extras
 
-- [ ] Concentration stamp recap moment in chapter 12 (all stamps reappear as a ledger).
+- ~~Concentration stamp recap ledger~~ (removed 2026-06-10 — there is one stamp now)
 - [ ] Scenario mode in atlas (v1: hand-authored "Taiwan disruption" — Taiwanese sites
       and 2 downstream layers dim/flag; data lives in `content/scenarios.json`).
 - [ ] Methodology page: data provenance, source tiers, confidence flags, corrections
@@ -97,6 +115,30 @@ Rob can open on his phone.
 ## Session log
 
 <!-- newest first: YYYY-MM-DD — what was done / what's next / open questions -->
+
+- 2026-06-10 (later still) — **Phase 3.5 built: the restructure from Rob's reflection.**
+  All copy rewritten at the kitchen-table register (style contract in the Phase 3.5
+  block above) — 39 beats, ~2,450 words, double prologue folded, every transition
+  carried in prose. Chapters gone: `StoryFlow` renders one continuous beat stream
+  (markdown section files unchanged as authoring units; ids/validation intact). Five
+  stamps deleted from content; the single ASML "ONE COMPANY" stays and hides when the
+  story moves on. One persistent story map for the whole piece (replaces 13 windowed
+  maps — simpler AND kinder to WebGL): the camera now TRAVELS from site to site
+  (flyTo capped 2.6s), a faint dashed journey line accumulates behind the reader
+  (sequential primaries, great-circle segments), active pins render 35% larger with
+  13.5px italic labels. Handoff camera now FITS the inhabited world (phones see the
+  whole plate). Numbered rail replaced by a 2px progress thread + vertical ATLAS
+  link. Figure numbers run sequentially (Fig. 1–11). DESIGN.md and CLAUDE.md amended
+  (stamp = single gesture; no chapter headers; traversing-map spec). Verified at 375px
+  and 1280px: opening flow, Abilene→Spruce Pine traverse with breadcrumb, stamp thunk
+  + hide, finale chain caption, world-fit handoff into the atlas. Kept continuous
+  scroll over snap-slides (Safari momentum, reading rhythm, and the traveling camera
+  all argue for it — revisit only if the deployed feel disagrees). **Decisions:**
+  plates now 8 (after copy approval); stamp-ledger Phase 5 item removed. **Next:**
+  Rob scrolls the deploy and red-pens the copy (Phase 3.5 acceptance box). Then
+  plates, or Phase 5 polish in parallel. **For Rob:** the copy is yours to mark up —
+  every beat lives in `content/chapters/*.md` as plain markdown; edit freely or dictate
+  changes and I'll apply them.
 
 - 2026-06-10 (late) — **Narrative-flow brief added** (`docs/narrative-flow-brief.md`)
   for Rob's structural reflection, gated BEFORE Phase 4 so plates don't lock a
