@@ -19,24 +19,26 @@ beats:
 
 ## Beat 8.1
 
-Follow the scale up: a chip the size of your palm; a tray of eight; a rack of
-seventy-two, drawing as much electricity as a hundred homes; a row of racks; a hall of
-rows; a campus of halls. Somewhere between the rack and the hall, the project stops being
-electronics and becomes heavy construction — steel, concrete, cooling plants, and a
-substation that would have served a mid-sized city a decade ago.
+Follow the scale up. A chip the size of your palm. A tray of eight. A rack of
+seventy-two that draws as much power as a hundred homes. A row of racks, a hall of
+rows, a campus of halls. Somewhere between the rack and the hall, this stops being
+electronics and becomes heavy construction. Steel, concrete, cooling plants, and a
+substation that would once have served a whole city.
 
 ## Beat 8.2
 
-The new clusters went up at a speed that broke industry assumptions. xAI converted an old
-appliance factory in Memphis into one of the world's largest supercomputers in about four
-months — a job the industry would have budgeted years for — partly by parking gas
-turbines outside because the grid couldn't deliver power fast enough. Speed is now a
-weapon; whoever stands up compute fastest trains the next model first.
+The buildings go up at a speed the construction industry did not think was possible.
+In Memphis, xAI turned an old appliance factory into one of the world's largest
+computers in about four months, partly by parking gas turbines in the lot because the
+grid could not keep up. Speed is the competition now. Whoever stands up computing
+power first trains the next model first.
 
 ## Beat 8.3
 
-And the buildings keep multiplying. OpenAI's Stargate program alone — a constellation of
-campuses across Texas, the Midwest, and New Mexico — represents hundreds of billions of
-dollars of committed construction. Hyperscalers collectively are spending more per year
-on these facilities than the inflation-adjusted cost of the entire Apollo program. Which
-runs the story into its hardest wall: where does the electricity come from?
+And the map keeps filling in. The Stargate program alone, OpenAI's buildout with
+Oracle and SoftBank, has committed hundreds of billions of dollars to campuses across
+Texas, Michigan, Wisconsin, and New Mexico. The industry now spends more on these
+buildings every year than the entire Apollo program cost, adjusted for inflation.
+
+All of which runs into the hardest question in the story. Where does the electricity
+come from?

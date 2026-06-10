@@ -15,27 +15,27 @@ beats:
 
 ## Beat 10.1
 
-Now the part with no geography. Everything so far was hardware; here is what it's *for*.
+Now the part with no geography at all. What the building actually does.
 
-Training a model works like this: take a neural network — billions of adjustable dials,
-initially set at random — and show it most of the written internet, one fragment at a
-time. For each fragment, ask it to guess the next word. Grade the guess. Nudge the dials.
-Repeat trillions of times. The single training run executes across the entire building
-for months, the largest computations our species performs.
+Training works like this. Build a network of billions of small adjustable dials, all
+set at random. Show it most of the written internet, one fragment at a time, and make
+it guess the next word. Grade the guess. Nudge the dials. Repeat, trillions of times,
+across the whole building, for months. It is the largest calculation humans perform.
 
 ## Beat 10.2
 
-The output is almost comically mundane: a file. A very large list of numbers — the final
-positions of all those dials — that you could carry on a briefcase of hard drives.
-That file *is* the model. It's plausibly the most expensive object per pound ever made:
-billions of dollars of compute, distilled into terabytes. Everything the model "knows"
-lives in how those numbers are arranged.
+What comes out the other end is a file. A very long list of numbers, the final
+positions of all those dials. A couple of terabytes. You could carry it in a briefcase
+of hard drives.
+
+That file is the AI. Copy the file and you have copied the thing itself. Billions of
+dollars of electricity and machine time, distilled into what may be the most expensive
+object per pound ever made.
 
 ## Beat 10.3
 
-One more thing, because it explains the market: the software that orchestrates all those
-GPUs — NVIDIA's CUDA — has been the industry's standard toolkit for over fifteen years.
-Every researcher learned it; every lab's code assumes it. Competitors have built faster
-chips on paper and lost anyway, because the moat was never just the silicon — it's that
-the world's AI software speaks NVIDIA's language. In this industry, lock-in is built in
-code as much as in fabs.
+One more piece, because it explains the market. The software that conducts all those
+chips belongs to NVIDIA, and it has been the industry's standard for fifteen years and
+counting. Every researcher learned it. Every lab's code assumes it. Rivals have
+designed faster chips on paper and lost anyway, because the world's AI software speaks
+NVIDIA's language. The moat was never just the chip.

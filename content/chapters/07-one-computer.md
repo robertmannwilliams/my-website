@@ -18,24 +18,23 @@ beats:
 
 ## Beat 7.1
 
-One GPU, alone, cannot train a frontier AI model — not in a thousand years of running.
-Training is a single program executed across tens of thousands of chips simultaneously,
-for months. Which means the chips must talk to each other constantly, at staggering
-speed. The cables are not plumbing; they're the machine's nervous system. A modern AI
-cluster contains thousands of miles of copper and fiber, and if the connections are slow,
-the million-dollar chips sit idle, waiting.
+Nobody trains an AI on one chip. One chip would need centuries. Training runs across
+tens of thousands of chips at once, for months, and the chips have to talk to each
+other the whole time. So the wiring matters as much as the silicon. The back of an AI
+server row is a waterfall of cables, thousands of miles of copper and fiber, bundled
+and swept like the strands of a suspension bridge. When the connections are slow,
+million-dollar chips sit idle, waiting for news.
 
 ## Beat 7.2
 
-This is the insight that reorganized the industry: the computer is no longer the box.
-The computer is the *building*. The box — the server, the rack — is just a component.
-NVIDIA understood this earliest, which is why it sells not chips but entire rack-scale
-machines: 72 GPUs fused into one liquid-cooled unit weighing as much as a car.
+That is the idea that reorganized the industry. The computer is not the box anymore.
+The computer is the building. NVIDIA saw this first, which is why it no longer really
+sells chips. It sells whole racks. Seventy-two chips fused into one liquid-cooled
+machine that weighs as much as a car.
 
 ## Beat 7.3
 
-Someone has to bolt all this together. That work belongs to Taiwanese manufacturing
-giants — Foxconn, Quanta, Wiwynn — the same companies that assemble iPhones, now
-building AI racks in Houston, Guadalajara, and a fast-growing archipelago of plants
-near the customers. The finished racks roll out by the thousands, headed for buildings
-that have a problem we haven't discussed yet.
+The racks are bolted together by the same contract manufacturers that assemble
+iPhones. Foxconn and its peers, on assembly lines in Houston, in Guadalajara, in a
+growing ring of plants near the customers. This is the one ordinary manufacturing step
+in the whole chain. It is also the last one.

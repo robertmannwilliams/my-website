@@ -690,14 +690,51 @@ html:has(.atlas-root) body {
   overflow-x: clip;
 }
 
-/* Story chapters render as full-width siblings of the .story columns. */
-.chapter--story {
+/* The story: one continuous flow, full width, no chapter chrome. */
+.story-flow {
+  position: relative;
   padding: 0 clamp(1rem, 3vw, 2.5rem);
+  margin-top: clamp(2rem, 5vw, 3.5rem);
 }
 
-.chapter--story__header {
-  max-width: 44rem;
-  margin: 0 auto 1rem;
+/* Reading-progress thread: the journey in miniature. */
+.story-thread {
+  position: sticky;
+  top: 18vh;
+  float: left;
+  margin-left: calc(-1 * clamp(0.5rem, 1.5vw, 1.5rem));
+  height: 64vh;
+  width: 2px;
+  background: color-mix(in srgb, var(--ink-faint) 45%, var(--paper));
+  display: none;
+}
+
+@media (min-width: 1150px) {
+  .story-thread {
+    display: block;
+  }
+}
+
+.story-thread__fill {
+  position: absolute;
+  inset: 0;
+  background: var(--ink);
+  transform-origin: top;
+  transform: scaleY(0);
+}
+
+.story-thread__atlas {
+  position: absolute;
+  bottom: -1.8rem;
+  left: -0.4rem;
+  font-size: 0.55rem;
+  color: var(--ink-faint);
+  text-decoration: none;
+  writing-mode: vertical-rl;
+}
+
+.story-thread__atlas:hover {
+  color: var(--wash-red);
 }
 
 .story-grid {
@@ -941,51 +978,6 @@ html:has(.atlas-root) body {
   .diagram .d-note {
     transition: none;
   }
-}
-
-/* ---------- Chapter rail ---------- */
-
-.story-rail {
-  position: fixed;
-  left: clamp(0.4rem, 1vw, 1.1rem);
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 20;
-  display: none;
-}
-
-@media (min-width: 1150px) {
-  .story-rail {
-    display: block;
-  }
-}
-
-.story-rail__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.18rem;
-}
-
-.story-rail__link {
-  display: block;
-  padding: 0.14rem 0.4rem;
-  font-size: 0.6rem;
-  color: var(--ink-faint);
-  text-decoration: none;
-  border-left: 2px solid transparent;
-  transition: color 200ms ease-out, border-color 200ms ease-out;
-}
-
-.story-rail__link:hover {
-  color: var(--ink);
-}
-
-.story-rail__link.is-active {
-  color: var(--ink-strong);
-  border-left-color: var(--wash-red);
 }
 
 @media (prefers-reduced-motion: no-preference) {

@@ -9,12 +9,9 @@ beats:
     sites: [skhynix-m16-icheon, samsung-memory-hwaseong-hbm, skhynix-m15x-cheongju]
     camera: { zoom: 7 }
   - id: 6.2
-    kind: stamp
-    stamp: "THREE COMPANIES"
-  - id: 6.3
     kind: plate
     plate: hbm-sandwich
-  - id: 6.4
+  - id: 6.3
     kind: map
     sites: [tsmc-ap7-chiayi, tsmc-ap6-zhunan, tsmc-ap3-longtan]
     camera: { zoom: 6.5 }
@@ -22,32 +19,28 @@ beats:
 
 ## Beat 6.1
 
-A fast chip with slow memory is a chef with no ingredients. AI models are so large that
-feeding numbers to the processor becomes the bottleneck — so the industry invented
-High-Bandwidth Memory: towers of memory chips stacked a dozen high, drilled through with
-thousands of microscopic elevators, and placed millimeters from the processor itself.
+An AI chip without memory is a chef without a pantry. The models are so large that
+getting numbers to the processor fast enough became its own crisis. So the industry
+invented a new kind of memory. Towers of memory chips, stacked a dozen high, placed
+millimeters from the processor.
 
-Most of the world's supply is made in a corridor of South Korean cities — Icheon,
-Hwaseong, Cheongju — by SK Hynix and Samsung, with America's Micron the third player.
+Three companies on Earth can make these towers. Two are South Korean, SK Hynix and
+Samsung, in a corridor of cities south of Seoul. The third is America's Micron. For
+the last two years this memory has often been the part the world ran out of first.
 
 ## Beat 6.2
 
-Companies that can make leading-edge AI memory: three. All within missile range of
-North Korea, while we're tallying geographic concentration.
+Then the whole thing gets fused together. There is a limit to how large you can print
+a single chip, about the size of a matchbook, and AI chips hit that limit years ago.
+The answer is to print several and bond them, along with the memory towers, onto one
+silicon base. Thousands of connections finer than a human hair, and not one of them
+may fail. The industry calls this advanced packaging. A sandwich press with
+near-atomic tolerances is closer to the truth.
 
 ## Beat 6.3
 
-Then everything has to be fused together. There's a maximum size at which you can print
-a chip — about the size of a matchbook — and AI chips hit that wall years ago. The
-solution: print several, and bond them with the memory towers onto a silicon base, with
-connections finer than a human hair, thousands of them, none of which may fail. The
-industry calls it advanced packaging. Think of it as a sandwich press with near-atomic
-tolerances.
+For the chips that matter, that press is run almost entirely by TSMC, again, in a
+handful of buildings on Taiwan. So the chip is printed on Taiwan and bonded on Taiwan.
+The most important island in this story appears twice in its supply chain.
 
-## Beat 6.4
-
-For the chips that matter, that press is operated almost entirely by TSMC again, in a
-handful of Taiwanese facilities. For the past two years, *this* — not the printing, not
-the memory — was the tightest bottleneck in the entire stack: the reason you couldn't
-simply buy more GPUs at any price. When one step gates everything above it, the whole
-world queues behind one shop.
+The chip is finished now. But one chip alone is useless.

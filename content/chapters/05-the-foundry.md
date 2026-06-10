@@ -17,40 +17,36 @@ beats:
     kind: map
     sites: [tsmc-fab21-arizona-ph1, tsmc-fab21-arizona-ph2, tsmc-fab21-arizona-ph3]
     camera: { zoom: 8 }
-  - id: 5.5
-    kind: stamp
-    stamp: "ONE COMPANY, ONE ISLAND"
 ---
 
 ## Beat 5.1
 
-The printing happens in a fab — short for fabrication plant, and shorthand for the most
-expensive buildings ever constructed. A leading-edge fab costs $20 billion and up. Its
-air is thousands of times cleaner than an operating room, because a single dust particle
-ruins a chip. A wafer takes roughly three months and over a thousand process steps to
-finish, untouched by human hands the entire way.
+The printing happens in a building called a fab. Fabs are the most expensive buildings
+on Earth. A leading one costs twenty billion dollars and up. The air inside is kept
+thousands of times cleaner than a hospital operating room, because one dust particle
+ruins a chip. A wafer takes about three months to finish, and machines handle it the
+whole way.
 
 ## Beat 5.2
 
-About 90% of the world's most advanced chips — every top NVIDIA GPU, every Apple
-processor — are made by one company: TSMC, the Taiwan Semiconductor Manufacturing
-Company. Its leading fabs cluster along Taiwan's western coast, roughly a hundred miles
-of water away from mainland China.
+Nearly all of the world's most advanced chips are made by one company. TSMC, the
+Taiwan Semiconductor Manufacturing Company. Every top NVIDIA chip and every Apple
+processor comes out of its fabs, most of them strung along Taiwan's west coast, about
+a hundred miles of water from mainland China.
 
 ## Beat 5.3
 
-Sit with that. The machine intelligence boom — trillions of dollars of market value,
-national strategies, the next decade of economic growth — depends on facilities on an
-island that the world's second-largest military power claims as its territory. This is
-the single most concentrated risk in the global economy, and everyone who matters knows it.
+Sit with that for a moment. The technology everyone says will define the next century
+is manufactured, almost entirely, on one island that its giant neighbor claims as its
+own territory. Washington knows it. Beijing knows it. It explains more foreign policy
+than most treaties do.
 
 ## Beat 5.4
 
-It's why you now see fabs rising in the Arizona desert. TSMC's Phoenix site — backed by
-billions in U.S. CHIPS Act subsidies — is the hedge: years behind Taiwan and more
-expensive per chip, but it exists, and it's growing. Japan, Germany, and Texas have
-parallel projects. Reindustrialization isn't a slogan here; it's poured concrete.
+It is also why fabs are now rising in the Arizona desert. TSMC's Phoenix site, paid
+for partly with U.S. subsidies, is the insurance policy. It runs a few years behind
+Taiwan and costs more per chip, but it exists, and it is growing. The buildings turned
+out to be the easy part. The hard part is the thousands of people in Taiwan who
+already know the recipes.
 
-## Beat 5.5
-
-Companies that can manufacture at the leading edge: effectively one. The count holds.
+A printed chip still is not a finished chip, though. It needs memory.

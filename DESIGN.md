@@ -14,10 +14,11 @@ is drawn the way America drew its last great industrial projects.
 
 Light mode only. No dark mode. Ever.
 
-**Signature element (spend the boldness here):** the red ink stamp. At the climax of most
-chapters, a rubber-stamp graphic thunks onto the paper — "ONE COMPANY", "ONE RIDGE",
-"THREE COMPANIES" — carrying the concentration thesis. Everything else stays quiet so the
-stamp lands.
+**Signature element (spend the boldness here):** the red ink stamp — used exactly ONCE
+in the whole piece. At the climax of the ASML sequence, "ONE COMPANY" thunks onto the
+paper. One gavel strike in twelve minutes; everything else stays quiet so it lands.
+(Revised 2026-06-10 per Rob's reflection: concentration is otherwise woven into prose,
+never badged. The atlas keeps chokepoint data as filters — exploration, not rhetoric.)
 
 ## Tokens
 
@@ -52,9 +53,10 @@ Subtle. If you can screenshot it and immediately see noise, it's too strong.
   filter labels, and axis-like text. Small sizes, letter-spaced, often small caps.
 - No other typefaces. No font-weight above 600.
 
-**Title block motif:** headers and the site footer borrow the engineering-drawing title
-block — a thin-ruled box with PROJECT / SHEET / DATE / SCALE fields set in Plex Mono.
-Chapter headers use a slim version: kicker (mega-layer) + chapter number + title.
+**Title block motif:** the masthead and the site footer borrow the engineering-drawing
+title block — a thin-ruled box with PROJECT / SHEET / DATE / SCALE fields set in Plex
+Mono. (Revised 2026-06-10: there are no chapter headers — the story is one continuous
+flow of beats; section files exist for authoring only. Transitions live in the prose.)
 
 ## The map: a paper atlas, not a globe
 
@@ -67,8 +69,13 @@ Custom Mapbox style, built in Mapbox Studio (or style JSON in repo). Layer spec:
 - Labels: Newsreader for places, Plex Mono for anything numeric. --ink-strong at low
   density. Remove all label halos wider than 1px.
 - Optional at low zoom: a faint graticule (--ink-faint, 0.5px) for the atlas-plate feel.
-- Projection: mercator. Camera moves are slow `flyTo` (curve ~1.4, speed ~0.8). The map
-  should feel like a plate being slid across a drafting table, not a video game.
+- Projection: mercator. Camera moves are slow `flyTo` (curve ~1.4, speed ~0.8, capped
+  ~2.6s). The map should feel like a plate being slid across a drafting table, not a
+  video game.
+- **One persistent story map** (revised 2026-06-10): the camera *travels* from each site
+  to the next as the reader scrolls — the journey is the through-line. A faint dashed
+  ink line accumulates behind the camera (the journey so far); the finale re-draws the
+  full line bold. Active sites carry real presence: larger pin, larger italic label.
 
 **Pins:** ink-drawn symbols, not teardrops. Default: 4–5px circle, 1.25px --ink stroke,
 --paper fill. Active/story: filled --ink with a 1px offset ring. Status: construction =

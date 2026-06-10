@@ -13,17 +13,16 @@ beats:
 
 ## Beat 0.1
 
-You type a question. Two seconds later, an answer — fluent, specific, in plain English.
+You type a question into a chat box. Two seconds later an answer comes back, written
+in plain English, usually right.
 
-It feels like nothing. It is the most industrially expensive thing you will do all day.
+It feels like nothing. Behind it sits more heavy industry than anything else you will
+touch today.
 
 ## Beat 0.2
 
-Those two seconds sit on top of the largest concentrated industrial buildout since the
-Second World War: mines, chemical plants, the most precise machines ever made, buildings
-that consume as much electricity as cities, and a handful of companies — countable on
-your fingers — without which none of it works.
+This is a short tour of what happens inside those two seconds. It runs from a mine in
+North Carolina to a nuclear plant in Pennsylvania, and it ends with a map of 341 real
+places you can explore yourself.
 
-This is a tour of what's inside the two seconds. No background required. By the end,
-you'll have the whole stack in your head, and a map of where every piece of it sits
-on Earth.
+No background needed. If you can follow a supply chain, you can follow this one.

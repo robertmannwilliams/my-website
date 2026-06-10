@@ -1,26 +1,22 @@
 import AtlasSection from "@/features/atlas/components/AtlasSection";
-import ChapterStory from "@/features/atlas/components/story/ChapterStory";
-import StoryRail from "@/features/atlas/components/story/StoryRail";
+import StoryFlow from "@/features/atlas/components/story/StoryFlow";
 import { TitleBlock } from "@/features/atlas/components/TitleBlock";
 import { loadChapters, loadSites } from "@/features/atlas/lib/content";
-import { getStorySites } from "@/features/atlas/lib/story";
+import { getFlowData } from "@/features/atlas/lib/story";
 
 export default function AIStackStoryPage() {
   const chapters = loadChapters();
   const siteCount = loadSites().length;
+  const flow = getFlowData(chapters);
 
   return (
     <main>
-      <StoryRail
-        chapters={chapters.map(({ id, slug, title }) => ({ id, slug, title }))}
-      />
-
       <div className="story">
         <header className="story-masthead">
           <TitleBlock
             fields={[
               { label: "Project", value: "The Physical AI Stack" },
-              { label: "Sheet", value: "02 — Story" },
+              { label: "Sheet", value: "03 — Flow" },
               { label: "Date", value: "Jun 2026" },
               { label: "Scale", value: "1 : 40,000,000" },
             ]}
@@ -37,13 +33,7 @@ export default function AIStackStoryPage() {
         </header>
       </div>
 
-      {chapters.map((chapter) => (
-        <ChapterStory
-          chapter={chapter}
-          sites={getStorySites(chapter)}
-          key={chapter.id}
-        />
-      ))}
+      <StoryFlow beats={flow.beats} sites={flow.sites} />
 
       <AtlasSection />
 

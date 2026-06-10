@@ -13,23 +13,20 @@ beats:
 
 ## Beat 2.1
 
-A quick word on why the AI world runs on GPUs and not the processors in your laptop.
+A GPU was built to draw video games. Drawing a game means painting millions of dots on
+a screen, all at the same time, sixty times a second.
 
-AI, under the hood, is mostly one operation: multiplying enormous grids of numbers
-against each other, billions of times. The work isn't clever; it's *vast*. A regular
-processor (CPU) is a few brilliant workers — great at complicated sequential tasks. A
-GPU is twenty thousand simple workers all doing the same small multiplication at once.
-
-For grids of numbers, the twenty thousand win. It's not close — roughly a hundred times
-faster, and the gap grows every generation.
+The processor in your laptop is a different animal. It is a few very clever workers,
+built to handle complicated jobs one after another. A GPU is twenty thousand simple
+workers, all doing the same small piece of arithmetic at once.
 
 ## Beat 2.2
 
-GPUs were invented for video game graphics, which happen to have the same shape: millions
-of independent pixels, same operation on each. When neural networks took off, the right
-chip already existed. One company — NVIDIA — had spent fifteen years building it, plus
-the software that researchers had already standardized on. That head start is much of why
-it's now among the most valuable companies in the world.
+Teaching an AI turns out to be the same kind of chore as drawing a game. One simple
+calculation, repeated billions of times. So when AI took off, the perfect chip already
+existed. NVIDIA had spent two decades building it for gamers, and the researchers'
+software already ran on it. That lucky fit is most of why NVIDIA is now one of the most
+valuable companies on Earth.
 
-A modern AI GPU is one of the most complex objects humans manufacture. Making one
-requires a planet-wide relay race. First leg: dirt.
+A modern AI chip is one of the most complicated objects people make. Building one is a
+relay race across the planet. The first leg starts in the ground.

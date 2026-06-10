@@ -5,8 +5,7 @@ title: "The Point — and the Map"
 kicker: "Atlas"
 beats:
   - id: 12.1
-    kind: stamp
-    stamp: "COUNT THE COMPANIES"
+    kind: text
   - id: 12.2
     kind: text
   - id: 12.3
@@ -18,22 +17,19 @@ beats:
 
 ## Beat 12.1
 
-One company prints. One company manufactures. One company packages. Three make the
-memory. Two mines supply the quartz. Five make the wafers.
-
-The defining fact of the machine-intelligence era isn't a breakthrough or an algorithm.
-It's *concentration* — the most important technology in a century, resting on the fewest
-indispensable suppliers of any industry in modern history, arranged on the map in ways
-that should keep strategists up at night and that explain a decade of industrial policy.
+People argue about what AI will become. This tour takes no side in that. But whichever
+way it goes, it will be built through the places you just visited. One company prints.
+One company manufactures and bonds. Three make the memory. Two mines feed the
+crucibles. Five make the wafers. The most important technology in a century rests on a
+shorter list of suppliers than any industry in modern memory.
 
 ## Beat 12.2
 
-Everything you just read happens at specific places you can point to. I've mapped 341 of
-them — every mine, plant, fab, packaging line, assembly site, datacenter, cable landing,
-and power station I could document, each with what it does, who owns it, why it matters,
+Everything you just read happens at real places you can point to. I have mapped 341 of
+them. Every mine, plant, fab, bonding line, assembly site, data center, cable landing,
+and power station I could document, with what it does, who owns it, why it matters,
 and sources.
 
 ## Beat 12.3
 
-The map is yours now. Filter by layer of the stack, by geopolitical bloc, by how
-concentrated each step is. Click anything. Start with Taiwan.
+The map is yours now. Start with Taiwan.

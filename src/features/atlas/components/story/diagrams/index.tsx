@@ -28,11 +28,11 @@ export const DIAGRAMS: Record<string, DiagramEntry> = {
 
 export default function DiagramFigure({
   plate,
-  chapterId,
+  figNo,
   drawn,
 }: {
   plate: string;
-  chapterId: number;
+  figNo: number;
   drawn: boolean;
 }) {
   const entry = DIAGRAMS[plate];
@@ -44,7 +44,7 @@ export default function DiagramFigure({
         <Component drawn={drawn} />
       </div>
       <figcaption className="atlas-annotation story-plate__caption">
-        Fig. {chapterId} — {entry.caption}
+        Fig. {figNo} — {entry.caption}
       </figcaption>
     </figure>
   );

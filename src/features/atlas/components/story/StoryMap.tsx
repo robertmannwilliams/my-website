@@ -16,6 +16,7 @@ import { addPinImages, PIN_ICON_EXPRESSION } from "../../map/pins";
 import { greatCirclePoints, type LngLat } from "../../map/geo";
 import type { StorySite } from "../../lib/story";
 
+const INK = "#2B4A8C";
 const INK_STRONG = "#1C3263";
 const PAPER = "#F8F4E9";
 
@@ -27,10 +28,12 @@ export interface StoryMapProps {
   sites: StorySite[];
   activeSiteIds: string[];
   camera: StoryCamera | null;
-  /** hub: spokes from the first site. chain: legs in site order (ch. 11). */
+  /** hub: spokes from the first site. chain: legs in site order (finale). */
   linkMode: "hub" | "chain" | null;
-  /** Atlas handoff (ch. 12): reveal every site in the dataset. */
+  /** Atlas handoff: reveal every site in the dataset. */
   allSites: boolean;
+  /** The journey so far — primaries visited, drawn as a faint ink line. */
+  journey: LngLat[];
 }
 
 function prefersReducedMotion(): boolean {
@@ -59,6 +62,7 @@ export default function StoryMap({
   camera,
   linkMode,
   allSites,
+  journey,
 }: StoryMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -66,9 +70,16 @@ export default function StoryMap({
   const loadedRef = useRef(false);
   const applyBeatRef = useRef<(() => void) | null>(null);
 
-  const stateRef = useRef({ sites, activeSiteIds, camera, linkMode, allSites });
+  const stateRef = useRef({
+    sites,
+    activeSiteIds,
+    camera,
+    linkMode,
+    allSites,
+    journey,
+  });
   useEffect(() => {
-    stateRef.current = { sites, activeSiteIds, camera, linkMode, allSites };
+    stateRef.current = { sites, activeSiteIds, camera, linkMode, allSites, journey };
   });
 
   // ----- init once -----
@@ -105,6 +116,22 @@ export default function StoryMap({
         type: "geojson",
         data: toFeatureCollection(stateRef.current.sites),
       });
+      // The journey so far: a quiet dashed breadcrumb under the pins.
+      map.addSource("journey", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+      map.addLayer({
+        id: "journey-line",
+        type: "line",
+        source: "journey",
+        paint: {
+          "line-color": INK,
+          "line-width": 1,
+          "line-dasharray": [1.5, 2.6],
+          "line-opacity": 0.45,
+        },
+      });
       map.addLayer({
         id: "story-dim",
         type: "symbol",
@@ -124,18 +151,21 @@ export default function StoryMap({
           "icon-image": PIN_ICON_EXPRESSION as unknown as string,
           "icon-allow-overlap": true,
           "icon-padding": 0,
+          // Active sites carry real presence (Rob's reflection: the tiny
+          // pin under-sold the place).
+          "icon-size": 1.35,
           "text-field": ["get", "name"],
           "text-font": ["Newsreader Italic"],
-          "text-size": 11,
+          "text-size": 13.5,
           "text-anchor": "top",
-          "text-offset": [0, 1.05],
+          "text-offset": [0, 1.15],
           "text-max-width": 9,
           "text-optional": true,
         },
         paint: {
           "text-color": INK_STRONG,
           "text-halo-color": PAPER,
-          "text-halo-width": 1,
+          "text-halo-width": 1.2,
         },
       });
       loadedRef.current = true;
@@ -259,6 +289,26 @@ export default function StoryMap({
       });
     };
 
+    const applyJourney = () => {
+      const source = map.getSource("journey") as
+        | mapboxgl.GeoJSONSource
+        | undefined;
+      if (!source) return;
+      const stops = stateRef.current.journey;
+      const features: GeoJSON.Feature[] = [];
+      for (let i = 0; i < stops.length - 1; i++) {
+        features.push({
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "LineString",
+            coordinates: greatCirclePoints(stops[i], stops[i + 1], 32),
+          },
+        });
+      }
+      source.setData({ type: "FeatureCollection", features });
+    };
+
     let applied = false;
     const applyBeat = () => {
       if (!loadedRef.current) return;
@@ -272,6 +322,7 @@ export default function StoryMap({
         "!",
         ["in", ["get", "id"], ["literal", ids]],
       ]);
+      applyJourney();
       if (stateRef.current.allSites) loadAllSites();
       if (!cam) {
         // No camera on this beat (e.g. a stamp): leave the plate still.
@@ -322,6 +373,9 @@ export default function StoryMap({
           bearing: cam.bearing ?? 0,
           curve: 1.4,
           speed: 0.8,
+          // Cross-continent hops would otherwise run 5s+ — the traversal
+          // should feel like a plate sliding, not a documentary pan.
+          maxDuration: 2600,
         });
       }
     };
@@ -350,10 +404,11 @@ export default function StoryMap({
   // Re-apply whenever the beat-derived props change.
   const cameraKey = JSON.stringify(camera);
   const activeKey = activeSiteIds.join("|");
+  const journeyKey = journey.length;
   useEffect(() => {
     applyBeatRef.current?.();
 
-  }, [cameraKey, activeKey, linkMode, allSites]);
+  }, [cameraKey, activeKey, linkMode, allSites, journeyKey]);
 
   return (
     <div ref={containerRef} className="story-map" aria-hidden>

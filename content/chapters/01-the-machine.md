@@ -17,23 +17,24 @@ beats:
 
 ## Beat 1.1
 
-The answer didn't come from "the cloud." It came from a building. This one, for instance:
-a campus rising out of the scrubland near Abilene, Texas — one of the largest computing
-facilities ever constructed, with a price tag in the tens of billions of dollars.
+The answer did not come from "the cloud." It came from a building. This one, for
+example. A computing campus going up in the scrubland outside Abilene, Texas, with a
+price tag in the tens of billions of dollars.
 
 ## Beat 1.2
 
-Inside are hundreds of thousands of specialized chips called GPUs, wired together so
-tightly that they stop being many computers and become, functionally, one — a single
-machine the size of several football fields, drinking a power plant's worth of
-electricity.
+Inside are hundreds of thousands of chips called GPUs, wired together so tightly that
+they behave like one machine. The building is the computer. It covers as much ground as
+a few dozen football fields and draws as much electricity as a small city.
 
-Here is the strange part: a building like this is mostly *one component*, repeated. The
-chip. Everything else — the racks, the cooling, the substation — exists to keep that one
-component fed and cool.
+And here is the odd thing about a building like this. Almost everything in it exists to
+serve one small part, repeated over and over. The chip. The racks hold it. The cables
+feed it. The cooling keeps it from overheating.
 
 ## Beat 1.3
 
-So the way to understand the whole buildout is to follow that one chip backwards: who
-makes it, what it's made from, which machines make it possible, and why so few places on
-Earth can do each step. That's where we're going. It starts, genuinely, with sand.
+So the simplest way to understand the whole story is to follow that one chip backwards.
+Who makes it. What it is made from. Why so few places on Earth can do each step.
+
+First, though, a fair question. Computers existed long before AI. What is special about
+this chip?

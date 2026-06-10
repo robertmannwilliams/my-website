@@ -8,11 +8,16 @@ physical AI stack — from quartz mines to the model answering a ChatGPT questio
 handing the reader an explorable atlas of 341 real facilities.
 
 Two modes, one page:
-1. **Story mode** — 13 chapters, each made of 3–5 scroll "beats." Beats mix illustrated
-   plates, an ink-styled Mapbox map with camera choreography, hand-drawn-style diagrams,
-   and red "stamp" moments.
+1. **Story mode** — one continuous flow of ~39 scroll "beats" (authored in 13 section
+   files; no chapter headers are rendered — transitions live in the prose). Beats mix
+   illustrated plates, ONE persistent ink-styled Mapbox map whose camera travels
+   site-to-site as you scroll (a faint journey line accumulating behind it),
+   hand-drawn-style diagrams, and a single red "stamp" moment (ASML).
 2. **Atlas mode** — the finale hands over the controls: full map of all sites in
    `data/sites.json` with filters, clustering, and a detail panel per site.
+
+(Story-mode shape revised 2026-06-10 per Rob's structural reflection: chapters and all
+but one stamp removed, plain-language register, traversing camera.)
 
 Read `DESIGN.md` before writing any UI code. Read `PLAN.md` to find the next task.
 

@@ -15,36 +15,28 @@ beats:
     kind: map
     sites: [crane-clean-energy-tmi-pa]
     camera: { zoom: 8 }
-  - id: 9.4
-    kind: stamp
-    stamp: "THE NEW BOTTLENECK"
 ---
 
 ## Beat 9.1
 
-Loudoun County, Virginia — an unremarkable stretch of suburbs west of Washington — hosts
-the largest concentration of datacenters on Earth, with gigawatts of computing load. The
-local utility now quotes waits of five years and more to connect a new large facility.
-Not because generation doesn't exist, but because wires, substations, and approvals move
-at infrastructure speed while AI moves at software speed.
+Loudoun County, Virginia. An ordinary stretch of suburbs west of Washington, and the
+largest concentration of data centers on Earth. The local utility now quotes waits of
+five years or more to plug in a big new building. Not because the power cannot be
+generated. Because wires, substations, and permits move at infrastructure speed, and
+AI moves at software speed.
 
 ## Beat 9.2
 
-The numbers stopped being computer-sized a while ago. A single frontier campus wants a
-gigawatt — a full nuclear reactor's worth of demand, running around the clock. The
-constraint on artificial intelligence has migrated entirely outside the building: it is
-now transformers, transmission lines, turbine backlogs, and the patience of public
-utility commissions.
+The demands stopped being computer-sized a while ago. A single frontier campus wants a
+gigawatt, the output of a full nuclear reactor, running day and night. The limit on AI
+has moved outside the building entirely. It now looks like transformers, transmission
+lines, turbine backlogs, and the patience of utility commissions.
 
 ## Beat 9.3
 
-Nothing captures the moment like this place. Three Mile Island — the site of America's
-most famous nuclear accident, shut down as uneconomical in 2019 — is being restarted,
-its output sold for twenty years to Microsoft to power AI. Mothballed reactors revived,
-new ones ordered, gas turbines sold out for years: the AI buildout has become, almost
-incidentally, the largest force in American energy.
-
-## Beat 9.4
-
-A year ago the bottleneck was the sandwich press. Now it's the grid. The constraint
-keeps moving down the stack — from silicon to steel to electrons.
+Nothing sums up the moment like this place. Three Mile Island, the site of America's
+most famous nuclear accident, was shut down in 2019 because it could not make money.
+It is being restarted, and Microsoft has bought twenty years of its output to power
+AI. A year ago the scarcest thing in this story was a bonding line on Taiwan. Today it
+is electricity. The bottleneck keeps moving down the stack, from silicon to steel to
+electrons.

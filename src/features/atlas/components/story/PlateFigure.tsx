@@ -18,10 +18,10 @@ const PLATE_CAPTIONS: Record<string, string> = {
 
 export default function PlateFigure({
   plate,
-  chapterId,
+  figNo,
 }: {
   plate: string;
-  chapterId: number;
+  figNo: number;
 }) {
   const caption =
     PLATE_CAPTIONS[plate] ?? `${plate.replace(/-/g, " ")} (plate forthcoming).`;
@@ -37,7 +37,7 @@ export default function PlateFigure({
         </span>
       </div>
       <figcaption className="atlas-annotation story-plate__caption">
-        Fig. {chapterId} — {caption}
+        Fig. {figNo} — {caption}
       </figcaption>
     </figure>
   );
