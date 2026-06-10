@@ -98,6 +98,12 @@ Rob can open on his phone.
 
 <!-- newest first: YYYY-MM-DD — what was done / what's next / open questions -->
 
+- 2026-06-10 (late) — **Narrative-flow brief added** (`docs/narrative-flow-brief.md`)
+  for Rob's structural reflection, gated BEFORE Phase 4 so plates don't lock a
+  structure that's about to move. Beat-by-beat data (2,576 words / 43 beats / ~12 min),
+  stamp cadence, mode rhythm, seven builder observations, decision prompts. Phase 4+
+  holds until the reflection lands.
+
 - 2026-06-10 (night) — **Phase 3 complete: the full story scrolls start to finish.**
   All 13 chapters run through the engine; the Phase 0 scaffold renderer is deleted.
   Engine generalizations: figure surface (plate/diagram/map) inherits across text and
