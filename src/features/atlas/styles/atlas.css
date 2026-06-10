@@ -733,6 +733,275 @@
   }
 }
 
+/* ---------- Story chapters (beat engine) ---------- */
+
+/* The host site sets `overflow-x: hidden` on html/body, which turns body
+   into a scroll container and silently disables position: sticky. `clip`
+   keeps the safety without breaking the sticky figure column. */
+html:has(.atlas-root),
+html:has(.atlas-root) body {
+  overflow-x: clip;
+}
+
+/* Story chapters render as full-width siblings of the .story columns. */
+.chapter--story {
+  padding: 0 clamp(1rem, 3vw, 2.5rem);
+}
+
+.chapter--story__header {
+  max-width: 44rem;
+  margin: 0 auto 1rem;
+}
+
+.story-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 26rem) minmax(0, 1fr);
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  align-items: start;
+}
+
+.story-grid__copy {
+  grid-column: 1;
+  grid-row: 1;
+  padding-bottom: 20svh;
+}
+
+.story-beat {
+  min-height: 78svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  opacity: 0.55;
+  transition: opacity 350ms ease-out;
+}
+
+.story-beat.is-active {
+  opacity: 1;
+}
+
+.story-beat p + p {
+  margin-top: 1em;
+}
+
+.story-grid__figure {
+  grid-column: 2;
+  grid-row: 1;
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  padding: clamp(0.75rem, 2vh, 1.5rem) 0;
+}
+
+.story-stage {
+  position: relative;
+  height: 100%;
+  border: 1px solid var(--ink-faint);
+  background: var(--paper-shade);
+  overflow: hidden;
+}
+
+.story-grid__figure.is-stamping .story-stage {
+  animation: paper-shake 180ms ease-out 110ms 1;
+}
+
+@keyframes paper-shake {
+  0%, 100% { transform: translate(0, 0); }
+  35% { transform: translate(0, 1px); }
+  70% { transform: translate(-1px, 0); }
+}
+
+/* Scoped to outrank mapbox-gl.css's `.mapboxgl-map { position: relative }`. */
+.story-stage .story-map {
+  position: absolute;
+  inset: 0;
+}
+
+.story-map .mapboxgl-canvas {
+  cursor: default;
+}
+
+.story-map__links {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.story-link {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.1;
+  opacity: 0.82;
+}
+
+.story-stage__caption {
+  position: absolute;
+  z-index: 3;
+  left: 0.85rem;
+  bottom: 0.7rem;
+  max-width: 70%;
+  font-size: 0.85rem;
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  padding: 0.2rem 0.45rem;
+  border: 1px solid var(--paper-shade);
+}
+
+/* Plate surface: crossfades over the map (wash bloom). */
+.story-stage__plate {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: var(--paper);
+  opacity: 0;
+  transform: scale(0.985);
+  transition: opacity 400ms ease-out, transform 400ms ease-out;
+  pointer-events: none;
+  display: flex;
+}
+
+.story-stage__plate.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+.story-plate {
+  margin: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(1rem, 3vh, 2rem);
+}
+
+.story-plate__frame {
+  position: relative;
+  flex: 1;
+  border: 1px solid var(--ink-faint);
+  display: grid;
+  place-items: center;
+}
+
+.story-plate__frame svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.story-plate__frame svg line {
+  stroke: var(--ink-faint);
+  stroke-width: 0.5;
+  opacity: 0.5;
+}
+
+.story-plate__tag {
+  position: relative;
+  background: var(--paper);
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--ink-faint);
+  color: color-mix(in srgb, var(--ink) 70%, var(--paper));
+}
+
+.story-plate__caption {
+  margin-top: 0.65rem;
+  font-size: 0.88rem;
+}
+
+/* The stamp (DESIGN §motion: thunk, slight rotation, once per chapter). */
+.stamp {
+  position: absolute;
+  z-index: 5;
+  right: clamp(0.75rem, 6%, 3rem);
+  bottom: clamp(2.5rem, 16%, 7rem);
+  color: var(--wash-red);
+  border: 3px solid var(--wash-red);
+  box-shadow: inset 0 0 0 1.5px var(--paper), inset 0 0 0 2.5px var(--wash-red);
+  padding: 0.55em 0.8em 0.5em;
+  font-family: var(--font-plex-mono), monospace;
+  font-size: clamp(1rem, 2.4vw, 1.5rem);
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  mix-blend-mode: multiply;
+  opacity: 0.92;
+  filter: url("#stamp-rough");
+  transform: rotate(-2.5deg);
+  animation: stamp-thunk 110ms ease-in both;
+}
+
+@keyframes stamp-thunk {
+  0% { opacity: 0; transform: rotate(-2.5deg) scale(1.18); }
+  100% { opacity: 0.92; transform: rotate(-2.5deg) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stamp {
+    animation: none;
+  }
+
+  .story-grid__figure.is-stamping .story-stage {
+    animation: none;
+  }
+
+  .story-beat {
+    opacity: 1;
+    transition: none;
+  }
+
+  .story-stage__plate {
+    transform: none;
+    transition: opacity 250ms ease-out;
+  }
+}
+
+/* Mobile: figure pins at reduced height; copy scrolls over it as cards. */
+@media (max-width: 880px) {
+  .story-grid {
+    display: block;
+  }
+
+  .story-grid__figure {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    height: 46svh;
+    padding: 0.5rem 0;
+  }
+
+  .story-grid__copy {
+    position: relative;
+    z-index: 2;
+    max-width: 34rem;
+    margin: 0 auto;
+    padding-bottom: 8svh;
+  }
+
+  .story-beat {
+    min-height: 0;
+    margin: 0 0 58svh;
+    padding: 1rem 1.1rem;
+    background: color-mix(in srgb, var(--paper) 96%, transparent);
+    border: 1px solid var(--ink-faint);
+    opacity: 1;
+  }
+
+  .story-beat:first-child {
+    margin-top: 6svh;
+  }
+
+  .story-beat:last-child {
+    margin-bottom: 24svh;
+  }
+
+  .stamp {
+    font-size: 0.95rem;
+    bottom: 12%;
+  }
+}
+
 .story-colophon {
   margin-top: clamp(4rem, 10vw, 6rem);
 }

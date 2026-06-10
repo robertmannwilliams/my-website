@@ -3,6 +3,7 @@
 // the real figures arrive in Phases 1–4.
 
 import { getSiteIndex } from "../lib/content";
+import { withEmphasis } from "../lib/emphasis";
 import type { Beat, Chapter } from "../types";
 
 export function ChapterSection({ chapter }: { chapter: Chapter }) {
@@ -38,13 +39,6 @@ function BeatBlock({ beat, chapterId }: { beat: Beat; chapterId: number }) {
       <BeatFigure beat={beat} chapterId={chapterId} />
     </article>
   );
-}
-
-/** Chapter copy is plain prose except for sparse *emphasis* spans. */
-function withEmphasis(text: string): React.ReactNode {
-  const parts = text.split(/\*([^*]+)\*/g);
-  if (parts.length === 1) return text;
-  return parts.map((part, i) => (i % 2 === 1 ? <em key={i}>{part}</em> : part));
 }
 
 function BeatFigure({ beat, chapterId }: { beat: Beat; chapterId: number }) {
