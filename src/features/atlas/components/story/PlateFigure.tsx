@@ -4,10 +4,16 @@
 // figure caption, holding the spot until the real plates land in Phase 4.
 
 const PLATE_CAPTIONS: Record<string, string> = {
+  "the-question": "a question, typed.",
+  "one-computer-building": "datacenter campus under construction, aerial cutaway.",
+  "sand-to-wafer": "quartz ridge, crystal ingot, mirror-polished wafers.",
   "euv-machine": "EUV exposure tool, Veldhoven.",
-  "gpu-grid": "A GPU drawn as a city; a CPU drawn as a few grand buildings.",
-  "cable-nervous-system": "The cable plant, rear of rack row.",
-  "training-room": "A building-sized machine reading a library.",
+  "fab-cathedral": "fab interior, cathedral scale.",
+  "hbm-sandwich": "the chip package, drawn like a building section.",
+  "rack-to-building": "chip → tray → rack → row → hall → campus.",
+  "power-island": "cooling towers and a restarted reactor, lines marching to the horizon.",
+  "two-seconds": "the journey, one continuous line.",
+  "the-atlas": "a drafting table, the world spread on it.",
 };
 
 export default function PlateFigure({

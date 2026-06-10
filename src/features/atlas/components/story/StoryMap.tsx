@@ -27,7 +27,10 @@ export interface StoryMapProps {
   sites: StorySite[];
   activeSiteIds: string[];
   camera: StoryCamera | null;
-  drawLinks: boolean;
+  /** hub: spokes from the first site. chain: legs in site order (ch. 11). */
+  linkMode: "hub" | "chain" | null;
+  /** Atlas handoff (ch. 12): reveal every site in the dataset. */
+  allSites: boolean;
 }
 
 function prefersReducedMotion(): boolean {
@@ -54,7 +57,8 @@ export default function StoryMap({
   sites,
   activeSiteIds,
   camera,
-  drawLinks,
+  linkMode,
+  allSites,
 }: StoryMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -62,9 +66,9 @@ export default function StoryMap({
   const loadedRef = useRef(false);
   const applyBeatRef = useRef<(() => void) | null>(null);
 
-  const stateRef = useRef({ sites, activeSiteIds, camera, drawLinks });
+  const stateRef = useRef({ sites, activeSiteIds, camera, linkMode, allSites });
   useEffect(() => {
-    stateRef.current = { sites, activeSiteIds, camera, drawLinks };
+    stateRef.current = { sites, activeSiteIds, camera, linkMode, allSites };
   });
 
   // ----- init once -----
@@ -148,50 +152,114 @@ export default function StoryMap({
       if (svg) svg.replaceChildren();
     };
 
+    /**
+     * One ink line as SVG path data, with extra world-copy renderings when a
+     * leg crosses the antimeridian (so a Taipei→Houston leg exits the right
+     * edge and re-enters from the left instead of vanishing).
+     */
+    const legPaths = (a: StorySite, b: StorySite): string[] => {
+      const pts = greatCirclePoints([a.lng, a.lat], [b.lng, b.lat]);
+      const centerLng = map.getCenter().lng;
+      const lngs = pts.map((p) => p[0]);
+      const shifts = [0];
+      if (Math.max(...lngs) > centerLng + 180) shifts.push(-360);
+      if (Math.min(...lngs) < centerLng - 180) shifts.push(360);
+      return shifts.map((shift) =>
+        pts
+          .map((p, j) => {
+            const { x, y } = map.project([p[0] + shift, p[1]]);
+            return `${j === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+          })
+          .join(""),
+      );
+    };
+
     const renderLinks = (animate: boolean) => {
       const svg = svgRef.current;
-      const { activeSiteIds: ids, sites: all, drawLinks: wanted } = stateRef.current;
-      if (!svg || !wanted || ids.length < 2) return;
+      const { activeSiteIds: ids, sites: all, linkMode: mode } = stateRef.current;
+      if (!svg || !mode || ids.length < 2) return;
       const byId = new Map(all.map((s) => [s.id, s]));
-      const hub = byId.get(ids[0]);
-      if (!hub) return;
       svg.replaceChildren();
       const { clientWidth, clientHeight } = map.getContainer();
       svg.setAttribute("viewBox", `0 0 ${clientWidth} ${clientHeight}`);
       const reduced = prefersReducedMotion();
-      ids.slice(1).forEach((id, i) => {
-        const spoke = byId.get(id);
-        if (!spoke) return;
-        const pts = greatCirclePoints([hub.lng, hub.lat], [spoke.lng, spoke.lat]);
-        const d = pts
-          .map((p, j) => {
-            const { x, y } = map.project(p as [number, number]);
-            return `${j === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
-          })
-          .join("");
-        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        path.setAttribute("d", d);
-        path.setAttribute("class", "story-link");
-        svg.appendChild(path);
-        const len = path.getTotalLength();
-        // Dash pattern that still reads as drafting dashes after the draw-on:
-        // many short dashes, revealed by animating a long cover dash.
-        path.style.strokeDasharray = `${len} ${len}`;
-        if (animate && !reduced) {
-          path.style.strokeDashoffset = `${len}`;
-          path.style.transition = `stroke-dashoffset 650ms ease-out ${i * 300}ms`;
-          // Force style flush so the transition runs.
-          path.getBoundingClientRect();
-          path.style.strokeDashoffset = "0";
-        } else if (animate && reduced) {
-          path.style.opacity = "0";
-          path.style.transition = `opacity 400ms ease-out ${i * 120}ms`;
-          path.getBoundingClientRect();
-          path.style.opacity = "1";
+
+      // hub: every link starts at site 0. chain: consecutive legs in order.
+      const legs: Array<[StorySite, StorySite]> = [];
+      if (mode === "hub") {
+        const hub = byId.get(ids[0]);
+        if (!hub) return;
+        for (const id of ids.slice(1)) {
+          const spoke = byId.get(id);
+          if (spoke) legs.push([hub, spoke]);
+        }
+      } else {
+        for (let i = 0; i < ids.length - 1; i++) {
+          const a = byId.get(ids[i]);
+          const b = byId.get(ids[i + 1]);
+          if (a && b) legs.push([a, b]);
+        }
+      }
+
+      const stagger = mode === "chain" ? 170 : 300;
+      const duration = mode === "chain" ? 450 : 650;
+      legs.forEach(([a, b], i) => {
+        for (const d of legPaths(a, b)) {
+          const path = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "path",
+          );
+          path.setAttribute("d", d);
+          path.setAttribute("class", "story-link");
+          svg.appendChild(path);
+          const len = path.getTotalLength();
+          path.style.strokeDasharray = `${len} ${len}`;
+          if (animate && !reduced) {
+            path.style.strokeDashoffset = `${len}`;
+            path.style.transition = `stroke-dashoffset ${duration}ms ease-out ${i * stagger}ms`;
+            // Force style flush so the transition runs.
+            path.getBoundingClientRect();
+            path.style.strokeDashoffset = "0";
+          } else if (animate && reduced) {
+            path.style.opacity = "0";
+            path.style.transition = `opacity 400ms ease-out ${i * 100}ms`;
+            path.getBoundingClientRect();
+            path.style.opacity = "1";
+          }
         }
       });
     };
 
+    let allSitesLoaded = false;
+    const loadAllSites = () => {
+      if (allSitesLoaded) return;
+      allSitesLoaded = true;
+      // Shares the lazy atlas chunk; only ch. 12 ever requests it.
+      void import("../../map/sites").then(({ allSites: everySite }) => {
+        const source = map.getSource("story-sites") as
+          | mapboxgl.GeoJSONSource
+          | undefined;
+        if (!source || !stateRef.current.allSites) return;
+        source.setData({
+          type: "FeatureCollection",
+          features: everySite.map((s) => ({
+            type: "Feature",
+            properties: {
+              id: s.id,
+              name: s.name,
+              status: s.status,
+              monopoly: s.chokepoint_severity === "monopoly",
+            },
+            geometry: { type: "Point", coordinates: [s.lng, s.lat] },
+          })),
+        });
+        // The full constellation reads at half ink; full density and
+        // interactivity belong to the atlas below.
+        map.setPaintProperty("story-dim", "icon-opacity", 0.5);
+      });
+    };
+
+    let applied = false;
     const applyBeat = () => {
       if (!loadedRef.current) return;
       const { activeSiteIds: ids, camera: cam } = stateRef.current;
@@ -204,14 +272,18 @@ export default function StoryMap({
         "!",
         ["in", ["get", "id"], ["literal", ids]],
       ]);
+      if (stateRef.current.allSites) loadAllSites();
       if (!cam) {
         // No camera on this beat (e.g. a stamp): leave the plate still.
-        if (stateRef.current.drawLinks && !map.isMoving()) renderLinks(false);
+        if (stateRef.current.linkMode && !map.isMoving()) renderLinks(false);
         return;
       }
-      const reduced = prefersReducedMotion();
+      // The first application happens before the figure is revealed —
+      // arrive pre-framed instead of flying (DESIGN: one move per beat).
+      const reduced = prefersReducedMotion() || !applied;
+      applied = true;
       const after = () => {
-        if (stateRef.current.drawLinks) {
+        if (stateRef.current.linkMode) {
           drawTimer = setTimeout(() => renderLinks(true), 120);
         }
       };
@@ -257,7 +329,7 @@ export default function StoryMap({
     map.on("movestart", clearLinks);
     map.on("resize", () => {
       clearLinks();
-      if (stateRef.current.drawLinks && !map.isMoving()) renderLinks(false);
+      if (stateRef.current.linkMode && !map.isMoving()) renderLinks(false);
     });
 
     applyBeatRef.current = applyBeat;
@@ -280,8 +352,8 @@ export default function StoryMap({
   const activeKey = activeSiteIds.join("|");
   useEffect(() => {
     applyBeatRef.current?.();
-     
-  }, [cameraKey, activeKey, drawLinks]);
+
+  }, [cameraKey, activeKey, linkMode, allSites]);
 
   return (
     <div ref={containerRef} className="story-map" aria-hidden>

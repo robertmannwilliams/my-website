@@ -6,7 +6,14 @@
 // edge via an SVG displacement filter; multiply blend so it sits in the
 // paper like ink.
 
-export default function Stamp({ text }: { text: string }) {
+export default function Stamp({
+  text,
+  hidden = false,
+}: {
+  text: string;
+  /** A mid-chapter stamp hides when its figure moves on (no re-thunk). */
+  hidden?: boolean;
+}) {
   return (
     <>
       <svg width="0" height="0" aria-hidden focusable="false">
@@ -21,7 +28,12 @@ export default function Stamp({ text }: { text: string }) {
           <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.4" />
         </filter>
       </svg>
-      <span className="stamp" role="img" aria-label={`Stamp: ${text}`}>
+      <span
+        className={`stamp${hidden ? " stamp--hidden" : ""}`}
+        role="img"
+        aria-label={`Stamp: ${text}`}
+        aria-hidden={hidden}
+      >
         {text}
       </span>
     </>

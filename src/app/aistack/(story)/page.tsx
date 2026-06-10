@@ -1,44 +1,26 @@
 import AtlasSection from "@/features/atlas/components/AtlasSection";
-import { ChapterSection } from "@/features/atlas/components/ChapterSection";
 import ChapterStory from "@/features/atlas/components/story/ChapterStory";
+import StoryRail from "@/features/atlas/components/story/StoryRail";
 import { TitleBlock } from "@/features/atlas/components/TitleBlock";
 import { loadChapters, loadSites } from "@/features/atlas/lib/content";
 import { getStorySites } from "@/features/atlas/lib/story";
-import type { Chapter } from "@/features/atlas/types";
-
-// Chapters wired through the scroll engine; the rest render as the Phase 0
-// text scaffold until the Chapter 4 design proof is signed off (PLAN Phase 2).
-const STORY_CHAPTERS = new Set([4]);
-
-type Segment =
-  | { kind: "scaffold"; chapters: Chapter[] }
-  | { kind: "story"; chapter: Chapter };
 
 export default function AIStackStoryPage() {
   const chapters = loadChapters();
   const siteCount = loadSites().length;
 
-  // Story chapters render full-width (sticky figure); runs of scaffold
-  // chapters share centered .story columns between them.
-  const segments: Segment[] = [];
-  for (const chapter of chapters) {
-    if (STORY_CHAPTERS.has(chapter.id)) {
-      segments.push({ kind: "story", chapter });
-    } else {
-      const last = segments[segments.length - 1];
-      if (last?.kind === "scaffold") last.chapters.push(chapter);
-      else segments.push({ kind: "scaffold", chapters: [chapter] });
-    }
-  }
-
   return (
     <main>
+      <StoryRail
+        chapters={chapters.map(({ id, slug, title }) => ({ id, slug, title }))}
+      />
+
       <div className="story">
         <header className="story-masthead">
           <TitleBlock
             fields={[
               { label: "Project", value: "The Physical AI Stack" },
-              { label: "Sheet", value: "01 — Atlas" },
+              { label: "Sheet", value: "02 — Story" },
               { label: "Date", value: "Jun 2026" },
               { label: "Scale", value: "1 : 40,000,000" },
             ]}
@@ -49,29 +31,19 @@ export default function AIStackStoryPage() {
             — the mines, machines, and buildings behind AI.
           </p>
           <p className="story-masthead__note atlas-annotation">
-            Working draft. The copy below is the full story; plates and motion
-            are drawn in on later sheets. The atlas at the end is live —
-            {" "}{siteCount} facilities, explorable.
+            Working draft. Plates are placeholders and figures are unverified;
+            the atlas at the end is live — {siteCount} facilities, explorable.
           </p>
         </header>
-
       </div>
 
-      {segments.map((segment) =>
-        segment.kind === "story" ? (
-          <ChapterStory
-            chapter={segment.chapter}
-            sites={getStorySites(segment.chapter)}
-            key={segment.chapter.id}
-          />
-        ) : (
-          <div className="story" key={`scaffold-${segment.chapters[0].id}`}>
-            {segment.chapters.map((chapter) => (
-              <ChapterSection chapter={chapter} key={chapter.id} />
-            ))}
-          </div>
-        ),
-      )}
+      {chapters.map((chapter) => (
+        <ChapterStory
+          chapter={chapter}
+          sites={getStorySites(chapter)}
+          key={chapter.id}
+        />
+      ))}
 
       <AtlasSection />
 

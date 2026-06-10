@@ -1,10 +1,10 @@
 "use client";
 
 // The chapter engine: scrolling copy column + sticky figure column (DESIGN
-// §motion, CLAUDE.md §story mode). The figure shows the chapter's plate or
-// its map; one camera move per beat; the stamp thunks once at the chapter's
-// climax. On mobile the figure pins at reduced height and the copy scrolls
-// over it as drafting cards.
+// §motion, CLAUDE.md §story mode). The figure shows the chapter's plate,
+// diagram, or map; one camera move per beat; the stamp thunks once at the
+// chapter's climax. On mobile the figure pins at reduced height and the copy
+// scrolls over it as drafting cards.
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -12,6 +12,7 @@ import { withEmphasis } from "../../lib/emphasis";
 import type { StorySite } from "../../lib/story";
 import type { Beat, Chapter } from "../../types";
 import type { StoryCamera } from "./StoryMap";
+import DiagramFigure, { DIAGRAMS } from "./diagrams";
 import PlateFigure from "./PlateFigure";
 import Stamp from "./Stamp";
 
@@ -41,42 +42,60 @@ export default function ChapterStory({ chapter, sites }: ChapterStoryProps) {
   const [mapMounted, setMapMounted] = useState(false);
   const [stamped, setStamped] = useState(false);
   const [stamping, setStamping] = useState(false);
+  const [drawnDiagrams, setDrawnDiagrams] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const [handoffReached, setHandoffReached] = useState(false);
   const stampedRef = useRef(false);
 
   const beats = chapter.beats;
   const activeBeat = beats[activeIdx];
+  const hasMapBeats = useMemo(() => beats.some((b) => b.kind === "map"), [beats]);
 
   // ---- scroll engine: active beat = last block above the 55% line ----
   useEffect(() => {
     const compute = () => {
-      const line = window.innerHeight * 0.55;
+      const section = sectionRef.current;
+      if (!section) return;
+      const vh = window.innerHeight;
+      const rect = section.getBoundingClientRect();
+
+      // Mount the chapter's map while nearby (tile preload), release it when
+      // far away — 13 chapters of live WebGL contexts would hit browser caps.
+      if (hasMapBeats) {
+        if (rect.top < vh * 1.6 && rect.bottom > -vh * 1.6) {
+          setMapMounted(true);
+        } else if (rect.top > vh * 3.2 || rect.bottom < -vh * 3.2) {
+          setMapMounted(false);
+        }
+      }
+      // Beats only need attention while the chapter is on or near screen.
+      if (rect.top > vh * 1.5 || rect.bottom < -vh * 0.5) return;
+
+      const line = vh * 0.55;
       let idx = 0;
       beatRefs.current.forEach((el, i) => {
         if (el && el.getBoundingClientRect().top < line) idx = i;
       });
       setActiveIdx((prev) => (prev === idx ? prev : idx));
 
+      const beat = beats[idx];
       // The stamp fires the first time its beat becomes active, then stays.
-      if (beats[idx]?.kind === "stamp" && !stampedRef.current) {
+      if (beat?.kind === "stamp" && !stampedRef.current) {
         stampedRef.current = true;
         setStamped(true);
         setStamping(true);
         setTimeout(() => setStamping(false), 320);
       }
-
-      // Mount the map once the chapter is approaching (tile preload).
-      const section = sectionRef.current;
-      if (section) {
-        const rect = section.getBoundingClientRect();
-        if (rect.top < window.innerHeight + 1600 && rect.bottom > -1600) {
-          setMapMounted(true);
-        }
+      // Diagrams ink themselves in once and stay drawn.
+      if (beat?.kind === "diagram" && beat.plate && DIAGRAMS[beat.plate]) {
+        setDrawnDiagrams((prev) =>
+          prev.has(beat.id) ? prev : new Set(prev).add(beat.id),
+        );
       }
+      // The atlas handoff keeps the full constellation once revealed.
+      if (beat?.atlasHandoff) setHandoffReached(true);
     };
-    if (process.env.NODE_ENV !== "production") {
-       
-      setMapMounted(true);
-    }
     compute();
     window.addEventListener("scroll", compute, { passive: true });
     window.addEventListener("resize", compute);
@@ -84,15 +103,25 @@ export default function ChapterStory({ chapter, sites }: ChapterStoryProps) {
       window.removeEventListener("scroll", compute);
       window.removeEventListener("resize", compute);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [beats.length]);
+     
+  }, [beats, hasMapBeats]);
 
   // ---- figure state derived from the active beat ----
-  const showPlate =
-    activeBeat.kind === "plate" || activeBeat.kind === "diagram";
-  const plateBeat = nearestBeat(beats, activeIdx, ["plate", "diagram"]);
+  const surfaceBeat = nearestBeat(beats, activeIdx, ["plate", "diagram", "map"]);
+  const showMap = surfaceBeat?.kind === "map";
+  const artBeat = nearestBeat(beats, activeIdx, ["plate", "diagram"]);
+  const stampIdx = beats.findIndex((b) => b.kind === "stamp");
+  const stampBeat = stampIdx >= 0 ? beats[stampIdx] : undefined;
+  // A mid-chapter stamp belongs to the figure it was struck on; it hides
+  // when the chapter moves on to a different surface (and returns, without
+  // re-thunking, if the reader scrolls back).
+  const stampSurface =
+    stampIdx >= 0
+      ? nearestBeat(beats, stampIdx, ["plate", "diagram", "map"])
+      : undefined;
+  const stampVisible = stamped && surfaceBeat === stampSurface;
+
   const mapBeat = nearestBeat(beats, activeIdx, ["map"]);
-  const stampBeat = beats.find((b) => b.kind === "stamp");
 
   const camera: StoryCamera | null = useMemo(() => {
     if (!mapBeat) return null;
@@ -101,8 +130,19 @@ export default function ChapterStory({ chapter, sites }: ChapterStoryProps) {
       .map((id) => sites[id])
       .filter(Boolean)
       .map((s): [number, number] => [s.lng, s.lat]);
-    if (coords.length === 0) return null;
     const override = mapBeat.camera ?? {};
+    if (coords.length === 0) {
+      // Siteless map beat (the atlas handoff): fit the inhabited world, with
+      // the authored zoom as the ceiling so phones still see the whole plate.
+      return {
+        kind: "fit",
+        coords: [
+          [-124, 52],
+          [145, -36],
+        ],
+        maxZoom: override.zoom ?? 1.6,
+      };
+    }
     if (coords.length > 1) {
       return { kind: "fit", coords, maxZoom: override.zoom ?? 7 };
     }
@@ -121,23 +161,42 @@ export default function ChapterStory({ chapter, sites }: ChapterStoryProps) {
     return [];
   }, [activeBeat, mapBeat]);
 
-  const drawLinks =
-    (activeBeat.kind === "map" && !!activeBeat.drawLinks) ||
-    (activeBeat.kind === "stamp" && !!mapBeat?.drawLinks);
+  // Hub-and-spokes for a supplier web; a chain for the ch. 11 journey.
+  const linkMode: "hub" | "chain" | null =
+    (activeBeat.kind === "map" && activeBeat.drawLinks) ||
+    (activeBeat.kind === "stamp" && mapBeat?.drawLinks)
+      ? (mapBeat?.sites?.length ?? 0) > 5
+        ? "chain"
+        : "hub"
+      : null;
 
   const mapCaption = useMemo(() => {
     if (!mapBeat) return null;
+    if (mapBeat.atlasHandoff) {
+      return "The full atlas — every site, handed to you.";
+    }
     const list = (mapBeat.sites ?? []).map((id) => sites[id]).filter(Boolean);
     if (list.length === 0) return null;
+    if (mapBeat.drawLinks && list.length > 5) {
+      const first = list[0].city ?? list[0].name;
+      const last = list[list.length - 1].city ?? list[list.length - 1].name;
+      return `${first} → … → ${last} — ${list.length} stops.`;
+    }
     if (mapBeat.drawLinks) {
       const places = list.map((s) => s.city ?? s.name);
       return `${places.join(" · ")} — single points of failure.`;
     }
-    const s = list[0];
-    return [s.city, s.country].filter(Boolean).join(", ") + ".";
+    if (list.length > 1) {
+      const place = [list[0].city, list[0].country].filter(Boolean).join(", ");
+      return `${place} +${list.length - 1} more.`;
+    }
+    return [list[0].city, list[0].country].filter(Boolean).join(", ") + ".";
   }, [mapBeat, sites]);
 
   const storySites = useMemo(() => Object.values(sites), [sites]);
+
+  const artIsDiagram =
+    artBeat?.kind === "diagram" && !!artBeat.plate && !!DIAGRAMS[artBeat.plate];
 
   return (
     <section
@@ -145,6 +204,7 @@ export default function ChapterStory({ chapter, sites }: ChapterStoryProps) {
       className="chapter chapter--story"
       id={chapter.slug}
       aria-labelledby={`ch-${chapter.id}`}
+      data-chapter={chapter.id}
     >
       <header className="chapter__header chapter--story__header">
         <div className="chapter__meta">
@@ -163,27 +223,37 @@ export default function ChapterStory({ chapter, sites }: ChapterStoryProps) {
           className={`story-grid__figure${stamping ? " is-stamping" : ""}`}
         >
           <div className="story-stage">
-            {mapMounted && (
+            {hasMapBeats && mapMounted && (
               <StoryMap
                 sites={storySites}
                 activeSiteIds={activeSiteIds}
                 camera={camera}
-                drawLinks={drawLinks}
+                linkMode={linkMode}
+                allSites={handoffReached}
               />
             )}
-            {!showPlate && mapCaption && (
+            {showMap && mapCaption && (
               <span className="story-stage__caption atlas-annotation">
                 {mapCaption}
               </span>
             )}
             <div
-              className={`story-stage__plate${showPlate ? " is-visible" : ""}`}
+              className={`story-stage__plate${!showMap ? " is-visible" : ""}`}
             >
-              {plateBeat?.plate && (
-                <PlateFigure plate={plateBeat.plate} chapterId={chapter.id} />
-              )}
+              {artBeat?.plate &&
+                (artIsDiagram ? (
+                  <DiagramFigure
+                    plate={artBeat.plate}
+                    chapterId={chapter.id}
+                    drawn={drawnDiagrams.has(artBeat.id)}
+                  />
+                ) : (
+                  <PlateFigure plate={artBeat.plate} chapterId={chapter.id} />
+                ))}
             </div>
-            {stamped && stampBeat?.stamp && <Stamp text={stampBeat.stamp} />}
+            {stamped && stampBeat?.stamp && (
+              <Stamp text={stampBeat.stamp} hidden={!stampVisible} />
+            )}
           </div>
         </div>
 
