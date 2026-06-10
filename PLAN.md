@@ -22,20 +22,20 @@ Rob can open on his phone.
 
 ## Phase 1 — The paper map + Atlas mode
 
-- [ ] Build the "paper & ink" Mapbox style per DESIGN.md §Map. Iterate until a screenshot
+- [x] Build the "paper & ink" Mapbox style per DESIGN.md §Map. Iterate until a screenshot
       reads as "plate from a vintage atlas." This is the highest-leverage design task —
       don't rush it.
-- [ ] Atlas page section: full-viewport map, all 341 sites as a GeoJSON source.
-- [ ] Clustering at low zoom (survey-marker style), spiderfy/offset for the 41 co-located
+- [x] Atlas page section: full-viewport map, all 341 sites as a GeoJSON source.
+- [x] Clustering at low zoom (survey-marker style), spiderfy/offset for the 41 co-located
       pairs on expansion.
-- [ ] Pin system per DESIGN.md (status rings, monopoly tick, active states).
-- [ ] Filters: mega_layer (primary tabs), layer, bloc, chokepoint severity, status.
+- [x] Pin system per DESIGN.md (status rings, monopoly tick, active states).
+- [x] Filters: mega_layer (primary tabs), layer, bloc, chokepoint severity, status.
       Plex Mono labels; bottom sheet on mobile.
-- [ ] Detail panel: name, operator, kicker line (layer · sub_type), why_it_matters,
+- [x] Detail panel: name, operator, kicker line (layer · sub_type), why_it_matters,
       status, capex, key customers, source links. Drafting-card styling, figure caption
       convention.
-- [ ] Search by name/operator (simple client-side).
-- [ ] Acceptance: atlas is independently shippable and pleasant on a phone.
+- [x] Search by name/operator (simple client-side).
+- [x] Acceptance: atlas is independently shippable and pleasant on a phone.
 
 ## Phase 2 — Chapter engine + vertical slice (Chapter 4, lithography)
 
@@ -94,6 +94,32 @@ Rob can open on his phone.
 ## Session log
 
 <!-- newest first: YYYY-MM-DD — what was done / what's next / open questions -->
+
+- 2026-06-10 (later) — **Phase 1 complete.** The paper & ink map is real: in-repo style
+  module (`src/features/atlas/map/paperStyle.ts`) — cream land, paper-shade water with an
+  ink hairline coast via `fill-outline-color` (no separate coastline data, no tile
+  seams), dash-dot admin-0 / faint dashed admin-1 (US worldview), 10° graticule fading
+  out past z3, waterways past z8. **Map labels are true Newsreader / Plex Mono**: SDF
+  glyph PBFs generated in-repo (`scripts/build-map-glyphs.ts` — tiny-sdf EDT ported onto
+  @napi-rs/canvas after fontnik failed to build on Node 22; metrics calibrated against
+  decoded Mapbox DIN PBFs) and committed under `public/map-fonts/` (~2.8 MB, OFL).
+  Country names render as letterspaced Newsreader caps; oceans in italic. Atlas mode at
+  `/aistack#atlas`: all 341 sites clustered (survey-marker discs with hairline outer
+  ring + Plex Mono counts), canvas-drawn pins per DESIGN (status rings, red monopoly
+  tick, active fill), spiderfy with dashed ink leaders for the 24 co-located groups
+  (verified on Ashburn ×4 and Hsinchu), hover tooltip, drafting-card filter panel
+  (mega tabs with live counts, layer dropdown, bloc/chokepoint/status chips), global
+  search by name/operator (flyTo + select; clears filters if the pick is hidden),
+  detail card with kicker line, why-it-matters, facts (monopoly in red), source links,
+  and Fig.-caption. Mobile: filter sheet + detail sheet at ≤720px, verified at 375px.
+  Map lazy-mounts (IO + rect-check + scroll fallback; eager in dev) and is code-split
+  with sites.json riding in the map chunk. Verified flows end-to-end in the preview
+  browser (its rAF/IO quirks cost some debugging; flows forced via frame pumps).
+  **Next:** Phase 2 — beat engine + Chapter 4 vertical slice (flyTo per beat, story
+  density rule, draw_links, stamp motion). **For Rob:** the deployed atlas is the thing
+  to feel on a phone — cluster tap, spiderfy, filter sheet, a search. Flag anything
+  about the map's voice (label density, border weight, water tone) before Phase 2
+  reuses the style for story beats.
 
 - 2026-06-10 — **Phase 0 complete.** Spec package merged to repo root (`content/` and
   `data/` live at root so the paths in CLAUDE.md stay literal; package README archived
