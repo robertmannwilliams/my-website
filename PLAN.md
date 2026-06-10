@@ -100,13 +100,18 @@ Rob can open on his phone.
 ## Phase 5 — Polish & extras
 
 - ~~Concentration stamp recap ledger~~ (removed 2026-06-10 — there is one stamp now)
-- [ ] Scenario mode in atlas (v1: hand-authored "Taiwan disruption" — Taiwanese sites
+- [x] Scenario mode in atlas (v1: hand-authored "Taiwan disruption" — Taiwanese sites
       and 2 downstream layers dim/flag; data lives in `content/scenarios.json`).
-- [ ] Methodology page: data provenance, source tiers, confidence flags, corrections
+- [x] Methodology page: data provenance, source tiers, confidence flags, corrections
       contact. (This is what makes the piece citable.)
-- [ ] "Deep Dive" page rendering `content/primer.md` with a styled TOC.
-- [ ] OG image (a plate + title block), meta tags, favicon variant.
-- [ ] Performance: code-split the map, lazy plates, Lighthouse pass, bundle check.
+- [x] "Deep Dive" page rendering `content/primer.md` with a styled TOC.
+- [x] OG image (title block + journey line; plates aren't in yet), meta tags,
+      favicon variant.
+- [x] Performance: code-split the map, lazy plates, Lighthouse pass, bundle check.
+      (Perf 84 / a11y 95 after deferring the story map to first scroll and fixing
+      contrast + aria-hidden focusables. Known leftover: Turbopack duplicates the
+      sites module across the two lazy map chunks, ~87 KB gz extra on the handoff
+      path — revisit if it ever matters.)
 
 ## Phase 6 — Verify & launch
 
@@ -121,6 +126,26 @@ Rob can open on his phone.
 ## Session log
 
 <!-- newest first: YYYY-MM-DD — what was done / what's next / open questions -->
+
+- 2026-06-10 (Phase 5) — **Polish & extras shipped.** Scenario mode: "Taiwan
+  disruption" toggle in the atlas filter panel (data in `content/scenarios.json`) —
+  switches to an unclustered view, rings the 27 Taiwanese sites in red, fades the
+  Systems/Deployment layers to 20%, explainer note in the panel; clicks still open
+  the detail card. Methodology page (`/aistack/methodology`) with stats computed from
+  the data at build (341 sites, 286 high / 55 medium confidence, 662 source links, 48
+  monopolies) and a GitHub-issues corrections path. Deep Dive (`/aistack/primer`):
+  the full 11.6k-word primer rendered at build via marked with GitHub-style heading
+  ids so its own TOC anchors work; prose styles in the design system. OG card
+  (1200×630, next/og): title block + dashed journey line + red 341 SITES stamp, all
+  Plex Mono (satori can't take variable-font Newsreader); story icon.svg = survey
+  marker with red tick. Colophon links to both pages. **Perf pass:** story map now
+  mounts on first scroll instead of at load — Lighthouse perf 46→84 (TBT 2,070ms→80ms),
+  a11y 91→95 (DESIGN floor met) after darkening small mono labels and de-focusing
+  everything inside the aria-hidden story map. Known leftover: sites module duplicated
+  across the two lazy chunks (~87 KB gz on the handoff path) — Turbopack chunking,
+  noted in Phase 5 block. **Remaining before launch:** Rob's copy/layout read (Phase
+  3.5 box), the 8 plates (Phase 4), then Phase 6 verification, copyedit, QA, swap,
+  announce.
 
 - 2026-06-10 (last) — **Spine layout shipped** (Rob: map as background element, plates
   and copy do the work). StoryFlow now renders one full-bleed sticky "table": the map
