@@ -72,10 +72,19 @@ Custom Mapbox style, built in Mapbox Studio (or style JSON in repo). Layer spec:
 - Projection: mercator. Camera moves are slow `flyTo` (curve ~1.4, speed ~0.8, capped
   ~2.6s). The map should feel like a plate being slid across a drafting table, not a
   video game.
-- **One persistent story map** (revised 2026-06-10): the camera *travels* from each site
-  to the next as the reader scrolls — the journey is the through-line. A faint dashed
-  ink line accumulates behind the camera (the journey so far); the finale re-draws the
-  full line bold. Active sites carry real presence: larger pin, larger italic label.
+- **One persistent story map, as the SPINE** (revised again 2026-06-10, same session):
+  the map is a full-bleed background under the whole story — but recessive. Two states:
+  *recessed* (most beats — washed to ~40% under a paper scrim; plates and copy lead;
+  the dashed journey line darkens to stay legible, because the line, not the map, is
+  the actual spine) and *forward* (map-led beats — the wash lifts, labels and pins
+  return, the plate inset shrinks to a corner). Transitions are slow washes driven by
+  beat kind, never by scroll position. The camera *travels* site-to-site continuously
+  (even while recessed — travel is subliminal, arrival is the event), with composition
+  padding so targets land in the open area away from the copy column. Edge fades to
+  paper on the sheet borders are part of this treatment (Rob's direction) and are not
+  "UI gradients" under the never-list. Copy rides over the table as drafting cards at
+  all widths. Plates render as a bounded inset that is the lead visual when the map is
+  recessed and a postage stamp when the map is forward.
 
 **Pins:** ink-drawn symbols, not teardrops. Default: 4–5px circle, 1.25px --ink stroke,
 --paper fill. Active/story: filled --ink with a 1px offset ring. Status: construction =

@@ -702,6 +702,7 @@ html:has(.atlas-root) body {
   position: sticky;
   top: 18vh;
   float: left;
+  z-index: 4;
   margin-left: calc(-1 * clamp(0.5rem, 1.5vw, 1.5rem));
   height: 64vh;
   width: 2px;
@@ -737,54 +738,21 @@ html:has(.atlas-root) body {
   color: var(--wash-red);
 }
 
-.story-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 26rem) minmax(0, 1fr);
-  gap: clamp(1.5rem, 4vw, 3.5rem);
-  align-items: start;
-}
+/* ---------- The table: full-bleed sticky stage (map as spine) ---------- */
 
-.story-grid__copy {
-  grid-column: 1;
-  grid-row: 1;
-  padding-bottom: 20svh;
-}
-
-.story-beat {
-  min-height: 78svh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  opacity: 0.55;
-  transition: opacity 350ms ease-out;
-}
-
-.story-beat.is-active {
-  opacity: 1;
-}
-
-.story-beat p + p {
-  margin-top: 1em;
-}
-
-.story-grid__figure {
-  grid-column: 2;
-  grid-row: 1;
+.story-table {
   position: sticky;
   top: 0;
   height: 100svh;
-  padding: clamp(0.75rem, 2vh, 1.5rem) 0;
-}
-
-.story-stage {
-  position: relative;
-  height: 100%;
-  border: 1px solid var(--ink-faint);
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-bottom: -100svh;
+  z-index: 0;
   background: var(--paper-shade);
   overflow: hidden;
 }
 
-.story-grid__figure.is-stamping .story-stage {
+.story-table.is-stamping {
   animation: paper-shake 180ms ease-out 110ms 1;
 }
 
@@ -795,9 +763,120 @@ html:has(.atlas-root) body {
 }
 
 /* Scoped to outrank mapbox-gl.css's `.mapboxgl-map { position: relative }`. */
-.story-stage .story-map {
+.story-table .story-map {
   position: absolute;
   inset: 0;
+}
+
+/* Recessed/forward wash. ::before is the uniform recess; the gradients keep
+   the copy side and the sheet edges washed to paper in both states. */
+.story-table__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(to right, var(--paper) 4%, color-mix(in srgb, var(--paper) 78%, transparent) 26%, transparent 52%),
+    linear-gradient(to bottom, var(--paper), transparent 6%),
+    linear-gradient(to top, var(--paper), transparent 8%),
+    linear-gradient(to left, var(--paper), transparent 5%);
+}
+
+.story-table__scrim::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--paper);
+  opacity: 0.62;
+  transition: opacity 650ms ease-out;
+}
+
+.story-table.is-forward .story-table__scrim::before {
+  opacity: 0;
+}
+
+/* The copy column scrolls over the table as drafting cards. */
+.story-copy {
+  position: relative;
+  z-index: 3;
+  width: min(24rem, calc(100% - 0.5rem));
+  margin-left: clamp(1rem, 6vw, 5.5rem);
+  padding-bottom: 18svh;
+}
+
+.story-beat {
+  margin: 0 0 56svh;
+  padding: 1.1rem 1.25rem;
+  background: color-mix(in srgb, var(--paper) 96%, transparent);
+  border: 1px solid var(--ink-faint);
+  opacity: 0.6;
+  transition: opacity 350ms ease-out;
+}
+
+.story-beat:first-child {
+  margin-top: 26svh;
+}
+
+.story-beat:last-child {
+  margin-bottom: 30svh;
+}
+
+.story-beat.is-active {
+  opacity: 1;
+}
+
+.story-beat p + p {
+  margin-top: 1em;
+}
+
+/* Plate/diagram inset: the lead visual when the map recedes, a postage
+   stamp in the corner when geography takes the stage. */
+.story-inset {
+  position: absolute;
+  z-index: 3;
+  background: color-mix(in srgb, var(--paper) 97%, transparent);
+  border: 1px solid var(--ink-faint);
+  display: flex;
+  overflow: hidden;
+  transition:
+    width 480ms ease-out,
+    height 480ms ease-out,
+    top 480ms ease-out,
+    right 480ms ease-out,
+    transform 480ms ease-out,
+    opacity 480ms ease-out;
+}
+
+.story-inset > figure {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.story-inset--large {
+  top: 50%;
+  right: clamp(1rem, 5vw, 5rem);
+  transform: translateY(-50%);
+  width: min(46vw, 42rem);
+  height: min(66svh, 36rem);
+}
+
+.story-inset--small {
+  top: 1.1rem;
+  right: 1.1rem;
+  transform: none;
+  width: 11rem;
+  height: 8.25rem;
+  opacity: 0.92;
+}
+
+.story-inset--small figcaption {
+  display: none;
+}
+
+.story-inset--small .story-plate,
+.story-inset--small .story-diagram {
+  padding: 0.5rem;
 }
 
 .story-map .mapboxgl-canvas {
@@ -824,31 +903,13 @@ html:has(.atlas-root) body {
 .story-stage__caption {
   position: absolute;
   z-index: 3;
-  left: 0.85rem;
-  bottom: 0.7rem;
-  max-width: 70%;
+  right: 1.1rem;
+  bottom: 1rem;
+  max-width: 46%;
   font-size: 0.85rem;
-  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  background: color-mix(in srgb, var(--paper) 90%, transparent);
   padding: 0.2rem 0.45rem;
   border: 1px solid var(--paper-shade);
-}
-
-/* Plate surface: crossfades over the map (wash bloom). */
-.story-stage__plate {
-  position: absolute;
-  inset: 0;
-  z-index: 4;
-  background: var(--paper);
-  opacity: 0;
-  transform: scale(0.985);
-  transition: opacity 400ms ease-out, transform 400ms ease-out;
-  pointer-events: none;
-  display: flex;
-}
-
-.story-stage__plate.is-visible {
-  opacity: 1;
-  transform: none;
 }
 
 .story-plate {
@@ -1027,7 +1088,7 @@ html:has(.atlas-root) body {
     animation: none;
   }
 
-  .story-grid__figure.is-stamping .story-stage {
+  .story-table.is-stamping {
     animation: none;
   }
 
@@ -1036,54 +1097,68 @@ html:has(.atlas-root) body {
     transition: none;
   }
 
-  .story-stage__plate {
-    transform: none;
-    transition: opacity 250ms ease-out;
+  .story-table__scrim::before,
+  .story-inset {
+    transition: none;
   }
 }
 
-/* Mobile: figure pins at reduced height; copy scrolls over it as cards. */
+/* Narrow stage: copy rides the lower half; map composes in the upper. */
 @media (max-width: 880px) {
-  .story-grid {
-    display: block;
+  .story-table__scrim {
+    background:
+      linear-gradient(to top, var(--paper) 6%, color-mix(in srgb, var(--paper) 72%, transparent) 32%, transparent 56%),
+      linear-gradient(to bottom, var(--paper), transparent 7%),
+      linear-gradient(to right, var(--paper), transparent 5%),
+      linear-gradient(to left, var(--paper), transparent 5%);
   }
 
-  .story-grid__figure {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    height: 46svh;
-    padding: 0.5rem 0;
-  }
-
-  .story-grid__copy {
-    position: relative;
-    z-index: 2;
+  .story-copy {
+    width: auto;
     max-width: 34rem;
     margin: 0 auto;
-    padding-bottom: 8svh;
+    padding: 0 0.25rem 10svh;
   }
 
   .story-beat {
-    min-height: 0;
-    margin: 0 0 58svh;
-    padding: 1rem 1.1rem;
-    background: color-mix(in srgb, var(--paper) 96%, transparent);
-    border: 1px solid var(--ink-faint);
-    opacity: 1;
+    margin: 0 0 62svh;
   }
 
   .story-beat:first-child {
-    margin-top: 6svh;
+    margin-top: 58svh;
   }
 
   .story-beat:last-child {
-    margin-bottom: 24svh;
+    margin-bottom: 26svh;
+  }
+
+  .story-inset--large {
+    top: 6svh;
+    right: 50%;
+    transform: translateX(50%);
+    width: min(88vw, 30rem);
+    height: min(42svh, 24rem);
+  }
+
+  .story-inset--small {
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 8.5rem;
+    height: 6.5rem;
+  }
+
+  .story-stage__caption {
+    right: auto;
+    left: 0.75rem;
+    top: 0.85rem;
+    bottom: auto;
+    max-width: 52%;
   }
 
   .stamp {
     font-size: 0.95rem;
-    bottom: 12%;
+    bottom: auto;
+    top: 30svh;
   }
 }
 

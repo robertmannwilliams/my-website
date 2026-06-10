@@ -76,6 +76,12 @@ Rob can open on his phone.
       faint dashed journey line accumulates behind the reader, active pins 35% larger
       with bigger italic labels. Continuous scroll kept (no snap) with slide-like beat
       presentation.
+- [x] Spine layout (Rob's follow-on direction, same day): the map is a full-bleed
+      sticky background under the whole story with recessed/forward states (paper
+      scrim by beat kind; journey line darkens when recessed). Copy rides over the
+      table as drafting cards at every width. Plates render as an inset — lead visual
+      when recessed, postage stamp when the map takes the stage. Camera composition
+      padding keeps targets in the open area (and re-applies on resize).
 - [ ] Acceptance: Rob scrolls the rewritten flow on his phone; red-pens the copy.
 
 ## Phase 4 — Plates
@@ -115,6 +121,23 @@ Rob can open on his phone.
 ## Session log
 
 <!-- newest first: YYYY-MM-DD — what was done / what's next / open questions -->
+
+- 2026-06-10 (last) — **Spine layout shipped** (Rob: map as background element, plates
+  and copy do the work). StoryFlow now renders one full-bleed sticky "table": the map
+  under everything with a recessed/forward scrim driven by beat kind (recessed = paper
+  wash at 62%, journey line darkens to 0.8 to stay legible; forward = wash lifts).
+  Copy is a single column of drafting cards over the table at all widths (left on
+  desktop, lower half on phones) with matching camera composition padding, re-applied
+  on resize via setPadding (no re-fly on phone URL-bar churn). Plate/diagram inset has
+  two sizes: lead visual when recessed (centered-right ~46vw desktop, top-center
+  ~88vw mobile), postage stamp top-right when the map is forward; captions hide in the
+  small state. Stage edge fades + copy-side wash are gradients-to-paper, sanctioned in
+  DESIGN.md as part of the sheet treatment. Verified at 375px (recessed plate beat,
+  forward Abilene beat with pin composed in open space) and 1280px geometry. The old
+  two-column story grid is gone. **Plates note for Phase 4:** insets argue for
+  transparent-background sketches that sit on the washed map — decide at generation.
+  **Next:** Rob's phone read of copy + new layout (acceptance box above); then plates
+  and/or Phase 5.
 
 - 2026-06-10 (later still) — **Phase 3.5 built: the restructure from Rob's reflection.**
   All copy rewritten at the kitchen-table register (style contract in the Phase 3.5

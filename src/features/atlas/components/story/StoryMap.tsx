@@ -34,6 +34,9 @@ export interface StoryMapProps {
   allSites: boolean;
   /** The journey so far — primaries visited, drawn as a faint ink line. */
   journey: LngLat[];
+  /** Spine state: washed back while plates/copy lead; the journey line
+   *  compensates so the thread stays legible through the scrim. */
+  recessed: boolean;
 }
 
 function prefersReducedMotion(): boolean {
@@ -63,6 +66,7 @@ export default function StoryMap({
   linkMode,
   allSites,
   journey,
+  recessed,
 }: StoryMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -77,9 +81,18 @@ export default function StoryMap({
     linkMode,
     allSites,
     journey,
+    recessed,
   });
   useEffect(() => {
-    stateRef.current = { sites, activeSiteIds, camera, linkMode, allSites, journey };
+    stateRef.current = {
+      sites,
+      activeSiteIds,
+      camera,
+      linkMode,
+      allSites,
+      journey,
+      recessed,
+    };
   });
 
   // ----- init once -----
@@ -309,6 +322,28 @@ export default function StoryMap({
       source.setData({ type: "FeatureCollection", features });
     };
 
+    /**
+     * Composition padding: the copy column owns the left of a wide stage
+     * (the lower half of a narrow one), so targets land in the open area.
+     */
+    const compositionPadding = () => {
+      const { clientWidth: w, clientHeight: h } = map.getContainer();
+      if (w >= 880) {
+        return {
+          left: Math.min(w * 0.4, 560),
+          right: Math.min(90, w * 0.1),
+          top: Math.min(90, h * 0.15),
+          bottom: Math.min(110, h * 0.18),
+        };
+      }
+      return {
+        left: 24,
+        right: 24,
+        top: Math.max(70, h * 0.12),
+        bottom: h * 0.48,
+      };
+    };
+
     let applied = false;
     const applyBeat = () => {
       if (!loadedRef.current) return;
@@ -323,6 +358,13 @@ export default function StoryMap({
         ["in", ["get", "id"], ["literal", ids]],
       ]);
       applyJourney();
+      // The journey line is the spine: when the map recedes behind the
+      // scrim it darkens to stay legible.
+      map.setPaintProperty(
+        "journey-line",
+        "line-opacity",
+        stateRef.current.recessed ? 0.8 : 0.5,
+      );
       if (stateRef.current.allSites) loadAllSites();
       if (!cam) {
         // No camera on this beat (e.g. a stamp): leave the plate still.
@@ -340,21 +382,14 @@ export default function StoryMap({
       };
       map.stop(); // one move per beat: cancel anything in flight
       map.once("moveend", after);
+      const padding = compositionPadding();
       if (cam.kind === "fit") {
         const bounds = cam.coords.reduce(
           (b, c) => b.extend(c),
           new mapboxgl.LngLatBounds(cam.coords[0], cam.coords[0]),
         );
-        // Padding scaled to the container so a short mobile map can't
-        // produce an impossible (NaN) camera.
-        const { clientWidth: w, clientHeight: h } = map.getContainer();
         map.fitBounds(bounds, {
-          padding: {
-            top: Math.min(60, h * 0.16),
-            bottom: Math.min(80, h * 0.2),
-            left: Math.min(60, w * 0.1),
-            right: Math.min(60, w * 0.1),
-          },
+          padding,
           maxZoom: cam.maxZoom,
           duration: reduced ? 0 : 1300,
         });
@@ -364,6 +399,7 @@ export default function StoryMap({
           zoom: cam.zoom,
           pitch: cam.pitch ?? 0,
           bearing: cam.bearing ?? 0,
+          padding,
         });
       } else {
         map.flyTo({
@@ -371,6 +407,7 @@ export default function StoryMap({
           zoom: cam.zoom,
           pitch: cam.pitch ?? 0,
           bearing: cam.bearing ?? 0,
+          padding,
           curve: 1.4,
           speed: 0.8,
           // Cross-continent hops would otherwise run 5s+ — the traversal
@@ -383,6 +420,9 @@ export default function StoryMap({
     map.on("movestart", clearLinks);
     map.on("resize", () => {
       clearLinks();
+      // Recompose for the new viewport without flying (URL-bar show/hide
+      // on phones fires resize constantly).
+      map.setPadding(compositionPadding());
       if (stateRef.current.linkMode && !map.isMoving()) renderLinks(false);
     });
 
@@ -408,7 +448,7 @@ export default function StoryMap({
   useEffect(() => {
     applyBeatRef.current?.();
 
-  }, [cameraKey, activeKey, linkMode, allSites, journeyKey]);
+  }, [cameraKey, activeKey, linkMode, allSites, journeyKey, recessed]);
 
   return (
     <div ref={containerRef} className="story-map" aria-hidden>

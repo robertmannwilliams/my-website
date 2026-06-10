@@ -250,64 +250,66 @@ export default function StoryFlow({ beats, sites }: StoryFlowProps) {
         </a>
       </div>
 
-      <div className="story-grid">
-        <div
-          className={`story-grid__figure${stamping ? " is-stamping" : ""}`}
-        >
-          <div className="story-stage">
-            {mapMounted && (
-              <StoryMap
-                sites={storySites}
-                activeSiteIds={activeSiteIds}
-                camera={camera}
-                linkMode={linkMode}
-                allSites={handoffReached}
-                journey={journey}
+      {/* The table: one full-bleed sticky stage under everything. The map is
+          the spine — recessed while plates and copy carry the beat, forward
+          when geography is the argument. */}
+      <div
+        className={`story-table${showMap ? " is-forward" : ""}${stamping ? " is-stamping" : ""}`}
+      >
+        {mapMounted && (
+          <StoryMap
+            sites={storySites}
+            activeSiteIds={activeSiteIds}
+            camera={camera}
+            linkMode={linkMode}
+            allSites={handoffReached}
+            journey={journey}
+            recessed={!showMap}
+          />
+        )}
+        <div className="story-table__scrim" aria-hidden />
+        {showMap && mapCaption && (
+          <span className="story-stage__caption atlas-annotation">
+            {mapCaption}
+          </span>
+        )}
+        {artBeat?.plate && (
+          <div
+            className={`story-inset${showMap ? " story-inset--small" : " story-inset--large"}`}
+          >
+            {artIsDiagram ? (
+              <DiagramFigure
+                plate={artBeat.plate}
+                figNo={figNumbers.get(artBeat.id) ?? 0}
+                drawn={drawnDiagrams.has(artBeat.id)}
+              />
+            ) : (
+              <PlateFigure
+                plate={artBeat.plate}
+                figNo={figNumbers.get(artBeat.id) ?? 0}
               />
             )}
-            {showMap && mapCaption && (
-              <span className="story-stage__caption atlas-annotation">
-                {mapCaption}
-              </span>
-            )}
-            <div
-              className={`story-stage__plate${!showMap ? " is-visible" : ""}`}
-            >
-              {artBeat?.plate &&
-                (artIsDiagram ? (
-                  <DiagramFigure
-                    plate={artBeat.plate}
-                    figNo={figNumbers.get(artBeat.id) ?? 0}
-                    drawn={drawnDiagrams.has(artBeat.id)}
-                  />
-                ) : (
-                  <PlateFigure
-                    plate={artBeat.plate}
-                    figNo={figNumbers.get(artBeat.id) ?? 0}
-                  />
-                ))}
-            </div>
-            {stamped && stampBeat?.stamp && (
-              <Stamp text={stampBeat.stamp} hidden={!stampVisible} />
-            )}
           </div>
-        </div>
+        )}
+        {stamped && stampBeat?.stamp && (
+          <Stamp text={stampBeat.stamp} hidden={!stampVisible} />
+        )}
+      </div>
 
-        <div className="story-grid__copy">
-          {beats.map((beat, i) => (
-            <article
-              key={beat.id}
-              ref={(el) => {
-                beatRefs.current[i] = el;
-              }}
-              className={`story-beat${i === activeIdx ? " is-active" : ""}`}
-            >
-              {beat.copy.map((paragraph, j) => (
-                <p key={j}>{withEmphasis(paragraph)}</p>
-              ))}
-            </article>
-          ))}
-        </div>
+      <div className="story-copy">
+        {beats.map((beat, i) => (
+          <article
+            key={beat.id}
+            ref={(el) => {
+              beatRefs.current[i] = el;
+            }}
+            className={`story-beat${i === activeIdx ? " is-active" : ""}`}
+          >
+            {beat.copy.map((paragraph, j) => (
+              <p key={j}>{withEmphasis(paragraph)}</p>
+            ))}
+          </article>
+        ))}
       </div>
     </section>
   );
