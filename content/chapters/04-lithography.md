@@ -32,7 +32,7 @@ need an extreme kind of light, and producing it is barely possible. The machine 
 does it fires fifty thousand droplets of molten tin every second, hits each droplet
 with a laser until it flashes into glowing plasma, and steers that flash with the
 smoothest mirrors ever made. One machine costs a few hundred million dollars and ships
-to its buyer in thirteen containers.
+to its buyer in forty freight containers — about three jumbo jets' worth.
 
 ## Beat 4.2
 
@@ -44,9 +44,9 @@ take a competitor a decade or more.
 ## Beat 4.3
 
 Even ASML stands on other one-of-a-kind companies. The mirrors come from Zeiss in
-Germany, polished so precisely that if a mirror were stretched to the size of a
-country, its tallest bump would be a few millimeters. The light source comes from a
-plant in San Diego. Optical modules come from Connecticut. Single points of failure,
+Germany, polished so precisely that if a mirror were stretched to the size of Germany
+itself, its tallest bump would be less than a millimeter. The light source comes from
+a plant in San Diego. Optical modules come from Connecticut. Single points of failure,
 stacked on top of each other.
 
 ## Beat 4.4

@@ -115,17 +115,45 @@ Rob can open on his phone.
 
 ## Phase 6 — Verify & launch
 
-- [ ] Hand-verify every hero-site claim in chapter copy against `sources` URLs in
-      sites.json; fix numbers in copy. (Rob leads; Claude Code assists with a checklist
-      generated from chapter frontmatter.)
-- [ ] Copyedit pass at the dad register: read every beat aloud; cut 10%.
+- [x] Hand-verify every hero-site claim in chapter copy against `sources` URLs in
+      sites.json; fix numbers in copy. (Run 2026-06-10 via four research agents — 29
+      claim clusters: 26 confirmed, 3 fixed in copy [EUV containers 13→40, Zeiss
+      mirror bump, CUDA age] plus 2 belt-and-braces hedges. Full audit trail with
+      links in `docs/verification.md`; Rob spot-checks from there.)
+- [ ] Copyedit pass at the dad register: read every beat aloud; cut 10%. (Rob — same
+      session as the Phase 3.5 acceptance read.)
 - [ ] Cross-browser/device QA (Safari iOS especially, for Mapbox + sticky behavior).
-- [ ] Swap `/aistack` to the new experience; remove `/aistack/old`.
-- [ ] Announce: link from homepage with a one-line description.
+      (Done from here: Chromium against the production build + Lighthouse 84/95.
+      WebKit feature floor by audit: Safari/iOS ≥16.2 for :has(), overflow:clip,
+      color-mix, svh. Open: a real iOS Safari scroll — rides Rob's phone read.
+      Desktop-Safari automation needs macOS Accessibility/Screen Recording grants.)
+- [x] Swap `/aistack` to the new experience; remove `/aistack/old`. (Old route,
+      `src/features/aistack`, build-stack script, and its pre-hooks all removed.)
+- [x] Announce: link from homepage with a one-line description. ("The Physical AI
+      Stack — an illustrated atlas of the mines, machines, and buildings behind AI."
+      Louder announcement timing is Rob's call, likely post-plates.)
 
 ## Session log
 
 <!-- newest first: YYYY-MM-DD — what was done / what's next / open questions -->
+
+- 2026-06-10 (Phase 6, pre-plates) — **Verification + launch prep run ahead of Phase 4
+  at Rob's call.** Fact-check: four parallel research agents verified 29 hero-claim
+  clusters against the sites' source URLs + fresh search — 26 confirmed (often with
+  margin: Apollo comparison, Loudoun waits, NVL72 weight, eleven nines all check out),
+  3 fixed in copy: EUV machine ships in ~40 containers not 13 (canonical ASML/CNBC/
+  Intel figure), Zeiss mirror bump corrected to "Germany-sized → under a millimeter,"
+  CUDA "fifteen years" → "nearly two decades" (2007 launch). Plus two hedges: wafer
+  share "about ninety" → "more than eighty percent," model file "couple of terabytes"
+  → "likely a terabyte or two." Audit trail: `docs/verification.md` (also flags TMI
+  wording for revisit after the 2027 restart). `/aistack/old` deleted along with the
+  whole legacy feature (src/features/aistack, build-stack script, predev/prebuild
+  hooks — three/topojson deps left in place pending a homepage-usage check). Homepage
+  link relabeled to "The Physical AI Stack" with a real description. QA: Chromium on
+  the prod build + Lighthouse already done (84/95); WebKit floor audited (≥16.2);
+  the on-device iOS scroll rides Rob's read. **Open before "done":** Rob's read-aloud
+  copyedit + Phase 3.5 acceptance, the iOS scroll, the 8 plates, then louder
+  announcement whenever Rob wants.
 
 - 2026-06-10 (Phase 5) — **Polish & extras shipped.** Scenario mode: "Taiwan
   disruption" toggle in the atlas filter panel (data in `content/scenarios.json`) —

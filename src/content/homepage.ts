@@ -19,8 +19,8 @@ export const homepageCopy = {
 export const homeProjectLinks: HomeLink[] = [
   {
     href: "/aistack",
-    label: "Data Center Thing",
-    status: "Work in progress",
+    label: "The Physical AI Stack",
+    status: "An illustrated atlas of the mines, machines, and buildings behind AI",
   },
   {
     href: "/monitor",

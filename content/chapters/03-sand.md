@@ -48,7 +48,7 @@ film.
 
 ## Beat 3.4
 
-About ninety percent of the world's wafers come from five companies, led by two
+More than eighty percent of the world's wafers come from five companies, led by two
 Japanese firms most people have never heard of, in towns most maps don't label. Get
 used to that feeling. This story keeps resting on quiet buildings.
 

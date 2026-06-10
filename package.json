@@ -3,9 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build:content": "tsx scripts/build-stack.ts",
-    "predev": "npm run build:content",
-    "prebuild": "npm run build:content",
     "dev": "next dev --port 3001",
     "generate:homepage-sketch": "tsx scripts/generate-homepage-reference-sketch.ts",
     "build": "next build",
