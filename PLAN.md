@@ -48,17 +48,20 @@ Rob can open on his phone.
 - [x] Build Chapter 4 end-to-end to full polish with a placeholder plate. This is the
       design proof — Rob reviews and signs off before replication.
 - [x] Reduced-motion variants for every interaction introduced.
-- [ ] Acceptance: Rob approves the slice on a phone preview.
+- [x] Acceptance: Rob approves the slice on a phone preview. (Rob, 2026-06-10:
+      "Amazing keep it up" — treated as the go-ahead; every knob stays cheap to tune.)
 
 ## Phase 3 — All chapters
 
-- [ ] Wire chapters 0–12 through the engine (copy already in `content/chapters/`).
-- [ ] Build the 3–4 in-code SVG diagrams (chapters 2, 7, 10, 11) with draw-on animation.
-- [ ] Chapter 11 finale beat: the full-journey arc draw across the world map.
-- [ ] Chapter 12 → atlas handoff transition (story map expands into atlas with filters
+- [x] Wire chapters 0–12 through the engine (copy already in `content/chapters/`).
+- [x] Build the 3–4 in-code SVG diagrams (chapters 2, 7, 10, 11) with draw-on animation.
+      (Three diagrams — gpu-grid, cable-nervous-system, training-room; chapter 11's
+      "diagram" is the journey arc on the map, next box.)
+- [x] Chapter 11 finale beat: the full-journey arc draw across the world map.
+- [x] Chapter 12 → atlas handoff transition (story map expands into atlas with filters
       appearing; should feel like being handed the pen).
-- [ ] Progress affordance: slim chapter rail (Plex Mono numbers) for orientation/jumping.
-- [ ] Acceptance: full story scroll works start to finish with placeholder plates.
+- [x] Progress affordance: slim chapter rail (Plex Mono numbers) for orientation/jumping.
+- [x] Acceptance: full story scroll works start to finish with placeholder plates.
 
 ## Phase 4 — Plates
 
@@ -94,6 +97,34 @@ Rob can open on his phone.
 ## Session log
 
 <!-- newest first: YYYY-MM-DD — what was done / what's next / open questions -->
+
+- 2026-06-10 (night) — **Phase 3 complete: the full story scrolls start to finish.**
+  All 13 chapters run through the engine; the Phase 0 scaffold renderer is deleted.
+  Engine generalizations: figure surface (plate/diagram/map) inherits across text and
+  stamp beats; mid-chapter stamps (ch 3/6/9) hide when their figure moves on and return
+  without re-thunking on scroll-back (animation fill changed to `backwards` so the
+  cascade can fade them); story maps mount within ~1.6 viewports and unmount beyond
+  ~3.2 — never more than ~2 live WebGL contexts of 13 chapters (verified). Three
+  in-code diagrams ink themselves in on scroll (pathLength=1 dash trick, staggered
+  per-element delays, washes bloom then annotations write on; reduced-motion = appear):
+  GPU-as-city vs CPU-as-buildings, the cable plant, the training room. Chapter 11
+  finale: draw_links beats with >5 sites draw as a sequential chain (170ms/leg) instead
+  of hub-and-spokes, with antimeridian world-copy duplication so Pacific legs exit one
+  edge and re-enter the other — the 11-stop journey reads as one retraced line.
+  Chapter 12: the stamp strikes the world plate, then the handoff beat lazy-loads the
+  full 341-site constellation at half ink (shares the atlas chunk) and fits the
+  inhabited world on any screen; the real atlas section follows immediately below.
+  Chapter rail at ≥1150px: Plex Mono 00–12 + ATLAS, red-ticked active, smooth-scroll
+  jumps (auto under reduced motion). **Decisions:** chain-vs-hub inferred from site
+  count (>5 = chain) — schema untouched; handoff constellation at 0.5 opacity (full
+  density stays exclusive to the atlas); diagrams draw once and stay drawn. Verified in
+  browser at 375px and 1280px: ch2 diagram, ch3 stamp hide/return, ch11 chain, ch12
+  handoff into atlas, rail tracking. **Phase 2 acceptance checked off** per Rob's
+  "Amazing keep it up". **Next:** Phase 4 is Rob's (generate the 13 plates with the
+  locked DESIGN prompt; the post-process script and drop-in slots are ready to build on
+  request) — or skip ahead to Phase 5 polish (stamp ledger recap, scenario mode,
+  methodology + deep-dive pages, OG image, perf pass). **For Rob:** full scroll on the
+  phone — the story now runs unbroken from "You type a question" to the atlas.
 
 - 2026-06-10 (evening) — **Phase 2 built; awaiting Rob's sign-off on the slice.**
   Chapter 4 (lithography) runs end-to-end through the new beat engine at `/aistack`
