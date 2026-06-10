@@ -23,6 +23,9 @@ const CLUSTER_MAX_ZOOM = 13;
 
 export interface AtlasMapProps {
   data: GeoJSON.FeatureCollection;
+  /** Non-null switches the atlas into scenario view: clustering off,
+   *  disrupted sites flagged red, impacted layers faded. */
+  scenarioData: GeoJSON.FeatureCollection | null;
   selectedId: string | null;
   onSelect: (siteId: string | null) => void;
   onMapReady?: (map: mapboxgl.Map) => void;
@@ -42,6 +45,7 @@ export function prefersReducedMotion(): boolean {
 
 export default function AtlasMap({
   data,
+  scenarioData,
   selectedId,
   onSelect,
   onMapReady,
@@ -50,7 +54,11 @@ export default function AtlasMap({
   const tooltipRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const loadedRef = useRef(false);
+  const applyScenarioRef = useRef<
+    ((fc: GeoJSON.FeatureCollection | null) => void) | null
+  >(null);
   const dataRef = useRef(data);
+  const scenarioRef = useRef(scenarioData);
   const selectedRef = useRef(selectedId);
   const onSelectRef = useRef(onSelect);
   const onMapReadyRef = useRef(onMapReady);
@@ -58,6 +66,7 @@ export default function AtlasMap({
   // the map-init effect. Runs after every render.
   useEffect(() => {
     dataRef.current = data;
+    scenarioRef.current = scenarioData;
     selectedRef.current = selectedId;
     onSelectRef.current = onSelect;
     onMapReadyRef.current = onMapReady;
@@ -239,6 +248,66 @@ export default function AtlasMap({
         },
       });
 
+      // Scenario view: a parallel unclustered source, hidden until a
+      // scenario is switched on (PLAN Phase 5).
+      map.addSource("sites-scenario", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+      map.addLayer({
+        id: "scenario-unaffected",
+        type: "symbol",
+        source: "sites-scenario",
+        filter: ["==", ["get", "scenario"], "unaffected"],
+        layout: {
+          "icon-image": PIN_ICON_EXPRESSION as unknown as string,
+          "icon-allow-overlap": true,
+          "icon-padding": 0,
+          visibility: "none",
+        },
+        paint: { "icon-opacity": 0.8 },
+      });
+      map.addLayer({
+        id: "scenario-impacted",
+        type: "symbol",
+        source: "sites-scenario",
+        filter: ["==", ["get", "scenario"], "impacted"],
+        layout: {
+          "icon-image": PIN_ICON_EXPRESSION as unknown as string,
+          "icon-allow-overlap": true,
+          "icon-padding": 0,
+          visibility: "none",
+        },
+        paint: { "icon-opacity": 0.2 },
+      });
+      map.addLayer({
+        id: "scenario-disrupted-ring",
+        type: "circle",
+        source: "sites-scenario",
+        filter: ["==", ["get", "scenario"], "disrupted"],
+        layout: { visibility: "none" },
+        paint: {
+          "circle-radius": 10,
+          "circle-color": "rgba(0,0,0,0)",
+          "circle-stroke-color": "#C8502E",
+          "circle-stroke-width": 1.6,
+          "circle-stroke-opacity": 0.9,
+        },
+      });
+      map.addLayer({
+        id: "scenario-disrupted",
+        type: "symbol",
+        source: "sites-scenario",
+        filter: ["==", ["get", "scenario"], "disrupted"],
+        layout: {
+          "icon-image": PIN_ICON_EXPRESSION as unknown as string,
+          "icon-allow-overlap": true,
+          "icon-padding": 0,
+          "icon-size": 1.15,
+          visibility: "none",
+        },
+      });
+
       // Selected site: active pin drawn on top.
       map.addLayer({
         id: "site-selected",
@@ -258,7 +327,14 @@ export default function AtlasMap({
 
       // --- interactions ---
       const tooltip = tooltipRef.current;
-      const pinLayers = ["site-pins", "spider-pins", "site-selected"];
+      const pinLayers = [
+        "site-pins",
+        "spider-pins",
+        "site-selected",
+        "scenario-disrupted",
+        "scenario-unaffected",
+        "scenario-impacted",
+      ];
 
       map.on("mousemove", (e) => {
         const features = map.queryRenderedFeatures(e.point, {
@@ -328,9 +404,31 @@ export default function AtlasMap({
         ["get", "id"],
         selectedRef.current ?? "__none__",
       ]);
+      applyScenarioRef.current?.(scenarioRef.current);
       map.resize();
       onMapReadyRef.current?.(map);
     });
+
+    // Swap between the clustered base view and the flat scenario view.
+    applyScenarioRef.current = (fc: GeoJSON.FeatureCollection | null) => {
+      if (!loadedRef.current) return;
+      const on = fc !== null;
+      if (on) {
+        (map.getSource("sites-scenario") as mapboxgl.GeoJSONSource).setData(fc);
+        clearSpider();
+      }
+      for (const id of ["clusters-outer", "clusters", "cluster-count", "site-pins"]) {
+        map.setLayoutProperty(id, "visibility", on ? "none" : "visible");
+      }
+      for (const id of [
+        "scenario-unaffected",
+        "scenario-impacted",
+        "scenario-disrupted-ring",
+        "scenario-disrupted",
+      ]) {
+        map.setLayoutProperty(id, "visibility", on ? "visible" : "none");
+      }
+    };
 
     if (process.env.NODE_ENV !== "production") {
       (window as unknown as { __atlasMap?: mapboxgl.Map }).__atlasMap = map;
@@ -339,6 +437,7 @@ export default function AtlasMap({
     mapRef.current = map;
     return () => {
       loadedRef.current = false;
+      applyScenarioRef.current = null;
       map.remove();
       mapRef.current = null;
     };
@@ -367,6 +466,11 @@ export default function AtlasMap({
       selectedId ?? "__none__",
     ]);
   }, [selectedId]);
+
+  // Scenario view on/off.
+  useEffect(() => {
+    applyScenarioRef.current?.(scenarioData);
+  }, [scenarioData]);
 
   return (
     <div ref={containerRef} className="atlas-map">

@@ -12,6 +12,7 @@ import {
   MEGA_LAYERS,
   searchSites,
   STATUSES,
+  type Scenario,
 } from "../map/sites";
 import type { MegaLayer, Site } from "../types";
 
@@ -28,6 +29,9 @@ export interface FilterPanelProps {
   megaCounts: Record<MegaLayer | "all", number>;
   shownCount: number;
   onPickSite: (site: Site) => void;
+  scenario: Scenario;
+  scenarioOn: boolean;
+  onToggleScenario: () => void;
 }
 
 export default function FilterPanel({
@@ -36,6 +40,9 @@ export default function FilterPanel({
   megaCounts,
   shownCount,
   onPickSite,
+  scenario,
+  scenarioOn,
+  onToggleScenario,
 }: FilterPanelProps) {
   const [query, setQuery] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -152,8 +159,26 @@ export default function FilterPanel({
         />
       </FilterRow>
 
+      <FilterRow label="Scenario">
+        <button
+          type="button"
+          className="atlas-mono atlas-filters__chip atlas-filters__chip--scenario"
+          aria-pressed={scenarioOn}
+          onClick={onToggleScenario}
+        >
+          {scenario.name}
+        </button>
+        {scenarioOn && (
+          <p className="atlas-annotation atlas-filters__scenario-note">
+            {scenario.note}
+          </p>
+        )}
+      </FilterRow>
+
       <div className="atlas-filters__footer">
-        <span className="atlas-mono">{shownCount} sites shown</span>
+        <span className="atlas-mono">
+          {scenarioOn ? "Scenario view — all 341 sites" : `${shownCount} sites shown`}
+        </span>
         {!isDefault && (
           <button
             type="button"

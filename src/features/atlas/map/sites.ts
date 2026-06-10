@@ -1,6 +1,7 @@
 // Client-side site data for atlas mode. The JSON is imported statically so it
 // ships (code-split) with the lazy map chunk, per CLAUDE.md §Stack decisions.
 
+import scenariosJson from "@content/scenarios.json";
 import sitesJson from "@data/sites.json";
 import type {
   ChokepointSeverity,
@@ -97,6 +98,48 @@ export function toFeatureCollection(sites: Site[]): GeoJSON.FeatureCollection {
         status: s.status,
         monopoly: s.chokepoint_severity === "monopoly",
         mega: s.mega_layer,
+      },
+      geometry: { type: "Point", coordinates: [s.lng, s.lat] },
+    })),
+  };
+}
+
+// ---- Scenario mode (PLAN Phase 5; v1 data in content/scenarios.json) ----
+
+export interface Scenario {
+  id: string;
+  name: string;
+  summary: string;
+  disrupted_country: string;
+  impacted_mega_layers: string[];
+  note: string;
+}
+
+export const SCENARIOS: Scenario[] = scenariosJson.scenarios;
+
+export type ScenarioClass = "disrupted" | "impacted" | "unaffected";
+
+export function classifyForScenario(site: Site, scenario: Scenario): ScenarioClass {
+  if (site.country === scenario.disrupted_country) return "disrupted";
+  if (scenario.impacted_mega_layers.includes(site.mega_layer)) return "impacted";
+  return "unaffected";
+}
+
+/** Unclustered FC with a per-site scenario class, for the scenario layers. */
+export function toScenarioFeatureCollection(
+  sites: Site[],
+  scenario: Scenario,
+): GeoJSON.FeatureCollection {
+  return {
+    type: "FeatureCollection",
+    features: sites.map((s) => ({
+      type: "Feature",
+      properties: {
+        id: s.id,
+        name: s.name,
+        status: s.status,
+        monopoly: s.chokepoint_severity === "monopoly",
+        scenario: classifyForScenario(s, scenario),
       },
       geometry: { type: "Point", coordinates: [s.lng, s.lat] },
     })),

@@ -1,0 +1,12 @@
+{
+  "scenarios": [
+    {
+      "id": "taiwan-disruption",
+      "name": "Taiwan disruption",
+      "summary": "Blockade, quake, or conflict: Taiwan goes offline.",
+      "disrupted_country": "Taiwan",
+      "impacted_mega_layers": ["Systems", "Deployment"],
+      "note": "Red: the 27 facilities on Taiwan, including nearly all leading-edge fabrication and advanced packaging. Faded: the Systems and Deployment layers downstream — server assembly lines and datacenters would starve on a horizon of weeks to months. Everything else keeps producing, with nowhere to send it."
+    }
+  ]
+}

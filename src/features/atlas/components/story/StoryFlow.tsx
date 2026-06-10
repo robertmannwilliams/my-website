@@ -60,8 +60,12 @@ export default function StoryFlow({ beats, sites }: StoryFlowProps) {
       const vh = window.innerHeight;
       const rect = section.getBoundingClientRect();
 
-      // One persistent map for the whole story; mount it as the flow nears.
-      if (rect.top < vh * 1.5 && rect.bottom > -vh) setMapMounted(true);
+      // One persistent map for the whole story. Mount on first engagement
+      // (any scroll) rather than at load — the landing screen is masthead
+      // text and shouldn't pay for mapbox in its first paint.
+      if (window.scrollY > 24 && rect.top < vh * 1.5 && rect.bottom > -vh) {
+        setMapMounted(true);
+      }
 
       // Reading progress for the thread (0..1, quantized so scroll ticks
       // with no visible change skip the re-render).

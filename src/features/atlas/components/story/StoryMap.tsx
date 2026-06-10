@@ -182,6 +182,13 @@ export default function StoryMap({
         },
       });
       loadedRef.current = true;
+      // The story map is decorative (aria-hidden container) and
+      // non-interactive: nothing inside it may take keyboard focus.
+      map.getCanvas().setAttribute("tabindex", "-1");
+      map
+        .getContainer()
+        .querySelectorAll<HTMLElement>("a, button, [tabindex]")
+        .forEach((el) => el.setAttribute("tabindex", "-1"));
       applyBeat();
       map.resize();
     });

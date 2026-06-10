@@ -1,3 +1,4 @@
+import Link from "next/link";
 import AtlasSection from "@/features/atlas/components/AtlasSection";
 import StoryFlow from "@/features/atlas/components/story/StoryFlow";
 import { TitleBlock } from "@/features/atlas/components/TitleBlock";
@@ -50,6 +51,10 @@ export default function AIStackStoryPage() {
           Figures in this draft are unverified; a sourcing pass precedes
           launch. Corrections welcome.
         </p>
+        <nav className="story-colophon__links atlas-mono" aria-label="Related pages">
+          <Link href="/aistack/methodology">Methodology &amp; sources</Link>
+          <Link href="/aistack/primer">Deep Dive: the full primer</Link>
+        </nav>
       </footer>
     </main>
   );

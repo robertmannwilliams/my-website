@@ -14,7 +14,9 @@ import {
   allSites,
   siteById,
   toFeatureCollection,
+  toScenarioFeatureCollection,
   MEGA_LAYERS,
+  SCENARIOS,
 } from "../map/sites";
 import type { MegaLayer, Site } from "../types";
 import DetailPanel from "./DetailPanel";
@@ -46,6 +48,7 @@ export default function AtlasSection() {
   const [nearViewport, setNearViewport] = useState(false);
   const [filters, setFilters] = useState<AtlasFilters>(DEFAULT_FILTERS);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [scenarioOn, setScenarioOn] = useState(false);
 
   useEffect(() => {
     const el = sectionRef.current;
@@ -92,6 +95,11 @@ export default function AtlasSection() {
     [filters],
   );
   const data = useMemo(() => toFeatureCollection(shownSites), [shownSites]);
+  const scenario = SCENARIOS[0];
+  const scenarioData = useMemo(
+    () => (scenarioOn ? toScenarioFeatureCollection(allSites, scenario) : null),
+    [scenarioOn, scenario],
+  );
 
   // Mega tab counts respect every other active filter.
   const megaCounts = useMemo(() => {
@@ -141,6 +149,7 @@ export default function AtlasSection() {
           <>
             <AtlasMap
               data={data}
+              scenarioData={scenarioData}
               selectedId={selectedId}
               onSelect={setSelectedId}
               onMapReady={(map) => {
@@ -156,6 +165,12 @@ export default function AtlasSection() {
               megaCounts={megaCounts}
               shownCount={shownSites.length}
               onPickSite={focusSite}
+              scenario={scenario}
+              scenarioOn={scenarioOn}
+              onToggleScenario={() => {
+                setScenarioOn((on) => !on);
+                setSelectedId(null);
+              }}
             />
             {selectedSite && (
               <DetailPanel
