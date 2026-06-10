@@ -6,18 +6,18 @@ Rob can open on his phone.
 
 ## Phase 0 — Scaffold
 
-- [ ] Create route `/aistack` in the existing Next.js app (App Router). Archive the current
+- [x] Create route `/aistack` in the existing Next.js app (App Router). Archive the current
       work-in-progress page (keep reachable at `/aistack/old` until launch).
-- [ ] Install deps: `mapbox-gl`, `gray-matter` (or chosen frontmatter parser). Confirm
+- [x] Install deps: `mapbox-gl`, `gray-matter` (or chosen frontmatter parser). Confirm
       `NEXT_PUBLIC_MAPBOX_TOKEN` works locally and on Vercel.
-- [ ] Move this package into the repo: `CLAUDE.md`, `DESIGN.md`, `PLAN.md` at root;
+- [x] Move this package into the repo: `CLAUDE.md`, `DESIGN.md`, `PLAN.md` at root;
       `content/` and `data/` per repo conventions.
-- [ ] Global tokens: CSS variables from DESIGN.md, font loading (Newsreader + IBM Plex
+- [x] Global tokens: CSS variables from DESIGN.md, font loading (Newsreader + IBM Plex
       Mono via next/font), paper grain, base typography styles.
-- [ ] Content pipeline: parse `content/chapters/*.md` (frontmatter + per-beat copy) into a
+- [x] Content pipeline: parse `content/chapters/*.md` (frontmatter + per-beat copy) into a
       typed structure at build time. Validate every `sites:` id against `data/sites.json`;
       fail the build on misses.
-- [ ] Acceptance: deployed preview renders chapter copy as plain styled text (no map yet),
+- [x] Acceptance: deployed preview renders chapter copy as plain styled text (no map yet),
       typography already on-system.
 
 ## Phase 1 — The paper map + Atlas mode
@@ -94,3 +94,31 @@ Rob can open on his phone.
 ## Session log
 
 <!-- newest first: YYYY-MM-DD — what was done / what's next / open questions -->
+
+- 2026-06-10 — **Phase 0 complete.** Spec package merged to repo root (`content/` and
+  `data/` live at root so the paths in CLAUDE.md stay literal; package README archived
+  at `docs/aistack-spec-package.md`). Old WIP page archived at `/aistack/old` — its
+  about-page links and the url-state writer now point at `/aistack/old` so map
+  interactions don't bounce to the new route. New `/aistack` lives in a `(story)` route
+  group (`src/app/aistack/(story)/`) so the archive keeps its own fonts/theme untouched;
+  feature code under `src/features/atlas/`. Content pipeline
+  (`src/features/atlas/lib/content.ts`): gray-matter parse of all 13 chapters / 43 beats,
+  copy split by `## Beat {id}`, strict aggregated validation (site ids, beat shapes,
+  camera keys, orphaned copy) — verified it fails the build on a planted bad site id.
+  Tokens at `:root` per DESIGN.md; Newsreader (variable, opsz) + IBM Plex Mono via
+  next/font; 3% SVG-noise grain; title-block motif on masthead and colophon; the host
+  site's global `h1–h6 { font-weight: 800 }` is overridden inside `.atlas-root` (DESIGN
+  caps at 600). Page renders every beat's copy as styled text with quiet drafting-strip
+  placeholders (plate/diagram keys, map camera notes with site names resolved from
+  sites.json, static red stamp previews — the animated thunk is Phase 2). Chapter prose
+  uses sparse `*emphasis*` (7 instances); rendered as italics, no markdown lib.
+  `NEXT_PUBLIC_MAPBOX_TOKEN` confirmed inlined in the production bundle (so Vercel has
+  it) and copied into local `.env.local` (it's the public pk token already shipped on
+  the live site). Checked on desktop + 375px viewports; lint/tsc/build clean.
+  **Decisions made without sign-off** (all reversible): root-level `content/`+`data/`;
+  plain stylesheet for the design-system layer (CSS modules can come with Phase 1
+  components); beat id + kind shown as faint mono margin markers in the draft for review
+  reference. **Next:** Phase 1 — the paper & ink Mapbox style (the high-leverage one),
+  atlas mode with clustering/filters/detail panel. **For Rob:** open the preview on your
+  phone and check the typography register; flag anything in the title-block/stamp
+  styling you want steered before it spreads to the map UI.
