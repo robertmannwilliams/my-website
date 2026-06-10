@@ -13,7 +13,7 @@ export default function AboutPage() {
     <main className="h-screen overflow-y-auto bg-background text-foreground">
       <div className="mx-auto max-w-2xl px-6 py-14">
         <Link
-          href="/aistack"
+          href="/aistack/old"
           className="font-ui inline-flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
@@ -147,7 +147,7 @@ export default function AboutPage() {
 
           <p className="!mt-12">
             <Link
-              href="/aistack"
+              href="/aistack/old"
               className="font-ui no-underline text-foreground transition-colors hover:text-foreground/65"
             >
               ← Return to the map

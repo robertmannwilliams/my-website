@@ -52,5 +52,5 @@ export function buildHrefWithStages(
 
 function serialize(params: URLSearchParams): string {
   const q = params.toString();
-  return q ? `/aistack?${q}` : "/aistack";
+  return q ? `/aistack/old?${q}` : "/aistack/old";
 }

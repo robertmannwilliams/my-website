@@ -71,7 +71,7 @@ export function WelcomeOverlay() {
             </p>
             <div className="mt-6 flex items-center justify-between gap-3">
               <Link
-                href="/aistack/about"
+                href="/aistack/old/about"
                 onClick={dismiss}
                 className="font-ui text-xs uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground"
               >
