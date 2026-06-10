@@ -39,15 +39,15 @@ Rob can open on his phone.
 
 ## Phase 2 — Chapter engine + vertical slice (Chapter 4, lithography)
 
-- [ ] Beat engine: IntersectionObserver triggers; beat kinds `text | plate | map |
+- [x] Beat engine: IntersectionObserver triggers; beat kinds `text | plate | map |
       diagram | stamp`; sticky map/figure column with scrolling copy column (stacks on
       mobile per DESIGN.md).
-- [ ] Map beat behavior: flyTo camera per beat, story-mode density rule (active sites
+- [x] Map beat behavior: flyTo camera per beat, story-mode density rule (active sites
       full ink, rest ≤12%), `draw_links` ink-line animation.
-- [ ] Stamp component per DESIGN.md motion spec.
-- [ ] Build Chapter 4 end-to-end to full polish with a placeholder plate. This is the
+- [x] Stamp component per DESIGN.md motion spec.
+- [x] Build Chapter 4 end-to-end to full polish with a placeholder plate. This is the
       design proof — Rob reviews and signs off before replication.
-- [ ] Reduced-motion variants for every interaction introduced.
+- [x] Reduced-motion variants for every interaction introduced.
 - [ ] Acceptance: Rob approves the slice on a phone preview.
 
 ## Phase 3 — All chapters
@@ -94,6 +94,37 @@ Rob can open on his phone.
 ## Session log
 
 <!-- newest first: YYYY-MM-DD — what was done / what's next / open questions -->
+
+- 2026-06-10 (evening) — **Phase 2 built; awaiting Rob's sign-off on the slice.**
+  Chapter 4 (lithography) runs end-to-end through the new beat engine at `/aistack`
+  (`#lithography`): scroll-driven active beat (rect check against a 55% viewport line,
+  scoped per chapter), sticky figure column on desktop (copy left, plate/map right),
+  mobile per DESIGN — map pinned at 46svh with copy scrolling over it as drafting
+  cards. Beat sequence as authored: placeholder plate (ruled frame, construction
+  lines, "Fig. 4 — EUV exposure tool, Veldhoven."), camera pre-framed on Veldhoven so
+  the map reveals already composed (zero gratuitous moves), `draw_links` beat flies to
+  a fitBounds framing of all four sites and draws great-circle ink lines from the hub
+  staggered 300ms (SVG stroke-dashoffset over the map, recomputed on resize), and the
+  ONE COMPANY stamp thunks (110ms scale 1.18→1, −2.5°, 1px paper shake, distressed
+  edge via feTurbulence displacement, multiply blend) and persists. Active sites get
+  italic Newsreader labels; chapter sites dim to 12%; the other 300+ sites aren't on
+  the sheet. Reduced motion: camera jumps, links fade, stamp appears, no beat dimming.
+  **Two host-site landmines fixed:** `html, body { overflow-x: hidden }` silently
+  disables ALL position:sticky (body becomes a non-scrolling scroll container) — the
+  atlas route now overrides to `overflow-x: clip` via `html:has(.atlas-root)`; and
+  mapbox-gl.css's `.mapboxgl-map { position: relative }` outranks single-class
+  absolute positioning (scoped both map containers). Also hardened story fitBounds
+  (stop in-flight moves, container-relative padding — a tiny mobile map could
+  otherwise produce a NaN camera). **Decisions:** multi-site map beats use fitBounds
+  with the authored `camera.zoom` as max — "camera resolves to first site" reads as
+  intent for single-site beats, but a hub-and-spokes beat must frame its spokes on
+  every screen; stamp persists once fired (per "once per chapter"); chapters 0–3 and
+  5–12 still render as the Phase 0 text scaffold until sign-off. **Next:** Rob reviews
+  the slice on his phone (acceptance box above left unchecked). If approved → Phase 3
+  (all chapters through the engine, diagrams, finale arc, chapter rail). **For Rob:**
+  scroll Chapter 4 slowly, then fast, then backwards; the stamp should land once and
+  stay. Things easiest to tune now: beat trigger line (55%), link draw pace (300ms
+  stagger), stamp size/position, mobile card styling.
 
 - 2026-06-10 (later) — **Phase 1 complete.** The paper & ink map is real: in-repo style
   module (`src/features/atlas/map/paperStyle.ts`) — cream land, paper-shade water with an
