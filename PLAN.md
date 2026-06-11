@@ -141,6 +141,29 @@ Rob can open on his phone.
 
 <!-- newest first: YYYY-MM-DD — what was done / what's next / open questions -->
 
+- 2026-06-11 (hero, gate round 3 → crisp layer + sequenced replay) — **Rob's
+  gate-3 notes split into render quality (A) and replay feel (B); both built,
+  high-pass convergence honest-but-short after the 3 authorized rounds.**
+  (A) Two stamp registers (soft 0-4 for tiers ≤1, hard 5-9 with ≤1px-at-size
+  feather + chipped silhouettes for tiers ≥2); NEW crisp-touch tier: 23k
+  hard dabs (2.5-5.5px) at 98-100% opacity placed by per-pixel residual,
+  footprint-MEDIAN colors unsharped ×1.9 against a σ6 low-pass (FINE_PUNCH
+  ×1.25 on tier r=3); silhouette protection clips fine strokes at master
+  color boundaries (ΔRGB>70); finals + contact sheets now 2× supersampled,
+  single downsample, no other smoothing anywhere. (B) Wash thinned (76px
+  spacing, α .30-.42, mix .75 — tinted canvas); ordering rebuilt around an
+  8×5 cell walk (cells scored light/calm/sky-first, greedy nearest-of-4 walk
+  → the activity has a locus; tiers big→small within each cell; crisp pass
+  returns late along the same walk; accent tail unchanged, starts 80.0%).
+  Replay previews committed: hero/replay-preview.mp4 (5.5s real tempo,
+  count(τ)=1-(1-τ)^2.2) + replay-fast.mp4 (1.5s). ffmpeg-static added as a
+  devDependency for these. **Convergence: high-pass energy vs master
+  flags 42→49→56%, workers 41→52→66%, tower 40→50→62% across rounds 4-6
+  (target ≥80%); RGB ±1/255, sat 23.8 vs 25.4%, coverage 100.0%; 46,748
+  strokes at 788 KB gz (within the raised 800 KB cap, gate-3 authorized).
+  Remaining gap is a design tension: more punch/density drifts back toward
+  the gate-2 "confetti" — parked for Rob's call at gate round 4.**
+
 - 2026-06-11 (hero, gate round 2 → oil-paint rework) — **Rob rejected round 2
   ("pointillist confetti, not oil paint") with a render-rework spec; built and
   converged it in the 3 authorized autonomous rounds.** New brush system

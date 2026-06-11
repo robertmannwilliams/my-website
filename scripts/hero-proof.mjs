@@ -31,7 +31,7 @@ export function parseStrokes(buf) {
   }
   const headerLen = dv.getUint32(4, true);
   const header = JSON.parse(Buffer.from(u8.subarray(8, 8 + headerLen)).toString("utf8"));
-  if (header.version !== 3) throw new Error(`expected strokes.bin v3, got v${header.version}`);
+  if (header.version !== 4) throw new Error(`expected strokes.bin v4, got v${header.version}`);
   const { count } = header;
   let o = 8 + headerLen;
 
@@ -51,8 +51,8 @@ export function parseStrokes(buf) {
   for (let i = 0; i < count; i++) ang[i] = (u8[o++] / 255) * Math.PI - Math.PI / 2;
   for (let i = 0; i < count; i++) {
     const p = u8[o++];
-    alpha[i] = (p >> 3) / 31;
-    stamp[i] = p & 7;
+    alpha[i] = (p >> 4) / 15;
+    stamp[i] = p & 15;
   }
   for (let i = 0; i < count; i++) {
     const p = u8[o++];

@@ -23,13 +23,16 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import sharp from "sharp";
 import zlib from "node:zlib";
+import { spawnSync } from "node:child_process";
+import ffmpegPath from "ffmpeg-static";
 import {
   generateStampSprite,
   generateGrainTile,
   applyGrain,
   drawStroke,
   makeScratch,
-  STAMP_COUNT,
+  SOFT_STAMPS,
+  HARD_STAMPS,
 } from "./hero-brush.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -47,12 +50,28 @@ const TILE_TIER = { r: 24, overlap: 0.38 };
 const REFINE_TIERS = [
   { r: 12, t: 26, cap: 5000 },
   { r: 6, t: 30, cap: 10000 },
-  { r: 3, t: 38, cap: 22000 },
+  { r: 3, t: 38, cap: 8000 },
 ];
+// Mild unsharp on the finest refine tier so mid-detail carries contrast too.
+const FINE_PUNCH = 1.25;
+// The crisp-touch tier (gate-3 note A3): small hard-edged dabs at 98-100%
+// opacity placed by residual error, colors as footprint MEDIANS so the
+// broken-color flecks come back over the blended base. The crisp register
+// carries most of the high-pass energy, so it gets the density.
+const CRISP_TIER = { r: 2, t: 14, cap: 23000, grid: 3 };
+// Unsharp factor on crisp colors: medians against the local low-pass,
+// punched so adjacent touches carry the master's fleck contrast.
+const CRISP_PUNCH = 1.9;
 const PAINT_ALPHA = [0.9, 0.96]; // wet blending range (gate-2 rule 3)
-const WASH_SPACING = 52;
-const ORDER_PASSES = 8;
+const WASH_SPACING = 76; // thin toning wash — barely more than tinted canvas
 const GRAIN_STRENGTH = 0.035;
+const SIZE_BUDGET_KB = 800; // raised from 600 per gate-3 note A6 (see log)
+
+// Spatially coherent development (gate-3 note B2): strokes order through a
+// coarse cell grid so the activity always has a locus — sky settles, then
+// skyline, tower, street, figures — instead of uniform global refinement.
+const CELL_COLS = 8;
+const CELL_ROWS = 5;
 
 // ---------------------------------------------------------------------------
 // numeric helpers
@@ -292,17 +311,68 @@ function averageColor(img, samples) {
   return [clamp255(Math.round(r)), clamp255(Math.round(g)), clamp255(Math.round(b))];
 }
 
-/** Common stroke fields shared by every tier. */
+/** Per-channel MEDIAN under the stroke footprint — the crisp-touch color
+ *  rule (gate-3 note A3): medians keep the fleck colors averages dissolve. */
+function footprintMedian(img, samples) {
+  const rs = [], gs = [], bs = [];
+  for (const [x, y] of samples) {
+    const p = (y * img.w + x) * 3;
+    rs.push(img.data[p]);
+    gs.push(img.data[p + 1]);
+    bs.push(img.data[p + 2]);
+  }
+  const med = (arr) => {
+    arr.sort((a, b) => a - b);
+    return arr[Math.floor(arr.length / 2)];
+  };
+  return [med(rs), med(gs), med(bs)];
+}
+
+/** Common stroke fields shared by every tier. Soft stamp register for the
+ *  blended underpainting (tiers ≤ 1), hard register for crisp tiers (≥ 2). */
 function finishStroke(s, master, fields, w, h, random) {
   const i = Math.round(s.y) * w + Math.round(s.x);
   const coh = fields.coh[i];
   s.bend = (random() - 0.5) * 2 * lerp(0.25, 1, 1 - coh); // calm areas curve more
-  s.stamp = Math.floor(random() * STAMP_COUNT);
+  s.stamp =
+    s.tier >= 2
+      ? SOFT_STAMPS + Math.floor(random() * HARD_STAMPS)
+      : Math.floor(random() * SOFT_STAMPS);
   s.vdrift = random() * 2 - 1;
   s.coh = coh;
   s.density = fields.density[i];
   s.samples = footprintSamples(s, w, h);
   s.color = averageColor(master, s.samples);
+  return s;
+}
+
+/**
+ * Silhouette protection (gate-3 note A4): walk outward from the stroke's
+ * center along its path; where the master's color breaks hard from the
+ * stroke's own color (an object boundary), trim the stroke so it stops at
+ * the edge instead of smudging across it. Fine tiers only.
+ */
+function clipAtEdges(s, master, w, h) {
+  const dx = Math.cos(s.angle), dy = Math.sin(s.angle);
+  const c = s.color;
+  const limit = 70; // RGB distance that counts as "crossed a boundary"
+  let half = s.len / 2;
+  for (const dir of [-1, 1]) {
+    for (let t = 0.35; t <= 1; t += 0.22) {
+      const px = Math.round(s.x + dir * dx * half * t);
+      const py = Math.round(s.y + dir * dy * half * t);
+      if (px < 0 || py < 0 || px >= w || py >= h) break;
+      const p = (py * w + px) * 3;
+      const dr = master.data[p] - c[0];
+      const dg = master.data[p + 1] - c[1];
+      const db = master.data[p + 2] - c[2];
+      if (Math.sqrt(dr * dr + dg * dg + db * db) > limit) {
+        half = Math.max(s.wid * 0.6, half * t * 0.85);
+        break;
+      }
+    }
+  }
+  s.len = Math.max(s.wid, half * 2);
   return s;
 }
 
@@ -312,17 +382,17 @@ function generateWash(blurred, w, h, random) {
     for (let gx = WASH_SPACING / 2; gx < w + WASH_SPACING / 2; gx += WASH_SPACING) {
       const x = Math.min(w - 2, Math.max(1, gx + (random() - 0.5) * WASH_SPACING * 0.6));
       const y = Math.min(h - 2, Math.max(1, gy + (random() - 0.5) * WASH_SPACING * 0.6));
-      const alpha = dissolveAlpha(x, y, w, h, lerp(0.45, 0.58, random()));
+      const alpha = dissolveAlpha(x, y, w, h, lerp(0.3, 0.42, random()));
       if (alpha === 0) continue;
       const wid = WASH_SPACING * lerp(1.05, 1.35, random());
       const p = (Math.round(y) * w + Math.round(x)) * 3;
-      const mix = 0.62;
+      const mix = 0.75; // barely more than tinted canvas
       strokes.push({
         x, y, wid,
         len: wid * lerp(1.6, 2.2, random()),
         angle: (random() - 0.5) * Math.PI,
         bend: (random() - 0.5) * 1.2,
-        stamp: Math.floor(random() * STAMP_COUNT),
+        stamp: Math.floor(random() * SOFT_STAMPS),
         vdrift: random() * 2 - 1,
         alpha,
         tier: -1,
@@ -440,13 +510,92 @@ function refineTier(ctx, tier, master, ref, fields, w, h, random) {
     };
     const st = finishStroke(s, master, fields, w, h, random);
     if (fine) st.bend *= 0.4;
+    if (tier.r <= 6) clipAtEdges(st, master, w, h);
     strokes.push(st);
   }
   return strokes;
 }
 
+/**
+ * The crisp-touch tier (gate-3 note A3): small hard-edged dabs at 98-100%
+ * opacity placed by residual error against the unblurred master — densest
+ * over the flags, scaffold lattice, figure edges, and water sparkle. Colors
+ * are footprint MEDIANS (not averages) so the broken-color flecks return.
+ */
+function crispTier(ctx, master, lowMaster, fields, w, h, random, stamps, scratch) {
+  const { t, cap, grid } = CRISP_TIER;
+  const canvasData = ctx.getImageData(0, 0, w, h).data;
+
+  const candidates = [];
+  for (let cy = 0; cy < h; cy += grid) {
+    for (let cx = 0; cx < w; cx += grid) {
+      let worst = -1, wx = cx, wy = cy;
+      const yEnd = Math.min(h, cy + grid);
+      const xEnd = Math.min(w, cx + grid);
+      for (let y = cy; y < yEnd; y++) {
+        for (let x = cx; x < xEnd; x++) {
+          const c4 = (y * w + x) * 4;
+          const c3 = (y * w + x) * 3;
+          const dr = canvasData[c4] - master.data[c3];
+          const dg = canvasData[c4 + 1] - master.data[c3 + 1];
+          const db = canvasData[c4 + 2] - master.data[c3 + 2];
+          const e = Math.sqrt(dr * dr + dg * dg + db * db);
+          if (e > worst) {
+            worst = e;
+            wx = x;
+            wy = y;
+          }
+        }
+      }
+      if (worst <= t) continue;
+      candidates.push({ err: worst, wx, wy });
+    }
+  }
+
+  candidates.sort((a, b) => b.err - a.err);
+  const strokes = [];
+  for (const cand of candidates) {
+    if (strokes.length >= cap) break;
+    const { wx, wy } = cand;
+    const i = wy * w + wx;
+    const coh = fields.coh[i];
+    const alpha = dissolveAlpha(wx, wy, w, h, lerp(0.98, 1, random()));
+    if (alpha === 0) continue;
+    const wid = lerp(2.5, 5.5, random());
+    const s = {
+      x: wx, y: wy, wid,
+      len: wid * lerp(1.0, 1.8, random()),
+      angle:
+        coh > 0.09
+          ? fields.angle[i] + (random() - 0.5) * 0.2
+          : (random() - 0.5) * Math.PI,
+      alpha,
+      tier: 4,
+      bend: (random() - 0.5) * 0.3,
+      stamp: SOFT_STAMPS + Math.floor(random() * HARD_STAMPS),
+      vdrift: random() * 2 - 1,
+      coh,
+      density: fields.density[i],
+    };
+    s.samples = footprintSamples(s, w, h);
+    const med = footprintMedian(master, s.samples);
+    // unsharp the touch against the local low-pass: the fleck's distance
+    // from its surroundings is what the eye reads as broken color
+    const lp = (wy * w + wx) * 3;
+    s.color = [
+      clamp255(Math.round(lowMaster.data[lp] + (med[0] - lowMaster.data[lp]) * CRISP_PUNCH)),
+      clamp255(Math.round(lowMaster.data[lp + 1] + (med[1] - lowMaster.data[lp + 1]) * CRISP_PUNCH)),
+      clamp255(Math.round(lowMaster.data[lp + 2] + (med[2] - lowMaster.data[lp + 2]) * CRISP_PUNCH)),
+    ];
+    clipAtEdges(s, master, w, h);
+    strokes.push(s);
+    drawStroke(ctx, s, s.color[0], s.color[1], s.color[2], stamps, scratch);
+  }
+  return strokes;
+}
+
 // ---------------------------------------------------------------------------
-// ordering (unchanged contract from gate round 1)
+// ordering (gate-1 contract + gate-3 spatial coherence)
 // ---------------------------------------------------------------------------
 
 function isWarmAccent([r, g, b]) {
@@ -501,38 +650,85 @@ function orderStrokes(wash, painted, random) {
     }
   }
 
+  // Spatially coherent development (gate-3 note B2): bucket strokes into a
+  // coarse cell grid; order the CELLS by painter logic (light before dark,
+  // calm before detailed, sky before street) but walk them with a
+  // nearest-neighbor bias so the activity has a continuous locus — the hand
+  // moves across the canvas. Within a cell: size tiers big → small, then the
+  // crisp pass returns across the same cell path as the finishing sweep.
   const jitterKey = (s) => {
     const v = Math.sin(s.x * 12.9898 + s.y * 78.233) * 43758.5453;
     return v - Math.floor(v);
   };
-  const tierGroups = new Map();
+  const W = 1672, H = 941; // cell math normalizes below — actual w/h passed via strokes
+  const cellOf = (s, w, h) =>
+    Math.min(CELL_ROWS - 1, Math.floor((s.y / h) * CELL_ROWS)) * CELL_COLS +
+    Math.min(CELL_COLS - 1, Math.floor((s.x / w) * CELL_COLS));
+
+  const wMax = Math.max(...middle.map((s) => s.x), W);
+  const hMax = Math.max(...middle.map((s) => s.y), H);
+  const cells = new Map();
   for (const s of middle) {
-    if (!tierGroups.has(s.tier)) tierGroups.set(s.tier, []);
-    tierGroups.get(s.tier).push(s);
+    const c = cellOf(s, wMax, hMax);
+    if (!cells.has(c)) cells.set(c, []);
+    cells.get(c).push(s);
   }
+
+  // score each cell, then greedy-walk: among the 4 best remaining scores,
+  // go to the one nearest the current cell
+  const cellInfo = [...cells.entries()].map(([id, list]) => {
+    let lum = 0, den = 0;
+    for (const s of list) {
+      lum += (0.2126 * s.color[0] + 0.7152 * s.color[1] + 0.0722 * s.color[2]) / 255;
+      den += s.density;
+    }
+    lum /= list.length;
+    den /= list.length;
+    const row = Math.floor(id / CELL_COLS);
+    const col = id % CELL_COLS;
+    return { id, row, col, score: 0.45 * (1 - lum) + 0.3 * den + 0.25 * (row / (CELL_ROWS - 1)) };
+  });
+  cellInfo.sort((a, b) => a.score - b.score);
+  const walk = [];
+  const remaining = [...cellInfo];
+  let current = remaining.shift();
+  walk.push(current);
+  while (remaining.length) {
+    const k = Math.min(4, remaining.length);
+    let best = 0, bestD = Infinity;
+    for (let i = 0; i < k; i++) {
+      const d = Math.hypot(remaining[i].row - current.row, remaining[i].col - current.col);
+      if (d < bestD) {
+        bestD = d;
+        best = i;
+      }
+    }
+    current = remaining.splice(best, 1)[0];
+    walk.push(current);
+  }
+
   const orderedMiddle = [];
-  for (const tierIdx of [...tierGroups.keys()].sort((a, b) => a - b)) {
-    const group = tierGroups.get(tierIdx);
-    const scored = group.map((s) => {
-      const lum = (0.2126 * s.color[0] + 0.7152 * s.color[1] + 0.0722 * s.color[2]) / 255;
-      const score = 0.45 * (1 - lum) + 0.3 * s.density + 0.25 * (s.y / 1000);
-      return { s, score };
-    });
-    scored.sort((a, b) => a.score - b.score);
-    const n = scored.length;
-    for (let p = 0; p < ORDER_PASSES; p++) {
-      const from = Math.floor((p / ORDER_PASSES) * n);
-      const to = Math.floor(((p + 1) / ORDER_PASSES) * n);
-      const pass = scored.slice(from, to);
-      const dir = p % 2 === 0 ? 1 : -1;
-      pass.sort(
+  const crispPass = [];
+  for (const cell of walk) {
+    const list = cells.get(cell.id);
+    const sweep = (arr, dir) =>
+      arr.sort(
         (a, b) =>
-          dir * (a.s.x + a.s.y * 0.3) + (jitterKey(a.s) - 0.5) * 260 -
-          (dir * (b.s.x + b.s.y * 0.3) + (jitterKey(b.s) - 0.5) * 260),
+          dir * (a.x + a.y * 0.3) + (jitterKey(a) - 0.5) * 200 -
+          (dir * (b.x + b.y * 0.3) + (jitterKey(b) - 0.5) * 200),
       );
-      orderedMiddle.push(...pass.map((e) => e.s));
+    const tiers = [...new Set(list.map((s) => s.tier))].sort((a, b) => a - b);
+    for (const t of tiers) {
+      const group = list.filter((s) => s.tier === t);
+      if (t === 4) {
+        // crisp touches come back late, as the finishing sweep
+        crispPass.push(...sweep(group, walk.indexOf(cell) % 2 === 0 ? 1 : -1));
+      } else {
+        orderedMiddle.push(...sweep(group, t % 2 === 0 ? 1 : -1));
+      }
     }
   }
+  orderedMiddle.push(...crispPass);
 
   const darkAccents = accents.filter((s) => !isWarmAccent(s.color));
   const warmAccents = accents.filter((s) => isWarmAccent(s.color));
@@ -558,17 +754,17 @@ const LEN_SCALE = 1.5; // u8 quantization: lengths to 170px
 function packStrokes(strokes, variants, w, h, washCount) {
   const count = strokes.length;
   const header = {
-    version: 3,
+    version: 4,
     count,
     width: w,
     height: h,
     washCount,
     paintAlpha: PAINT_ALPHA,
     grain: GRAIN_STRENGTH,
-    stamps: { count: STAMP_COUNT, cellW: 192, cellH: 96 },
+    stamps: { count: SOFT_STAMPS + HARD_STAMPS, soft: SOFT_STAMPS, cellW: 192, cellH: 96 },
     variants: ["master", ...variants.map((v) => v.name)],
     // SoA: x u16 (px*8), y u16 (px*8), len u8 (px*1.5), wid u8 (px*1.5),
-    // angle u8, alphaStamp u8 (alpha 5 bits | stamp 3 bits), bendDrift u8
+    // angle u8, alphaStamp u8 (alpha 4 bits | stamp 4 bits), bendDrift u8
     // (bend 4 bits | vdrift 4 bits), master rgb u8*3, per extra variant rgb
     // int8 deltas
     fields: ["x16", "y16", "len8", "wid8", "ang8", "alphaStamp8", "bendDrift8", "rgb8", "drgb8"],
@@ -588,8 +784,8 @@ function packStrokes(strokes, variants, w, h, washCount) {
     payload.writeUInt8(Math.round(((a + Math.PI / 2) / Math.PI) * 255), o++);
   }
   for (const s of strokes) {
-    const a5 = Math.round(clamp01(s.alpha) * 31);
-    payload.writeUInt8((a5 << 3) | (s.stamp & 7), o++);
+    const a4 = Math.round(clamp01(s.alpha) * 15);
+    payload.writeUInt8((a4 << 4) | (s.stamp & 15), o++);
   }
   for (const s of strokes) {
     const b4 = Math.round(clamp01(s.bend * 0.5 + 0.5) * 15);
@@ -621,19 +817,45 @@ function packStrokes(strokes, variants, w, h, washCount) {
 // rendering + diagnostics
 // ---------------------------------------------------------------------------
 
-function renderField(strokes, w, h, stamps, colorOf, { grain = null, upTo = strokes.length } = {}) {
-  const canvas = createCanvas(w, h);
+/** Render the field. supersample=2 rasterizes at 2x and downsamples ONCE
+ *  (gate-3 note A1 — no other smoothing exists anywhere in the pipeline). */
+function renderField(strokes, w, h, stamps, colorOf, { grain = null, upTo = strokes.length, supersample = 1 } = {}) {
+  const ss = supersample;
+  const canvas = createCanvas(w * ss, h * ss);
   const ctx = canvas.getContext("2d");
   const scratch = makeScratch();
   ctx.fillStyle = PAPER;
-  ctx.fillRect(0, 0, w, h);
+  ctx.fillRect(0, 0, w * ss, h * ss);
+  if (ss !== 1) ctx.scale(ss, ss);
   for (let i = 0; i < upTo; i++) {
     const s = strokes[i];
     const [r, g, b] = colorOf(s, i);
     drawStroke(ctx, s, r, g, b, stamps, scratch);
   }
-  if (grain) applyGrain(ctx, grain, w, h, GRAIN_STRENGTH);
-  return canvas;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (grain) applyGrain(ctx, grain, w * ss, h * ss, GRAIN_STRENGTH);
+  if (ss === 1) return canvas;
+  const out = createCanvas(w, h);
+  out.getContext("2d").drawImage(canvas, 0, 0, w * ss, h * ss, 0, 0, w, h);
+  return out;
+}
+
+/** High-frequency energy (mean |luminance - 4px boxblur|) over a crop —
+ *  the local-contrast convergence metric from gate-3 note A5. */
+function highPassEnergy(data, stride, imgW, crop) {
+  const { x: cx, y: cy, w: cw, h: ch } = crop;
+  const lum = new Float32Array(cw * ch);
+  for (let y = 0; y < ch; y++) {
+    for (let x = 0; x < cw; x++) {
+      const p = ((cy + y) * imgW + cx + x) * stride;
+      lum[y * cw + x] = 0.2126 * data[p] + 0.7152 * data[p + 1] + 0.0722 * data[p + 2];
+    }
+  }
+  const low = Float32Array.from(lum);
+  boxBlur(low, cw, ch, 4, 2);
+  let e = 0;
+  for (let i = 0; i < lum.length; i++) e += Math.abs(lum[i] - low[i]);
+  return e / lum.length;
 }
 
 /** % of interior pixels (outside the dissolve band) whose accumulated paint
@@ -682,6 +904,59 @@ const CROPS = [
   { name: "workers", x: 140, y: 560, w: 460, h: 300 },
   { name: "tower", x: 300, y: 60, w: 460, h: 300 },
 ];
+
+/**
+ * Animated replay preview at real pacing (gate-3 deliverable): the same
+ * fast-attack/slow-finish tempo the player will use — count(τ) follows
+ * 1-(1-τ)^2.2 — rendered at half res and encoded with ffmpeg-static.
+ */
+async function renderReplayVideo(ordered, w, h, stamps, grain, seconds, fps, outFile) {
+  const scale = 0.5;
+  const vw = Math.round((w * scale) / 2) * 2;
+  const vh = Math.round((h * scale) / 2) * 2;
+  const framesDir = path.join("/tmp", `hero-frames-${path.basename(outFile, ".mp4")}`);
+  await mkdir(framesDir, { recursive: true });
+
+  const acc = createCanvas(vw, vh);
+  const actx = acc.getContext("2d");
+  const scratch = makeScratch();
+  actx.fillStyle = PAPER;
+  actx.fillRect(0, 0, vw, vh);
+  actx.scale(vw / w, vh / h);
+
+  const frame = createCanvas(vw, vh);
+  const fctx = frame.getContext("2d");
+
+  const paintFrames = Math.round(seconds * fps);
+  const holdFrames = Math.round(0.8 * fps);
+  let drawn = 0;
+  let fileIdx = 0;
+  for (let f = 0; f < paintFrames + holdFrames; f++) {
+    const tau = Math.min(1, f / (paintFrames - 1));
+    const target = Math.round(ordered.length * (1 - Math.pow(1 - tau, 2.2)));
+    while (drawn < target) {
+      const s = ordered[drawn++];
+      drawStroke(actx, s, s.color[0], s.color[1], s.color[2], stamps, scratch);
+    }
+    fctx.drawImage(acc, 0, 0);
+    applyGrain(fctx, grain, vw, vh, GRAIN_STRENGTH);
+    await writeFile(
+      path.join(framesDir, `f${String(fileIdx++).padStart(4, "0")}.png`),
+      await frame.encode("png"),
+    );
+  }
+
+  const res = spawnSync(ffmpegPath, [
+    "-y", "-framerate", String(fps),
+    "-i", path.join(framesDir, "f%04d.png"),
+    "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "21",
+    "-movflags", "+faststart",
+    outFile,
+  ], { stdio: "pipe" });
+  if (res.status !== 0) {
+    console.warn(`  ffmpeg failed for ${outFile}: ${res.stderr?.toString().slice(-300)}`);
+  }
+}
 
 async function contactSheet(round, masterImg, renderCanvas, w, h, metrics) {
   const fullW = 720;
@@ -785,6 +1060,28 @@ async function main() {
     painted.push(...strokes);
     console.log(`  tier r=${tier.r}: ${strokes.length} strokes`);
   }
+
+  const lowMaster = await loadRaw(masterFile, 6);
+
+  // unsharp the finest refine tier against the local low-pass
+  for (const s of painted) {
+    if (s.tier !== 3) continue;
+    const lp = (Math.round(s.y) * w + Math.round(s.x)) * 3;
+    for (let ch = 0; ch < 3; ch++) {
+      s.color[ch] = clamp255(
+        Math.round(lowMaster.data[lp + ch] + (s.color[ch] - lowMaster.data[lp + ch]) * FINE_PUNCH),
+      );
+    }
+  }
+
+  console.log("· crisp-touch tier (hard register, median color, punched)");
+  {
+    const fineGray = toGray(master);
+    const fields = { ...orientationField(fineGray, w, h, 2.5), density };
+    const crisp = crispTier(wctx, master, lowMaster, fields, w, h, random, stamps, scratch);
+    painted.push(...crisp);
+    console.log(`  ${crisp.length} crisp touches`);
+  }
   const total = wash.length + painted.length;
   console.log(`  ${total} strokes total`);
 
@@ -867,27 +1164,35 @@ async function main() {
   await writeFile(path.join(OUT_DIR, "strokes.bin"), bin);
   const gz = zlib.gzipSync(bin).length;
   const gzKb = Math.round(gz / 1024);
-  console.log(`  ${Math.round(bin.length / 1024)} KB raw, ${gzKb} KB gzipped (budget 600 KB) ${gz <= 600 * 1024 ? "OK" : "OVER — note in session log"}`);
+  console.log(
+    `  ${Math.round(bin.length / 1024)} KB raw, ${gzKb} KB gzipped (budget ${SIZE_BUDGET_KB} KB) ` +
+      `${gz <= SIZE_BUDGET_KB * 1024 ? "OK" : "OVER — note in session log"}`,
+  );
 
-  console.log("· rendering final frames");
-  const masterCanvas = renderField(ordered, w, h, stamps, (s) => s.color, { grain });
-  await writeFile(path.join(OUT_DIR, "final-master.jpg"), await masterCanvas.encode("jpeg", 84));
+  console.log("· rendering final frames (2x supersampled)");
+  const masterCanvas = renderField(ordered, w, h, stamps, (s) => s.color, { grain, supersample: 2 });
+  await writeFile(path.join(OUT_DIR, "final-master.jpg"), await masterCanvas.encode("jpeg", 86));
   for (const v of variants) {
-    const canvas = renderField(ordered, w, h, stamps, (_s, i) => v.colors[i], { grain });
+    const canvas = renderField(ordered, w, h, stamps, (_s, i) => v.colors[i], { grain, supersample: 2 });
     await writeFile(path.join(OUT_DIR, `final-${v.name}.jpg`), await canvas.encode("jpeg", 84));
   }
 
   const fullCoverage = coverageMetric(ordered, w, h, stamps, ordered.length);
   console.log(`  full coverage (interior): ${(fullCoverage * 100).toFixed(1)}%`);
 
-  // color fidelity stats
+  // color fidelity + local-contrast stats
   const renderData = masterCanvas.getContext("2d").getImageData(0, 0, w, h).data;
   const ms = imageStats(master.data, w, h, 3);
   const rs = imageStats(renderData, w, h, 4);
+  const hpParts = CROPS.map((c) => {
+    const m = highPassEnergy(master.data, 3, w, c);
+    const r = highPassEnergy(renderData, 4, w, c);
+    return `${c.name} ${(r / m * 100).toFixed(0)}%`;
+  });
   const statLine =
     `coverage ${(fullCoverage * 100).toFixed(1)}% | mean RGB master (${ms.r.toFixed(0)},${ms.g.toFixed(0)},${ms.b.toFixed(0)}) ` +
     `render (${rs.r.toFixed(0)},${rs.g.toFixed(0)},${rs.b.toFixed(0)}) | sat master ${(ms.sat * 100).toFixed(1)}% render ${(rs.sat * 100).toFixed(1)}% | ` +
-    `${total} strokes, ${gzKb} KB gz`;
+    `high-pass (target ≥80%): ${hpParts.join(", ")} | ${total} strokes, ${gzKb} KB gz`;
   console.log(`  ${statLine}`);
 
   console.log("· contact sheet");
@@ -923,6 +1228,10 @@ async function main() {
     drawStroke(hctx, { ...s, alpha: 0.9 }, v, v, v, stamps, hscratch);
   });
   await writeFile(path.join(ROOT, "hero", "order-heatmap.png"), await heat.encode("png"));
+
+  console.log("· replay previews (real tempo + fast)");
+  await renderReplayVideo(ordered, w, h, stamps, grain, 5.5, 30, path.join(ROOT, "hero", "replay-preview.mp4"));
+  await renderReplayVideo(ordered, w, h, stamps, grain, 1.5, 30, path.join(ROOT, "hero", "replay-fast.mp4"));
 
   console.log(`· done — ${ordered.length} strokes, ${variants.length + 1} color fields, round ${round}`);
 }

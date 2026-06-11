@@ -7,7 +7,14 @@
 
 import { createCanvas } from "@napi-rs/canvas";
 
-export const STAMP_COUNT = 5;
+// Two registers (Rob's gate-3 note A2): stamps 0-4 are soft-edged for the
+// blended underpainting (tiers 0-1); stamps 5-9 are hard-edged (≤1px feather
+// at render size) irregular touches for the crisp tiers (3+). The feather is
+// defined relative to the 192px cell, so downscaled to dab size it stays
+// sub-pixel — no upscaling happens anywhere (dabs are always ≤ cell size).
+export const SOFT_STAMPS = 5;
+export const HARD_STAMPS = 5;
+export const STAMP_COUNT = SOFT_STAMPS + HARD_STAMPS;
 export const STAMP_W = 192;
 export const STAMP_H = 96;
 
@@ -33,6 +40,7 @@ export function generateStampSprite() {
   const ctx = sprite.getContext("2d");
 
   for (let s = 0; s < STAMP_COUNT; s++) {
+    const hard = s >= SOFT_STAMPS;
     const rand = stampRng(811 + s * 977);
     const img = ctx.createImageData(STAMP_W, STAMP_H);
     const data = img.data;
@@ -48,25 +56,37 @@ export function generateStampSprite() {
       bands.push({
         y: (rand() - 0.5) * 2 * halfW,
         w: halfW * (0.08 + rand() * 0.2),
-        a: (rand() - 0.5) * 0.5,
+        a: (rand() - 0.5) * (hard ? 0.4 : 0.5),
       });
     }
-    // low-frequency silhouette wobble
+    // silhouette wobble: hard touches get chunkier, higher-frequency chips
     const wob = [];
-    for (let k = 0; k < 4; k++) wob.push({ f: 1 + k + rand() * 2, p: rand() * Math.PI * 2, a: 0.05 + rand() * 0.08 });
+    const wobCount = hard ? 6 : 4;
+    for (let k = 0; k < wobCount; k++) {
+      wob.push({
+        f: 1 + k + rand() * (hard ? 4 : 2),
+        p: rand() * Math.PI * 2,
+        a: (hard ? 0.08 : 0.05) + rand() * (hard ? 0.11 : 0.08),
+      });
+    }
+
+    // soft register feathers over ~7px of the cell; hard register over ~2px,
+    // which is sub-pixel once the stamp is downscaled to dab size
+    const edgeRamp = hard ? 45 : 9;
 
     for (let y = 0; y < STAMP_H; y++) {
       for (let x = 0; x < STAMP_W; x++) {
         const u = (x - cx) / halfL; // -1..1 along
         const v = (y - cy) / halfW; // -1..1 across
-        // tapered ends: width envelope shrinks toward the tips
-        let envelope = Math.sqrt(Math.max(0, 1 - u * u * u * u));
+        // tapered ends (hard touches stay blunter)
+        let envelope = hard
+          ? Math.sqrt(Math.max(0, 1 - u * u * u * u * u * u))
+          : Math.sqrt(Math.max(0, 1 - u * u * u * u));
         for (const o of wob) envelope *= 1 + o.a * Math.sin(u * o.f * Math.PI + o.p) * 0.5;
         const edge = envelope - Math.abs(v);
-        let alpha = edge <= 0 ? 0 : Math.min(1, edge * 9);
+        let alpha = edge <= 0 ? 0 : Math.min(1, edge * edgeRamp);
         if (alpha > 0) {
-          // soft load variation toward the tail of the stroke
-          alpha *= 0.92 - 0.1 * u * (rand() * 0.2 + 0.9) * 0.5;
+          alpha *= hard ? 0.99 : 0.92 - 0.1 * u * (rand() * 0.2 + 0.9) * 0.5;
           for (const b of bands) {
             const d = Math.abs(y - cy - b.y);
             if (d < b.w) alpha *= 1 + b.a * (1 - d / b.w);
