@@ -141,7 +141,23 @@ Rob can open on his phone.
 
 <!-- newest first: YYYY-MM-DD — what was done / what's next / open questions -->
 
-- 2026-06-11 (map visual pass) — **Rob's four map issues, all addressed** (his list:
+- 2026-06-11 (hero, separate project — spec in hero/HERO.md) — **Phase 1
+  decomposition pipeline built, reworked once per Rob's gate notes, awaiting
+  gate round 2.** v1 (single-pass dart sampling, 12.3k strokes) rejected at the
+  gate with a detailed rework spec; v2 implements it: Hertzmann-style
+  error-driven refinement (4 tiers, r=24/12/6/3, per-tier caps with
+  worst-cells-first placement → 34,540 strokes, 563 KB gz of a 600 KB budget),
+  structure-tensor orientation at tier-matched integration scale (water runs
+  horizontal, figures vertical — no global lean), and a fully computed replay
+  order: 569-stroke pale toning wash (canvas covered, no paper holes) →
+  background-to-foreground within each size tier (lum/edge/y blend, spatial
+  sweep passes) → warm+darkest-decile accents forced into the tail (start
+  80.6%, warm rule absolute, dark class demotes to keep ≥80%). Variant colors
+  ride as int8 deltas (dusk/rain/snow all registered ≥0.66). Outputs:
+  strokes.bin, final-{variant}.jpg, og.jpg, underdrawing.jpg, proof strip +
+  order heatmap (early=light) for the gate. **Next:** Rob judges proof strip
+  round 2; on approval → Phases 2-4 (player, atmosphere, geo-keyed variants,
+  homepage swap — swap held behind the gate). (his list:
   weird town names / invisible sites / cluster zoom-ladder / wants tasteful color;
   he picked mega-layer pin washes + teal water/coast, declined red journey thread
   and tinted clusters). (1) Labels: three-tier settlement hierarchy calibrated on

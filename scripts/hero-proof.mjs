@@ -43,11 +43,22 @@ export function parseStrokes(buf) {
   for (let i = 0; i < count; i++) wid[i] = u8[o++] / 2;
   for (let i = 0; i < count; i++) ang[i] = (u8[o++] / 255) * Math.PI - Math.PI / 2;
   for (let i = 0; i < count; i++) alpha[i] = u8[o++] / 255;
+  // master colors are raw u8 RGB; later variants are int8 deltas from master
   const fields = {};
-  for (const name of header.variants) {
-    fields[name] = u8.subarray(o, o + count * 3);
+  header.variants.forEach((name, vi) => {
+    if (vi === 0) {
+      fields[name] = u8.subarray(o, o + count * 3);
+    } else {
+      const abs = new Uint8Array(count * 3);
+      const masterField = fields[header.variants[0]];
+      for (let i = 0; i < count * 3; i++) {
+        const d = u8[o + i];
+        abs[i] = Math.max(0, Math.min(255, masterField[i] + (d > 127 ? d - 256 : d)));
+      }
+      fields[name] = abs;
+    }
     o += count * 3;
-  }
+  });
   return { header, x, y, len, wid, ang, alpha, fields };
 }
 

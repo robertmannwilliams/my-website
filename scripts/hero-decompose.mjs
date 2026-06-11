@@ -1,16 +1,20 @@
 // hero-decompose.mjs — offline decomposition of the homepage hero painting
-// into an ordered brush-stroke field (spec: hero/HERO.md, Phase 1).
+// into an ordered brush-stroke field (spec: hero/HERO.md Phase 1, reworked
+// per Rob's gate notes 2026-06-11: Hertzmann-style multi-size error-driven
+// refinement, structure-tensor orientation everywhere, computed replay order
+// with toning wash + forced-late accents, order heatmap).
 //
 // Reads  hero/sources/{master,variant-*,underdrawing}.png
 // Writes public/hero/strokes.bin            (JSON header + quantized SoA arrays)
 //        public/hero/final-{variant}.jpg    (stroke render baked on site paper)
 //        public/hero/og.jpg                 (1200x630 crop of final-master)
-//        public/hero/underdrawing.jpg       (pentimento layer, q80)
+//        public/hero/underdrawing.jpg       (pentimento layer)
+//        hero/order-heatmap.png             (replay order: early=light, late=dark)
 //
 // Run: node scripts/hero-decompose.mjs
 //
-// The dab geometry here (capsule = roundRect with full-radius ends) MUST stay
-// in sync with the browser renderer in src/components/hero/HeroPainting.tsx.
+// The dab geometry (capsule = roundRect with full-radius ends) MUST stay in
+// sync with the browser renderer in src/components/hero/HeroPainting.tsx.
 
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -26,15 +30,28 @@ const OUT_DIR = path.join(ROOT, "public", "hero");
 
 /** Site paper the hero dissolves into (homepage background). */
 const PAPER = "#eee8da";
+const PAPER_RGB = [238, 232, 218];
 
-const TARGET_STROKES = 12500; // spec window: 8-15k
-const ORDER_PASSES = 18;
+// Refinement tiers: brush radius (px at source res), error floor a cell must
+// exceed to be a candidate (mean RGB distance, 0..441), and a per-tier cap —
+// candidates are sorted by error so the cap keeps the WORST regions first.
+// Caps land the total in Rob's 25-40k window.
+const TIERS = [
+  { r: 24, t: 26, cap: 2200 },
+  { r: 12, t: 28, cap: 4200 },
+  { r: 6, t: 32, cap: 9000 },
+  { r: 3, t: 40, cap: 20000 },
+];
+const WASH_SPACING = 52; // toning-wash grid spacing (px)
+const ACCENT_TAIL = 0.15; // accents own the final 15% of the order
+const ORDER_PASSES = 8; // spatial sweep passes inside each tier
 
 // ---------------------------------------------------------------------------
 // small numeric helpers
 // ---------------------------------------------------------------------------
 
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+const clamp255 = (v) => (v < 0 ? 0 : v > 255 ? 255 : v);
 const lerp = (a, b, t) => a + (b - a) * t;
 
 /** Deterministic PRNG so re-runs produce identical output (mulberry32). */
@@ -49,7 +66,7 @@ function rng(seed) {
   };
 }
 
-/** Cheap tileable value noise in [0,1] (for the edge dissolve). */
+/** Cheap value noise in [0,1] (edge dissolve modulation). */
 function valueNoise2(x, y) {
   const ix = Math.floor(x), iy = Math.floor(y);
   const fx = x - ix, fy = y - iy;
@@ -69,9 +86,9 @@ function valueNoise2(x, y) {
 
 /** In-place separable box blur on a Float32Array field (3 passes ~ gaussian). */
 function boxBlur(field, w, h, radius, passes = 3) {
+  if (radius < 1) return;
   const tmp = new Float32Array(field.length);
   for (let p = 0; p < passes; p++) {
-    // horizontal
     for (let y = 0; y < h; y++) {
       let acc = 0;
       const row = y * w;
@@ -79,21 +96,16 @@ function boxBlur(field, w, h, radius, passes = 3) {
       const n = radius * 2 + 1;
       for (let x = 0; x < w; x++) {
         tmp[row + x] = acc / n;
-        const xAdd = Math.min(w - 1, x + radius + 1);
-        const xSub = Math.max(0, x - radius);
-        acc += field[row + xAdd] - field[row + xSub];
+        acc += field[row + Math.min(w - 1, x + radius + 1)] - field[row + Math.max(0, x - radius)];
       }
     }
-    // vertical
     for (let x = 0; x < w; x++) {
       let acc = 0;
       for (let y = -radius; y <= radius; y++) acc += tmp[Math.min(h - 1, Math.max(0, y)) * w + x];
       const n = radius * 2 + 1;
       for (let y = 0; y < h; y++) {
         field[y * w + x] = acc / n;
-        const yAdd = Math.min(h - 1, y + radius + 1);
-        const ySub = Math.max(0, y - radius);
-        acc += tmp[yAdd * w + x] - tmp[ySub * w + x];
+        acc += tmp[Math.min(h - 1, y + radius + 1) * w + x] - tmp[Math.max(0, y - radius) * w + x];
       }
     }
   }
@@ -103,8 +115,10 @@ function boxBlur(field, w, h, radius, passes = 3) {
 // image loading + analysis
 // ---------------------------------------------------------------------------
 
-async function loadRaw(file) {
-  const { data, info } = await sharp(file).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+async function loadRaw(file, blurSigma = 0) {
+  let img = sharp(file).removeAlpha();
+  if (blurSigma >= 0.3) img = img.blur(blurSigma);
+  const { data, info } = await img.raw().toBuffer({ resolveWithObject: true });
   return { data, w: info.width, h: info.height };
 }
 
@@ -117,33 +131,24 @@ function toGray(img) {
   return g;
 }
 
-/** Sobel gradients + magnitude. */
-function sobel(gray, w, h) {
+/**
+ * Structure tensor orientation + coherence at an integration scale suited to
+ * the tier's brush radius — coarse tiers read broad form (the viaduct's axis),
+ * fine tiers read local contours (a figure's silhouette). Returns the angle of
+ * the local EDGE DIRECTION (gradient + 90°) in [-PI/2, PI/2) and coherence
+ * [0,1]. Strokes follow form: horizontal on water, vertical on figures —
+ * no global lean anywhere (Rob's gate note #2).
+ */
+function orientationField(gray, w, h, integrationRadius) {
   const gx = new Float32Array(w * h);
   const gy = new Float32Array(w * h);
-  const mag = new Float32Array(w * h);
   for (let y = 1; y < h - 1; y++) {
     for (let x = 1; x < w - 1; x++) {
       const i = y * w + x;
-      const a = gray[i - w - 1], b = gray[i - w], c = gray[i - w + 1];
-      const d = gray[i - 1], f = gray[i + 1];
-      const g2 = gray[i + w - 1], h2 = gray[i + w], k = gray[i + w + 1];
-      const sx = c + 2 * f + k - (a + 2 * d + g2);
-      const sy = g2 + 2 * h2 + k - (a + 2 * b + c);
-      gx[i] = sx;
-      gy[i] = sy;
-      mag[i] = Math.hypot(sx, sy);
+      gx[i] = (gray[i + 1] - gray[i - 1]) * 0.5;
+      gy[i] = (gray[i + w] - gray[i - w]) * 0.5;
     }
   }
-  return { gx, gy, mag };
-}
-
-/**
- * Structure tensor orientation + coherence. Returns per-pixel angle of the
- * LOCAL EDGE DIRECTION (along contours, i.e. gradient + 90°) in [-PI/2, PI/2),
- * and coherence in [0,1] (how strongly oriented the neighborhood is).
- */
-function orientationField(gx, gy, w, h) {
   const jxx = new Float32Array(w * h);
   const jyy = new Float32Array(w * h);
   const jxy = new Float32Array(w * h);
@@ -152,34 +157,48 @@ function orientationField(gx, gy, w, h) {
     jyy[i] = gy[i] * gy[i];
     jxy[i] = gx[i] * gy[i];
   }
-  boxBlur(jxx, w, h, 5, 3);
-  boxBlur(jyy, w, h, 5, 3);
-  boxBlur(jxy, w, h, 5, 3);
+  const r = Math.max(2, Math.round(integrationRadius));
+  boxBlur(jxx, w, h, r, 3);
+  boxBlur(jyy, w, h, r, 3);
+  boxBlur(jxy, w, h, r, 3);
   const angle = new Float32Array(w * h);
   const coh = new Float32Array(w * h);
   for (let i = 0; i < w * h; i++) {
-    const gradAngle = 0.5 * Math.atan2(2 * jxy[i], jxx[i] - jyy[i]);
-    let a = gradAngle + Math.PI / 2; // along the edge
+    let a = 0.5 * Math.atan2(2 * jxy[i], jxx[i] - jyy[i]) + Math.PI / 2;
     if (a >= Math.PI / 2) a -= Math.PI;
     angle[i] = a;
     const tr = jxx[i] + jyy[i];
     const det = Math.sqrt((jxx[i] - jyy[i]) ** 2 + 4 * jxy[i] * jxy[i]);
-    coh[i] = tr > 1e-6 ? det / tr : 0;
+    coh[i] = tr > 1e-7 ? det / tr : 0;
   }
   return { angle, coh };
 }
 
-/** Percentile of a Float32Array (sampled, for normalization). */
-function percentile(field, p) {
-  const n = 4096;
-  const step = Math.max(1, Math.floor(field.length / n));
+/** Edge density field (Sobel magnitude, heavily blurred, p95-normalized). */
+function edgeDensity(gray, w, h) {
+  const d = new Float32Array(w * h);
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const i = y * w + x;
+      const sx =
+        gray[i - w + 1] + 2 * gray[i + 1] + gray[i + w + 1] -
+        (gray[i - w - 1] + 2 * gray[i - 1] + gray[i + w - 1]);
+      const sy =
+        gray[i + w - 1] + 2 * gray[i + w] + gray[i + w + 1] -
+        (gray[i - w - 1] + 2 * gray[i - w] + gray[i - w + 1]);
+      d[i] = Math.hypot(sx, sy);
+    }
+  }
+  boxBlur(d, w, h, 14, 3);
   const sample = [];
-  for (let i = 0; i < field.length; i += step) sample.push(field[i]);
+  for (let i = 0; i < d.length; i += 397) sample.push(d[i]);
   sample.sort((a, b) => a - b);
-  return sample[Math.min(sample.length - 1, Math.floor(p * sample.length))];
+  const p95 = sample[Math.floor(sample.length * 0.95)] || 1;
+  for (let i = 0; i < d.length; i++) d[i] = clamp01(d[i] / p95);
+  return d;
 }
 
-/** 3x3 per-channel median color at (x, y). */
+/** 3x3 per-channel median color (tolerates small variant misregistration). */
 function medianColor(img, x, y) {
   const { data, w, h } = img;
   const rs = [], gs = [], bs = [];
@@ -200,8 +219,8 @@ function medianColor(img, x, y) {
   return [med(rs), med(gs), med(bs)];
 }
 
-/** Structural similarity check between master and a variant (edge-map
- *  correlation on a downsample) — flags gross misregistration. */
+/** Structural similarity (downsampled luminance correlation) — flags gross
+ *  misregistration of a variant. */
 async function registrationScore(masterFile, variantFile) {
   const prep = (f) =>
     sharp(f).resize(160, null).grayscale().raw().toBuffer({ resolveWithObject: true });
@@ -225,184 +244,7 @@ async function registrationScore(masterFile, variantFile) {
 }
 
 // ---------------------------------------------------------------------------
-// stroke sampling
-// ---------------------------------------------------------------------------
-
-/**
- * Variable-density dart throwing: spacing radius shrinks where edge density
- * is high (figures, scaffolds) and grows where it is calm (sky, water), so
- * calm regions get few broad strokes and detailed regions many small ones.
- */
-function sampleStrokes(master, fields, random) {
-  const { w, h } = master;
-  const { density, angle, coh } = fields;
-
-  const R_MIN = 4.2;
-  const R_MAX = 27;
-  const radiusAt = (x, y) => {
-    const d = density[y * w + x];
-    return lerp(R_MAX, R_MIN, Math.pow(d, 0.7));
-  };
-
-  // hash grid for neighborhood queries
-  const cell = R_MIN;
-  const gw = Math.ceil(w / cell);
-  const gh = Math.ceil(h / cell);
-  const grid = new Map(); // cellIndex -> array of point indices
-  const pts = [];
-
-  const fits = (x, y, r) => {
-    const reach = Math.ceil((r + R_MAX) / cell);
-    const cx = Math.floor(x / cell);
-    const cy = Math.floor(y / cell);
-    for (let oy = -reach; oy <= reach; oy++) {
-      for (let ox = -reach; ox <= reach; ox++) {
-        const gx2 = cx + ox, gy2 = cy + oy;
-        if (gx2 < 0 || gy2 < 0 || gx2 >= gw || gy2 >= gh) continue;
-        const bucket = grid.get(gy2 * gw + gx2);
-        if (!bucket) continue;
-        for (const pi of bucket) {
-          const p = pts[pi];
-          const minDist = Math.min(r, p.r) * 0.82;
-          const dx = p.x - x, dy = p.y - y;
-          if (dx * dx + dy * dy < minDist * minDist) return false;
-        }
-      }
-    }
-    return true;
-  };
-
-  let misses = 0;
-  const maxDarts = 1_400_000;
-  for (let dart = 0; dart < maxDarts && pts.length < TARGET_STROKES; dart++) {
-    const x = random() * (w - 2) + 1;
-    const y = random() * (h - 2) + 1;
-    const xi = Math.round(x), yi = Math.round(y);
-    const r = radiusAt(xi, yi);
-    if (!fits(x, y, r)) {
-      if (++misses > 220_000 && pts.length > 8000) break; // acceptance stalled inside spec window
-      continue;
-    }
-    const idx = pts.length;
-    pts.push({ x, y, r });
-    const key = Math.floor(y / cell) * gw + Math.floor(x / cell);
-    if (!grid.has(key)) grid.set(key, []);
-    grid.get(key).push(idx);
-  }
-
-  // geometry + color per accepted point
-  const strokes = pts.map((p) => {
-    const xi = Math.round(p.x), yi = Math.round(p.y);
-    const i = yi * w + xi;
-    const c = coh[i];
-    const width = p.r * 1.5 * lerp(0.85, 1.25, random());
-    const length = width * (1.7 + 1.6 * c) * lerp(0.85, 1.2, random());
-    // strokes follow contours where the neighborhood is coherent; in calm
-    // fields they relax toward a loose diagonal hatch (painter's habit)
-    let a;
-    if (c < 0.08) {
-      a = -0.35 + (random() - 0.5) * 1.1;
-    } else {
-      const jitter = (random() - 0.5) * lerp(0.7, 0.16, clamp01(c * 2));
-      a = angle[i] + jitter;
-    }
-    return {
-      x: p.x,
-      y: p.y,
-      len: length,
-      wid: width,
-      angle: a,
-      color: medianColor(master, xi, yi),
-      density: fields.density[i],
-      alpha: lerp(0.88, 1, random()),
-    };
-  });
-
-  return strokes;
-}
-
-// ---------------------------------------------------------------------------
-// ordering + edge dissolve
-// ---------------------------------------------------------------------------
-
-/** Optional 4-tone order map; white paints first, black last. */
-async function loadOrderMap(file, w, h) {
-  if (!existsSync(file)) return null;
-  const { data, info } = await sharp(file)
-    .resize(w, h, { fit: "fill" })
-    .grayscale()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  return { data, w: info.width, h: info.height };
-}
-
-function orderStrokes(strokes, orderMap, w, h, random) {
-  let scored;
-  if (orderMap) {
-    scored = strokes.map((s) => {
-      const v = orderMap.data[Math.round(s.y) * w + Math.round(s.x)] / 255;
-      return { s, score: 1 - v + (random() - 0.5) * 0.12 };
-    });
-  } else {
-    // washes -> masses -> street -> accents: light first, gray before vivid,
-    // calm before detailed.
-    scored = strokes.map((s) => {
-      const [r, g, b] = s.color;
-      const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-      const mx = Math.max(r, g, b) / 255;
-      const mn = Math.min(r, g, b) / 255;
-      const sat = mx > 0.001 ? (mx - mn) / mx : 0;
-      const score = 0.45 * (1 - lum) + 0.25 * sat + 0.3 * s.density;
-      return { s, score };
-    });
-  }
-
-  scored.sort((a, b) => a.score - b.score);
-
-  // bucket into passes, then order each pass spatially (a loose lateral sweep
-  // with alternating direction) so the brush works regions, not random pixels
-  const n = scored.length;
-  const out = [];
-  for (let p = 0; p < ORDER_PASSES; p++) {
-    const from = Math.floor((p / ORDER_PASSES) * n);
-    const to = Math.floor(((p + 1) / ORDER_PASSES) * n);
-    const pass = scored.slice(from, to);
-    const dir = p % 2 === 0 ? 1 : -1;
-    pass.sort((a, b) => {
-      const ka = dir * (a.s.x + a.s.y * 0.35) + (randKey(a) - 0.5) * 220;
-      const kb = dir * (b.s.x + b.s.y * 0.35) + (randKey(b) - 0.5) * 220;
-      return ka - kb;
-    });
-    out.push(...pass.map((e) => e.s));
-  }
-  return out;
-
-  function randKey(e) {
-    // stable per-stroke jitter (hash of position) so sort comparator is consistent
-    const v = Math.sin(e.s.x * 12.9898 + e.s.y * 78.233) * 43758.5453;
-    return v - Math.floor(v);
-  }
-}
-
-/** Painterly alpha falloff toward the canvas edges (noise-modulated). */
-function applyEdgeDissolve(strokes, w, h) {
-  const band = 0.085 * Math.min(w, h);
-  const kept = [];
-  for (const s of strokes) {
-    const d = Math.min(s.x, s.y, w - s.x, h - s.y) / band;
-    if (d < 1) {
-      const noise = valueNoise2(s.x * 0.016, s.y * 0.016);
-      const a = clamp01(d + (noise - 0.5) * 0.55);
-      s.alpha *= Math.pow(a, 1.5);
-      if (s.alpha < 0.05) continue;
-    }
-    kept.push(s);
-  }
-  return kept;
-}
-
-// ---------------------------------------------------------------------------
-// rendering (kept in sync with HeroPainting.tsx)
+// dab rendering (kept in sync with HeroPainting.tsx)
 // ---------------------------------------------------------------------------
 
 export function drawDab(ctx, x, y, len, wid, angle, r, g, b, alpha) {
@@ -417,41 +259,272 @@ export function drawDab(ctx, x, y, len, wid, angle, r, g, b, alpha) {
   ctx.restore();
 }
 
-function renderField(strokes, w, h, colorOf, upTo = strokes.length) {
-  const canvas = createCanvas(w, h);
-  const ctx = canvas.getContext("2d");
-  ctx.fillStyle = PAPER;
-  ctx.fillRect(0, 0, w, h);
-  for (let i = 0; i < upTo; i++) {
-    const s = strokes[i];
-    const [r, g, b] = colorOf(s, i);
-    drawDab(ctx, s.x, s.y, s.len, s.wid, s.angle, r, g, b, s.alpha);
+// ---------------------------------------------------------------------------
+// stroke generation
+// ---------------------------------------------------------------------------
+
+/** Painterly alpha falloff toward the canvas edges, applied at placement so
+ *  the working canvas (which drives the error refinement) is the truth.
+ *  Returns the dissolved alpha, or 0 if the stroke should be skipped. */
+function dissolveAlpha(x, y, w, h, alpha) {
+  const band = 0.085 * Math.min(w, h);
+  const d = Math.min(x, y, w - x, h - y) / band;
+  if (d >= 1) return alpha;
+  const noise = valueNoise2(x * 0.016, y * 0.016);
+  const a = alpha * Math.pow(clamp01(d + (noise - 0.5) * 0.55), 1.5);
+  return a < 0.05 ? 0 : a;
+}
+
+/**
+ * Toning wash (Rob's order rule a): a dedicated opening tier of very pale,
+ * low-opacity broad strokes covering the whole canvas, so no intermediate
+ * frame ever shows raw paper holes. Colors are the heavily blurred master
+ * pulled most of the way toward paper.
+ */
+function generateWash(blurred, w, h, random) {
+  const strokes = [];
+  for (let gy = WASH_SPACING / 2; gy < h + WASH_SPACING / 2; gy += WASH_SPACING) {
+    for (let gx = WASH_SPACING / 2; gx < w + WASH_SPACING / 2; gx += WASH_SPACING) {
+      const x = Math.min(w - 2, gx + (random() - 0.5) * WASH_SPACING * 0.6);
+      const y = Math.min(h - 2, gy + (random() - 0.5) * WASH_SPACING * 0.6);
+      const p = (Math.round(y) * w + Math.round(x)) * 3;
+      const mix = 0.62; // toward paper
+      const color = [
+        clamp255(Math.round(lerp(blurred.data[p], PAPER_RGB[0], mix))),
+        clamp255(Math.round(lerp(blurred.data[p + 1], PAPER_RGB[1], mix))),
+        clamp255(Math.round(lerp(blurred.data[p + 2], PAPER_RGB[2], mix))),
+      ];
+      const alpha = dissolveAlpha(x, y, w, h, lerp(0.42, 0.55, random()));
+      if (alpha === 0) continue;
+      const wid = WASH_SPACING * lerp(1.05, 1.35, random());
+      strokes.push({
+        x, y,
+        wid,
+        len: wid * lerp(1.5, 2.1, random()),
+        angle: (random() - 0.5) * Math.PI, // no lean: fully scattered
+        color,
+        alpha,
+        tier: -1,
+        coh: 0,
+        density: 0,
+      });
+    }
   }
-  return canvas;
+  return strokes;
+}
+
+/**
+ * One Hertzmann refinement tier: compare the working canvas against the
+ * tier-blurred reference on a grid of the brush radius; where a cell's mean
+ * error exceeds the tier threshold, place a stroke at the cell's worst pixel,
+ * colored and oriented from the tier-scale fields, then paint it onto the
+ * working canvas so later tiers only fix what still reads wrong.
+ */
+function refineTier(ctx, tier, ref, fields, w, h, random) {
+  const { r, t, cap } = tier;
+  const canvasData = ctx.getImageData(0, 0, w, h).data; // RGBA
+  const refData = ref.data; // RGB
+  const grid = Math.max(2, Math.round(r * 1.15));
+
+  // pass 1: score every grid cell against the tier reference
+  const candidates = [];
+  for (let cy = 0; cy < h; cy += grid) {
+    for (let cx = 0; cx < w; cx += grid) {
+      let sum = 0, n = 0, worst = -1, wx = cx, wy = cy;
+      const yEnd = Math.min(h, cy + grid);
+      const xEnd = Math.min(w, cx + grid);
+      for (let y = cy; y < yEnd; y += 2) {
+        for (let x = cx; x < xEnd; x += 2) {
+          const c4 = (y * w + x) * 4;
+          const c3 = (y * w + x) * 3;
+          const dr = canvasData[c4] - refData[c3];
+          const dg = canvasData[c4 + 1] - refData[c3 + 1];
+          const db = canvasData[c4 + 2] - refData[c3 + 2];
+          const e = Math.sqrt(dr * dr + dg * dg + db * db);
+          sum += e;
+          n++;
+          if (e > worst) {
+            worst = e;
+            wx = x;
+            wy = y;
+          }
+        }
+      }
+      if (n === 0 || sum / n <= t) continue;
+      candidates.push({ err: sum / n, wx, wy });
+    }
+  }
+
+  // pass 2: worst cells first, up to the tier cap
+  candidates.sort((a, b) => b.err - a.err);
+  const strokes = [];
+  for (const cand of candidates) {
+    if (strokes.length >= cap) break;
+    const { wx, wy } = cand;
+    const i = wy * w + wx;
+    const coh = fields.coh[i];
+    const density = fields.density[i];
+    const wid = r * 2 * lerp(0.85, 1.15, random());
+    const len = wid * (1.5 + 2.2 * coh) * lerp(0.85, 1.15, random());
+    // form-following: tensor angle where the neighborhood is coherent,
+    // fully random where it is not — never a global lean
+    const angle =
+      coh > 0.09
+        ? fields.angle[i] + (random() - 0.5) * lerp(0.55, 0.12, clamp01(coh * 1.6))
+        : (random() - 0.5) * Math.PI;
+    const p3 = i * 3;
+    const color = [refData[p3], refData[p3 + 1], refData[p3 + 2]];
+    const alpha = dissolveAlpha(wx, wy, w, h, lerp(0.92, 1, random()));
+    if (alpha === 0) continue;
+
+    const s = { x: wx, y: wy, wid, len, angle, color, alpha, tier: tier.index, coh, density };
+    strokes.push(s);
+    drawDab(ctx, s.x, s.y, s.len, s.wid, s.angle, color[0], color[1], color[2], alpha);
+  }
+  return strokes;
 }
 
 // ---------------------------------------------------------------------------
-// binary packing
+// replay ordering (Rob's gate note #3 — computed, no hand-made map)
 // ---------------------------------------------------------------------------
 
-function packStrokes(strokes, variants, w, h) {
+/** Accent test: high-saturation warm (the red/orange flag, bunting, train
+ *  hues) OR darkest value decile (set by caller) — forced into the tail. */
+function isWarmAccent([r, g, b]) {
+  const mx = Math.max(r, g, b) / 255;
+  const mn = Math.min(r, g, b) / 255;
+  if (mx < 0.3) return false;
+  const sat = mx > 0 ? (mx - mn) / mx : 0;
+  if (sat < 0.45) return false;
+  const d = mx - mn;
+  if (d === 0) return false;
+  let hue;
+  const r1 = r / 255, g1 = g / 255, b1 = b / 255;
+  if (mx === r1) hue = ((g1 - b1) / d) % 6;
+  else if (mx === g1) hue = (b1 - r1) / d + 2;
+  else hue = (r1 - g1) / d + 4;
+  hue *= 60;
+  if (hue < 0) hue += 360;
+  return hue <= 55 || hue >= 330; // reds through oranges
+}
+
+function orderStrokes(wash, painted, random) {
+  // darkest value decile across painted strokes
+  const values = painted.map((s) => Math.max(s.color[0], s.color[1], s.color[2]));
+  const sortedV = [...values].sort((a, b) => a - b);
+  const darkCut = sortedV[Math.floor(sortedV.length * 0.1)];
+
+  const accents = [];
+  const middle = [];
+  painted.forEach((s, i) => {
+    if (isWarmAccent(s.color) || values[i] <= darkCut) accents.push(s);
+    else middle.push(s);
+  });
+
+  // The warm-accent rule is absolute (nothing red/orange before the 80% mark)
+  // but the dark decile is the flexible class: if the combined tail would
+  // start before 80%, demote the lightest dark accents back into the middle.
+  const total = wash.length + painted.length;
+  const maxAccents = Math.floor(total * 0.2);
+  if (accents.length > maxAccents) {
+    const darks = accents
+      .filter((s) => !isWarmAccent(s.color))
+      .sort((a, b) => Math.max(...b.color) - Math.max(...a.color));
+    let excess = accents.length - maxAccents;
+    const demoted = new Set();
+    for (const s of darks) {
+      if (excess === 0) break;
+      demoted.add(s);
+      excess--;
+    }
+    for (let i = accents.length - 1; i >= 0; i--) {
+      if (demoted.has(accents[i])) {
+        middle.push(accents[i]);
+        accents.splice(i, 1);
+      }
+    }
+  }
+
+  // middle: background-to-foreground inside each size tier — light early,
+  // calm early, sky early; loose spatial sweeps + jitter inside each pass
+  const jitterKey = (s) => {
+    const v = Math.sin(s.x * 12.9898 + s.y * 78.233) * 43758.5453;
+    return v - Math.floor(v);
+  };
+  const tierGroups = new Map();
+  for (const s of middle) {
+    if (!tierGroups.has(s.tier)) tierGroups.set(s.tier, []);
+    tierGroups.get(s.tier).push(s);
+  }
+  const orderedMiddle = [];
+  for (const tierIdx of [...tierGroups.keys()].sort((a, b) => a - b)) {
+    const group = tierGroups.get(tierIdx);
+    const scored = group.map((s) => {
+      const lum = (0.2126 * s.color[0] + 0.7152 * s.color[1] + 0.0722 * s.color[2]) / 255;
+      const score =
+        0.45 * (1 - lum) + 0.3 * s.density + 0.25 * (s.y / 1000);
+      return { s, score };
+    });
+    scored.sort((a, b) => a.score - b.score);
+    const n = scored.length;
+    for (let p = 0; p < ORDER_PASSES; p++) {
+      const from = Math.floor((p / ORDER_PASSES) * n);
+      const to = Math.floor(((p + 1) / ORDER_PASSES) * n);
+      const pass = scored.slice(from, to);
+      const dir = p % 2 === 0 ? 1 : -1;
+      pass.sort(
+        (a, b) =>
+          dir * (a.s.x + a.s.y * 0.3) + (jitterKey(a.s) - 0.5) * 260 -
+          (dir * (b.s.x + b.s.y * 0.3) + (jitterKey(b.s) - 0.5) * 260),
+      );
+      orderedMiddle.push(...pass.map((e) => e.s));
+    }
+  }
+
+  // accents: dark masses settle in first, warm color lands at the very end;
+  // generation order is preserved within each class so overlaps stay correct
+  const darkAccents = accents.filter((s) => !isWarmAccent(s.color));
+  const warmAccents = accents.filter((s) => isWarmAccent(s.color));
+  const softShuffle = (arr) => {
+    for (let i = 0; i < arr.length; i++) {
+      const j = Math.min(arr.length - 1, i + Math.floor(random() * 24));
+      if (arr[i].tier === arr[j].tier) [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
+
+  const ordered = [
+    ...wash,
+    ...orderedMiddle,
+    ...softShuffle(darkAccents),
+    ...softShuffle(warmAccents),
+  ];
+
+  // verify the accent tail actually fits the contract (final ~15%)
+  const accentStart = (wash.length + orderedMiddle.length) / ordered.length;
+  return { ordered, accentStart, accentCount: accents.length };
+}
+
+// ---------------------------------------------------------------------------
+// packing
+// ---------------------------------------------------------------------------
+
+function packStrokes(strokes, variants, w, h, washCount) {
   const count = strokes.length;
   const header = {
-    version: 1,
+    version: 2,
     count,
     width: w,
     height: h,
+    washCount,
     variants: ["master", ...variants.map((v) => v.name)],
-    // SoA layout, in order: x u16 (px*8), y u16 (px*8), len u8 (px*2),
-    // wid u8 (px*2), angle u8 (0..255 over -PI/2..PI/2), alpha u8,
-    // then per variant: r,g,b u8 * count
-    fields: ["x16", "y16", "len8", "wid8", "ang8", "alpha8", "rgb8"],
+    // SoA layout: x u16 (px*8), y u16 (px*8), len u8 (px*2), wid u8 (px*2),
+    // angle u8 (-PI/2..PI/2), alpha u8, master rgb u8*3, then per extra
+    // variant rgb stored as int8 DELTAS from master (gzip-friendly).
+    fields: ["x16", "y16", "len8", "wid8", "ang8", "alpha8", "rgb8", "drgb8"],
   };
   const headerBytes = Buffer.from(JSON.stringify(header), "utf8");
-
-  const fixed = count * (2 + 2 + 1 + 1 + 1 + 1);
-  const colors = count * 3 * (1 + variants.length);
-  const payload = Buffer.alloc(fixed + colors);
+  const payload = Buffer.alloc(count * (2 + 2 + 1 + 1 + 1 + 1 + 3) + count * 3 * variants.length);
 
   let o = 0;
   for (const s of strokes) payload.writeUInt16LE(Math.round(s.x * 8), (o += 2) - 2);
@@ -472,10 +545,11 @@ function packStrokes(strokes, variants, w, h) {
   }
   for (const v of variants) {
     for (let i = 0; i < count; i++) {
+      const m = strokes[i].color;
       const c = v.colors[i];
-      payload.writeUInt8(c[0], o++);
-      payload.writeUInt8(c[1], o++);
-      payload.writeUInt8(c[2], o++);
+      for (let ch = 0; ch < 3; ch++) {
+        payload.writeInt8(Math.max(-128, Math.min(127, c[ch] - m[ch])), o++);
+      }
     }
   }
 
@@ -489,6 +563,18 @@ function packStrokes(strokes, variants, w, h) {
 // main
 // ---------------------------------------------------------------------------
 
+function renderField(strokes, w, h, colorOf) {
+  const canvas = createCanvas(w, h);
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = PAPER;
+  ctx.fillRect(0, 0, w, h);
+  strokes.forEach((s, i) => {
+    const [r, g, b] = colorOf(s, i);
+    drawDab(ctx, s.x, s.y, s.len, s.wid, s.angle, r, g, b, s.alpha);
+  });
+  return canvas;
+}
+
 async function main() {
   const masterFile = path.join(SRC_DIR, "master.png");
   if (!existsSync(masterFile)) {
@@ -497,35 +583,54 @@ async function main() {
   }
   await mkdir(OUT_DIR, { recursive: true });
 
-  console.log("· loading master");
+  console.log("· loading master + analysis fields");
   const master = await loadRaw(masterFile);
   const { w, h } = master;
-
-  console.log("· analyzing (sobel, structure tensor, density)");
   const gray = toGray(master);
-  const { gx, gy, mag } = sobel(gray, w, h);
-  const { angle, coh } = orientationField(gx, gy, w, h);
-  const density = Float32Array.from(mag);
-  boxBlur(density, w, h, 14, 3);
-  const p95 = percentile(density, 0.95);
-  for (let i = 0; i < density.length; i++) density[i] = clamp01(density[i] / p95);
+  const density = edgeDensity(gray, w, h);
 
-  console.log("· sampling strokes");
   const random = rng(20260611);
-  let strokes = sampleStrokes(master, { density, angle, coh }, random);
-  console.log(`  ${strokes.length} strokes sampled`);
-  if (strokes.length < 8000 || strokes.length > 15000) {
-    console.warn(`  WARNING: outside the 8-15k spec window`);
+
+  console.log("· toning wash");
+  const washRef = await loadRaw(masterFile, 28);
+  const wash = generateWash(washRef, w, h, random);
+  console.log(`  ${wash.length} wash strokes`);
+
+  // working canvas accumulates exactly what the replay will paint
+  const work = createCanvas(w, h);
+  const wctx = work.getContext("2d");
+  wctx.fillStyle = PAPER;
+  wctx.fillRect(0, 0, w, h);
+  for (const s of wash) {
+    drawDab(wctx, s.x, s.y, s.len, s.wid, s.angle, s.color[0], s.color[1], s.color[2], s.alpha);
   }
 
-  console.log("· ordering");
-  const orderMap = await loadOrderMap(path.join(SRC_DIR, "order-map.png"), w, h);
-  if (orderMap) console.log("  using order-map.png");
-  strokes = orderStrokes(strokes, orderMap, w, h, random);
+  console.log("· error-driven refinement");
+  const painted = [];
+  const tierRefs = []; // kept for variant resampling at matching blur
+  for (let ti = 0; ti < TIERS.length; ti++) {
+    const tier = { ...TIERS[ti], index: ti };
+    const sigma = Math.max(0.4, tier.r * 0.55);
+    const ref = await loadRaw(masterFile, ti === TIERS.length - 1 ? 0 : sigma);
+    tierRefs.push({ sigma: ti === TIERS.length - 1 ? 0 : sigma });
+    const refGray = toGray(ref);
+    const fields = {
+      ...orientationField(refGray, w, h, tier.r * 0.9),
+      density,
+    };
+    const strokes = refineTier(wctx, tier, ref, fields, w, h, random);
+    painted.push(...strokes);
+    console.log(`  tier r=${tier.r}: ${strokes.length} strokes`);
+  }
+  const total = wash.length + painted.length;
+  console.log(`  ${total} strokes total ${total < 25000 || total > 40000 ? "(OUTSIDE 25-40k window)" : "(in 25-40k window)"}`);
 
-  console.log("· edge dissolve");
-  strokes = applyEdgeDissolve(strokes, w, h);
-  console.log(`  ${strokes.length} strokes after dissolve`);
+  console.log("· ordering (wash → background-to-foreground → accents)");
+  const { ordered, accentStart, accentCount } = orderStrokes(wash, painted, random);
+  console.log(
+    `  ${accentCount} accent strokes start at ${(accentStart * 100).toFixed(1)}% ` +
+      `(contract: ≥ 80%; tail target ~${100 - ACCENT_TAIL * 100}%)`,
+  );
 
   console.log("· variant color fields");
   const variantNames = ["dusk", "rain", "snow"];
@@ -544,18 +649,40 @@ async function main() {
       );
       continue;
     }
-    const img = await loadRaw(file);
-    if (img.w !== w || img.h !== h) {
-      console.warn(`  WARNING: variant-${name}.png is ${img.w}x${img.h}, master is ${w}x${h} — skipped`);
-      continue;
+    // sample at each stroke's tier-matched blur so broad strokes take area
+    // color and fine strokes take local color, exactly like the master pass
+    const colors = new Array(ordered.length);
+    const bySigma = new Map();
+    ordered.forEach((s, i) => {
+      const sigma = s.tier === -1 ? 28 : tierRefs[s.tier].sigma;
+      if (!bySigma.has(sigma)) bySigma.set(sigma, []);
+      bySigma.get(sigma).push(i);
+    });
+    for (const [sigma, idxs] of bySigma) {
+      const img = await loadRaw(file, sigma);
+      if (img.w !== w || img.h !== h) {
+        console.warn(`  WARNING: variant-${name}.png is ${img.w}x${img.h}, master is ${w}x${h} — skipped`);
+        bySigma.clear();
+        break;
+      }
+      for (const i of idxs) {
+        const s = ordered[i];
+        colors[i] =
+          sigma === 0
+            ? medianColor(img, Math.round(s.x), Math.round(s.y))
+            : (() => {
+                const p = (Math.round(s.y) * w + Math.round(s.x)) * 3;
+                return [img.data[p], img.data[p + 1], img.data[p + 2]];
+              })();
+      }
     }
-    const colors = strokes.map((s) => medianColor(img, Math.round(s.x), Math.round(s.y)));
+    if (bySigma.size === 0) continue;
     variants.push({ name, colors });
     console.log(`  variant-${name} sampled (registration ${score.toFixed(2)})`);
   }
 
   console.log("· packing strokes.bin");
-  const bin = packStrokes(strokes, variants, w, h);
+  const bin = packStrokes(ordered, variants, w, h, wash.length);
   await writeFile(path.join(OUT_DIR, "strokes.bin"), bin);
   const gz = zlib.gzipSync(bin).length;
   console.log(
@@ -564,17 +691,14 @@ async function main() {
   );
 
   console.log("· rendering final frames");
-  const masterCanvas = renderField(strokes, w, h, (s) => s.color);
-  await writeFile(
-    path.join(OUT_DIR, "final-master.jpg"),
-    await masterCanvas.encode("jpeg", 84),
-  );
+  const masterCanvas = renderField(ordered, w, h, (s) => s.color);
+  await writeFile(path.join(OUT_DIR, "final-master.jpg"), await masterCanvas.encode("jpeg", 84));
   for (const v of variants) {
-    const canvas = renderField(strokes, w, h, (_s, i) => v.colors[i]);
+    const canvas = renderField(ordered, w, h, (_s, i) => v.colors[i]);
     await writeFile(path.join(OUT_DIR, `final-${v.name}.jpg`), await canvas.encode("jpeg", 84));
   }
 
-  // og.jpg — 1200x630 center crop of the final master frame
+  // og.jpg — 1200x630 crop, slight up-bias toward the flags
   const ogW = 1200, ogH = 630;
   const og = createCanvas(ogW, ogH);
   const ogCtx = og.getContext("2d");
@@ -584,19 +708,32 @@ async function main() {
   ogCtx.drawImage(
     masterCanvas,
     (ogW - w * scale) / 2,
-    (ogH - h * scale) / 2 - h * scale * 0.04, // slight up-bias toward the flags
+    (ogH - h * scale) / 2 - h * scale * 0.04,
     w * scale,
     h * scale,
   );
   await writeFile(path.join(OUT_DIR, "og.jpg"), await og.encode("jpeg", 84));
 
-  // pentimento layer for the player
+  // pentimento layer
   const under = await loadImage(path.join(SRC_DIR, "underdrawing.png"));
   const uc = createCanvas(w, h);
   uc.getContext("2d").drawImage(under, 0, 0);
   await writeFile(path.join(OUT_DIR, "underdrawing.jpg"), await uc.encode("jpeg", 80));
 
-  console.log(`· done — ${strokes.length} strokes, ${variants.length + 1} color fields`);
+  // order heatmap for Rob: early = light, late = dark
+  console.log("· order heatmap");
+  const heat = createCanvas(w, h);
+  const hctx = heat.getContext("2d");
+  hctx.fillStyle = "#ffffff";
+  hctx.fillRect(0, 0, w, h);
+  ordered.forEach((s, i) => {
+    const t = i / (ordered.length - 1);
+    const v = Math.round(lerp(235, 18, t));
+    drawDab(hctx, s.x, s.y, s.len, s.wid, s.angle, v, v, v, 0.9);
+  });
+  await writeFile(path.join(ROOT, "hero", "order-heatmap.png"), await heat.encode("png"));
+
+  console.log(`· done — ${ordered.length} strokes, ${variants.length + 1} color fields`);
 }
 
 // Run only when executed directly (hero-proof.mjs imports drawDab from here).

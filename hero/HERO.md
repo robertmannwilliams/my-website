@@ -78,9 +78,15 @@ than shipping it.
 7. **Proof strip:** `scripts/hero-proof.mjs` renders the master field at
    20/50/80/100% completion into one wide PNG → `hero/proof-strip.png`.
 
-- [ ] Pipeline runs on Rob's sources without manual tweaking
-- [ ] Proof strip committed and shown to Rob
-- [ ] **GATE: Rob approves the strip** (or supplies order-map.png; re-run; re-gate)
+- [x] Pipeline runs on Rob's sources without manual tweaking. (Reworked
+      2026-06-11 per Rob's gate notes: Hertzmann-style error-driven refinement
+      in 4 tiers r=24/12/6/3 with per-tier caps, 34,540 strokes total, 563 KB
+      gz; tensor orientation at tier scale, no global lean; computed order =
+      569-stroke toning wash → per-tier background-to-foreground passes →
+      accent tail (warm/dark) opening at 80.6%; order heatmap committed at
+      hero/order-heatmap.png.)
+- [x] Proof strip committed and shown to Rob
+- [ ] **GATE: Rob approves the strip** (round 2 pending — rework above)
 
 ## Phase 2 — The player
 
