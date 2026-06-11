@@ -14,6 +14,7 @@ export interface StorySite {
   lat: number;
   status: Site["status"];
   monopoly: boolean;
+  mega: Site["mega_layer"];
 }
 
 export function getStorySites(chapter: Chapter): Record<string, StorySite> {
@@ -33,6 +34,7 @@ export function getStorySites(chapter: Chapter): Record<string, StorySite> {
         lat: site.lat,
         status: site.status,
         monopoly: site.chokepoint_severity === "monopoly",
+        mega: site.mega_layer,
       };
     }
   }

@@ -62,13 +62,22 @@ flow of beats; section files exist for authoring only. Transitions live in the p
 
 Custom Mapbox style, built in Mapbox Studio (or style JSON in repo). Layer spec:
 
-- Land: --paper. Water: --paper-shade (or a 10% --ink wash). No satellite, no hillshade,
-  no terrain, no POIs, no roads below z8, no transit.
+- Land: --paper. Water: --paper-shade with a faint --wash-teal tint (~7%, "sea-glass"),
+  plus a soft blurred teal band hugging coastlines at plate zooms (≤z8) — the hand-tinted
+  atlas convention (Rob, 2026-06-11: color reach = pins + water/coast; base stays ink).
+  No satellite, no hillshade, no terrain, no POIs, no roads below z8, no transit.
 - Coastlines and country borders: --ink at 0.75px, country borders dashed (drafting
-  convention). Admin-1 only past z5, fainter.
-- Labels: Newsreader for places, Plex Mono for anything numeric. --ink-strong at low
-  density. Remove all label halos wider than 1px.
-- Optional at low zoom: a faint graticule (--ink-faint, 0.5px) for the atlas-plate feel.
+  convention). Admin-1 only past z5, fainter. The water-edge ink SOFTENS at mid zoom
+  (~50% past z8) so inland pond/river polygons never shout over the data marks.
+- Labels: Newsreader for places, Plex Mono for anything numeric. Remove all label halos
+  wider than 1.2px. Settlements use a three-tier hierarchy, calibrated on streets-v8
+  symbolrank (a vintage plate shows a few names in distinct voices, not a gazetteer
+  wall): cities (rank ≤8) largest in --ink-strong; towns (9–11) quieter --ink; villages
+  (≥12) small italic at ~60% ink, only past z10.75, trickling in by rank. Layer order
+  note: Mapbox places symbols from the LAST style layer first, so the order in the style
+  is village → town → city → country to give big names placement priority.
+- Optional at low zoom: a faint graticule (--ink-faint, 0.5px) for the atlas-plate feel,
+  ruled over land AND water like a printed plate.
 - Projection: mercator. Camera moves are slow `flyTo` (curve ~1.4, speed ~0.8, capped
   ~2.6s). The map should feel like a plate being slid across a drafting table, not a
   video game.
@@ -86,10 +95,22 @@ Custom Mapbox style, built in Mapbox Studio (or style JSON in repo). Layer spec:
   all widths. Plates render as a bounded inset that is the lead visual when the map is
   recessed and a postage stamp when the map is forward.
 
-**Pins:** ink-drawn symbols, not teardrops. Default: 4–5px circle, 1.25px --ink stroke,
---paper fill. Active/story: filled --ink with a 1px offset ring. Status: construction =
---wash-ochre ring; planned = dashed ring. Chokepoint monopoly sites get a small red tick.
-Clusters: a circled count in Plex Mono, drawn like a survey marker.
+**Pins:** ink-drawn symbols, not teardrops (revised 2026-06-11, Rob's map feedback).
+A surveyor's circle: 5.5px, 1.5px --ink stroke, interior carrying the site's mega-layer
+WASH at ~32% (Inputs = ochre, Toolchain = red, Silicon = ink, Systems = teal,
+Deployment = plain paper — the datacenters are the base condition; color marks the
+upstream stack). Each pin sits on a small cleared disc of paper (~88% opacity) so it
+reads over water lines and town names. Pins scale up with zoom in the atlas (~0.85 at
+z3 → 1.2 at z11) — past the survey zooms the sheet is deliberately empty, so the pins
+and their labels ARE the map: unclustered atlas sites label themselves in italic
+Newsreader past z8.5. Active/story: filled --ink with a 1px offset ring. Status:
+construction = --wash-ochre ring; planned = dashed ring. Chokepoint monopoly sites get
+a small red tick. The filter panel's mega tabs carry matching wash swatches — the
+legend is the UI. Clusters: a circled count in Plex Mono, drawn like a survey marker;
+2–4 count campus groups draw smaller (a pin with a badge, not a regional cluster).
+Cluster radius is small (~22px) so metros decompose by z7–9; clicking a regional
+cluster FRAMES ITS CONTENTS (fitBounds over the member sites — one click, every pin
+placed), while true co-located campus groups spiderfy in place. Never a zoom ladder.
 
 **Story-mode density rule:** only the active beat's sites at full ink; all other sites at
 ≤12% opacity or hidden. Atlas mode shows everything.

@@ -112,6 +112,10 @@ Rob can open on his phone.
       contrast + aria-hidden focusables. Known leftover: Turbopack duplicates the
       sites module across the two lazy map chunks, ~87 KB gz extra on the handoff
       path — revisit if it ever matters.)
+- [x] Map visual pass from Rob's 2026-06-11 feedback: settlement label hierarchy,
+      pin visibility (wash interiors, cleared disc, zoom scaling, atlas site labels),
+      cluster decomposition + frame-contents clicks, impressionist color (mega-layer
+      pin washes, sea-glass water, teal coast band). Spec amended in DESIGN.md §map.
 
 ## Phase 6 — Verify & launch
 
@@ -136,6 +140,35 @@ Rob can open on his phone.
 ## Session log
 
 <!-- newest first: YYYY-MM-DD — what was done / what's next / open questions -->
+
+- 2026-06-11 (map visual pass) — **Rob's four map issues, all addressed** (his list:
+  weird town names / invisible sites / cluster zoom-ladder / wants tasteful color;
+  he picked mega-layer pin washes + teal water/coast, declined red journey thread
+  and tinted clusters). (1) Labels: three-tier settlement hierarchy calibrated on
+  real symbolrank (Boston 7 / Worcester 10 / suburbs 12-14) — cities ≤8 large
+  ink-strong, towns 9-11 quiet, villages ≥12 small-italic only past z10.75; Boston
+  metro went from ~108 uniform names to Boston + 12 towns. Gotcha worth remembering:
+  Mapbox places symbols from the LAST style layer first, so layer order is
+  village→town→city→country to make big names win collisions (the city tier was
+  silently losing to towns until reordered). (2) Pins: redrawn at 30px box —
+  wash-tinted interiors by mega layer (Deployment stays paper: datacenters as base
+  condition, color marks the upstream), 88%-paper cleared disc under each, stroke
+  1.5, zoom-scaled in atlas, italic site self-labels past z8.5, filter tabs carry
+  matching swatches as legend. (3) Clusters: radius 38→22 (metros decompose z7-9,
+  campus pairs stay as small "2" badges), cluster click now getClusterLeaves →
+  fitBounds the contents (Bay Area "25" → one click → all 12+ named pins framed at
+  z10.5) or spiderfies tight groups; no more zoom ladder. (4) Color: water-tint
+  (teal 7% over paper-shade), blurred teal coast band ≤z8, water-edge ink softens
+  inland at mid-zoom (pond confetti gone — this also fixed half of issue 1's noise),
+  graticule now rules over water too. Atlas opens at z1.45 with country labels on
+  from the start (was an anonymous world at z1.25). Journey line nudged 1→1.15px.
+  Verified in real Chrome (Boston/Bay Area/SW-US/Taiwan/world + cluster-click +
+  spiderfy flows); build + tsc clean. **Tooling note for future sessions:** Mapbox
+  GL cannot finish loading in a hidden/backgrounded tab (rAF never fires) — the
+  in-app preview browser and background Chrome tabs both hit this; drive
+  `map._render()` via a MessageChannel pump or use a visible tab. **Next:** Rob
+  eyeballs the deploy on his phone — label density/teal strength/wash opacities are
+  all single-constant tunes. Then plates (Phase 4) and his Phase 3.5 copy read.
 
 - 2026-06-11 (later) — **Atlas lock-in replaces cooperative gestures** (Rob's call:
   "end the narrative, lock in the map, press back"). The colophon moved ABOVE the

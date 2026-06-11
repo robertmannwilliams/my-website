@@ -1,7 +1,9 @@
 // The "paper & ink" Mapbox style — DESIGN.md §The map.
-// A plate from a vintage atlas: cream land, recessed-paper water with ink
-// coastlines, dashed drafting borders, a faint graticule at low zoom,
-// Newsreader place labels (self-hosted SDF glyphs in public/map-fonts/).
+// A plate from a vintage atlas: cream land, recessed-paper water with a
+// sea-glass teal wash and ink coastlines, a soft teal band hugging the
+// shore at plate zooms, dashed drafting borders, a faint graticule, and a
+// three-tier settlement label hierarchy (cities > towns > villages) in
+// Newsreader (self-hosted SDF glyphs in public/map-fonts/).
 // No satellite, no terrain, no POIs, no roads.
 
 import type { StyleSpecification } from "mapbox-gl";
@@ -11,6 +13,7 @@ const PAPER_SHADE = "#EFE9D8";
 const INK = "#2B4A8C";
 const INK_STRONG = "#1C3263";
 const INK_FAINT = "#9DACC9";
+const TEAL = "#4E7E74";
 
 const SERIF = ["Newsreader Regular"];
 const SERIF_ITALIC = ["Newsreader Italic"];
@@ -73,6 +76,22 @@ export function buildPaperStyle(glyphsOrigin: string): StyleSpecification {
         paint: { "background-color": PAPER },
       },
       {
+        id: "water",
+        type: "fill",
+        source: "streets",
+        "source-layer": "water",
+        paint: { "fill-color": PAPER_SHADE },
+      },
+      {
+        // Sea-glass: a faint teal watercolor over the recessed paper.
+        id: "water-tint",
+        type: "fill",
+        source: "streets",
+        "source-layer": "water",
+        paint: { "fill-color": TEAL, "fill-opacity": 0.07 },
+      },
+      {
+        // Ruled over land AND water, like a printed plate.
         id: "graticule",
         type: "line",
         source: "graticule",
@@ -88,14 +107,47 @@ export function buildPaperStyle(glyphsOrigin: string): StyleSpecification {
         },
       },
       {
-        id: "water",
-        type: "fill",
+        // The hand-tinted plate edge: a soft teal band hugging the shore.
+        // Gone by z8 so it never rings inland ponds.
+        id: "coast-band",
+        type: "line",
+        source: "streets",
+        "source-layer": "water",
+        maxzoom: 8,
+        paint: {
+          "line-color": TEAL,
+          "line-width": ["interpolate", ["linear"], ["zoom"], 1, 4, 7, 8],
+          "line-blur": 4,
+          "line-opacity": [
+            "interpolate", ["linear"], ["zoom"],
+            1, 0.16,
+            6.5, 0.13,
+            8, 0,
+          ],
+        },
+      },
+      {
+        // The ink coastline. Softens at mid zoom so inland pond/river
+        // polygons stop shouting over the data marks.
+        id: "water-edge",
+        type: "line",
         source: "streets",
         "source-layer": "water",
         paint: {
-          "fill-color": PAPER_SHADE,
-          // The ink coastline: a hairline outline on every water polygon.
-          "fill-outline-color": INK,
+          "line-color": INK,
+          "line-width": [
+            "interpolate", ["linear"], ["zoom"],
+            1, 0.6,
+            8, 0.8,
+            12, 1.1,
+          ],
+          "line-opacity": [
+            "interpolate", ["linear"], ["zoom"],
+            1, 0.95,
+            6, 0.85,
+            8, 0.5,
+            12, 0.42,
+          ],
         },
       },
       {
@@ -175,11 +227,119 @@ export function buildPaperStyle(glyphsOrigin: string): StyleSpecification {
         },
       },
       {
+        id: "village-label",
+        type: "symbol",
+        source: "streets",
+        "source-layer": "place_label",
+        minzoom: 10.75,
+        maxzoom: 15,
+        filter: [
+          "all",
+          ["==", ["get", "class"], "settlement"],
+          WORLDVIEW as unknown as boolean,
+          [">=", ["get", "symbolrank"], 12],
+          // Trickle in by rank so the sheet never floods at once.
+          [
+            "step", ["zoom"],
+            ["<=", ["get", "symbolrank"], 13],
+            11.75, ["<=", ["get", "symbolrank"], 15],
+            12.75, true,
+          ],
+        ],
+        layout: {
+          "symbol-sort-key": ["get", "symbolrank"],
+          "text-field": ["coalesce", ["get", "name_en"], ["get", "name"]],
+          "text-font": SERIF_ITALIC as unknown as string[],
+          "text-size": [
+            "interpolate", ["linear"], ["zoom"],
+            10.75, 10.5,
+            13, 13,
+          ],
+          "text-letter-spacing": 0.03,
+          "text-max-width": 8,
+          "text-padding": 10,
+        },
+        paint: {
+          "text-color": INK,
+          "text-opacity": 0.62,
+          "text-halo-color": PAPER,
+          "text-halo-width": 1,
+        },
+      },
+      {
+        id: "town-label",
+        type: "symbol",
+        source: "streets",
+        "source-layer": "place_label",
+        minzoom: 6,
+        maxzoom: 14,
+        filter: [
+          "all",
+          ["==", ["get", "class"], "settlement"],
+          WORLDVIEW as unknown as boolean,
+          [">=", ["get", "symbolrank"], 9],
+          ["<=", ["get", "symbolrank"], 11],
+        ],
+        layout: {
+          "symbol-sort-key": ["get", "symbolrank"],
+          "text-field": ["coalesce", ["get", "name_en"], ["get", "name"]],
+          "text-font": SERIF as unknown as string[],
+          "text-size": [
+            "interpolate", ["linear"], ["zoom"],
+            6, 10.5,
+            10, 12.5,
+            13, 14.5,
+          ],
+          "text-letter-spacing": 0.04,
+          "text-max-width": 8,
+          "text-padding": 6,
+        },
+        paint: {
+          "text-color": INK,
+          "text-opacity": 0.85,
+          "text-halo-color": PAPER,
+          "text-halo-width": 1,
+        },
+      },
+      {
+        id: "city-label",
+        type: "symbol",
+        source: "streets",
+        "source-layer": "place_label",
+        minzoom: 3.5,
+        maxzoom: 14,
+        filter: [
+          "all",
+          ["==", ["get", "class"], "settlement"],
+          WORLDVIEW as unknown as boolean,
+          ["<=", ["get", "symbolrank"], 8],
+        ],
+        layout: {
+          "symbol-sort-key": ["get", "symbolrank"],
+          "text-field": ["coalesce", ["get", "name_en"], ["get", "name"]],
+          "text-font": SERIF as unknown as string[],
+          "text-size": [
+            "interpolate", ["linear"], ["zoom"],
+            4, 12,
+            8, 15,
+            11, 17,
+          ],
+          "text-letter-spacing": 0.06,
+          "text-max-width": 8,
+          "text-padding": 3,
+        },
+        paint: {
+          "text-color": INK_STRONG,
+          "text-halo-color": PAPER,
+          "text-halo-width": 1.1,
+        },
+      },
+      {
         id: "country-label",
         type: "symbol",
         source: "streets",
         "source-layer": "place_label",
-        minzoom: 1.4,
+        minzoom: 1,
         maxzoom: 8,
         filter: [
           "all",
@@ -193,6 +353,7 @@ export function buildPaperStyle(glyphsOrigin: string): StyleSpecification {
           ],
         ],
         layout: {
+          "symbol-sort-key": ["get", "symbolrank"],
           "text-field": ["coalesce", ["get", "name_en"], ["get", "name"]],
           "text-font": SERIF as unknown as string[],
           "text-transform": "uppercase",
@@ -211,43 +372,12 @@ export function buildPaperStyle(glyphsOrigin: string): StyleSpecification {
           "text-halo-width": 1,
         },
       },
-      {
-        id: "settlement-label",
-        type: "symbol",
-        source: "streets",
-        "source-layer": "place_label",
-        minzoom: 4,
-        maxzoom: 12,
-        filter: [
-          "all",
-          ["==", ["get", "class"], "settlement"],
-          WORLDVIEW as unknown as boolean,
-          [
-            "step", ["zoom"],
-            ["<=", ["get", "symbolrank"], 6],
-            6, ["<=", ["get", "symbolrank"], 10],
-            8, ["<=", ["get", "symbolrank"], 14],
-            10, true,
-          ],
-        ],
-        layout: {
-          "text-field": ["coalesce", ["get", "name_en"], ["get", "name"]],
-          "text-font": SERIF as unknown as string[],
-          "text-size": [
-            "interpolate", ["linear"], ["zoom"],
-            4, 10.5,
-            8, 13,
-            11, 15,
-          ],
-          "text-letter-spacing": 0.04,
-          "text-max-width": 8,
-        },
-        paint: {
-          "text-color": INK,
-          "text-halo-color": PAPER,
-          "text-halo-width": 1,
-        },
-      },
+      // ---- Settlement labels: a three-tier atlas hierarchy. A vintage
+      // plate shows a few names in distinct voices, not a gazetteer wall:
+      // the metro anchor largest in ink-strong, towns quieter, villages
+      // small italic and late — lower ranks always lose the fight for
+      // space. Tier cuts calibrated against streets-v8 symbolrank (Boston
+      // metro: Boston 7, Worcester/Cambridge 10-11, suburbs 12-14).
     ],
   };
 }

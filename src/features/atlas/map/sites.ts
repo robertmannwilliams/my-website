@@ -139,6 +139,7 @@ export function toScenarioFeatureCollection(
         name: s.name,
         status: s.status,
         monopoly: s.chokepoint_severity === "monopoly",
+        mega: s.mega_layer,
         scenario: classifyForScenario(s, scenario),
       },
       geometry: { type: "Point", coordinates: [s.lng, s.lat] },

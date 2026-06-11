@@ -53,6 +53,7 @@ function toFeatureCollection(sites: StorySite[]): GeoJSON.FeatureCollection {
         name: s.name,
         status: s.status,
         monopoly: s.monopoly,
+        mega: s.mega,
       },
       geometry: { type: "Point", coordinates: [s.lng, s.lat] },
     })),
@@ -140,9 +141,9 @@ export default function StoryMap({
         source: "journey",
         paint: {
           "line-color": INK,
-          "line-width": 1,
+          "line-width": 1.15,
           "line-dasharray": [1.5, 2.6],
-          "line-opacity": 0.45,
+          "line-opacity": 0.5,
         },
       });
       map.addLayer({
@@ -299,6 +300,7 @@ export default function StoryMap({
               name: s.name,
               status: s.status,
               monopoly: s.chokepoint_severity === "monopoly",
+              mega: s.mega_layer,
             },
             geometry: { type: "Point", coordinates: [s.lng, s.lat] },
           })),

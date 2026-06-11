@@ -21,6 +21,20 @@ const INK_STRONG = "#1C3263";
 const MONO_MEDIUM = ["IBM Plex Mono Medium"];
 const CLUSTER_MAX_ZOOM = 13;
 
+/** Pins grow with zoom: roughly today's size at survey zooms, then larger
+ *  as the sheet empties out (we draw no roads — past ~z10 the pins and
+ *  their labels ARE the map). */
+const PIN_SIZE = [
+  "interpolate", ["linear"], ["zoom"],
+  3, 0.85,
+  8, 1,
+  11, 1.2,
+] as const;
+
+/** Co-located campuses (the 41 near-identical pairs) spiderfy instead of
+ *  zooming; anything spread wider frames its contents on click. */
+const CAMPUS_SPAN_DEG = 0.02;
+
 export interface AtlasMapProps {
   data: GeoJSON.FeatureCollection;
   /** Non-null switches the atlas into scenario view: clustering off,
@@ -34,9 +48,11 @@ export interface AtlasMapProps {
   onMapReady?: (map: mapboxgl.Map) => void;
 }
 
+// Framed on the inhabited world (mercator wastes half its canvas on the
+// poles), high enough that country names are on the sheet from the start.
 const WORLD_VIEW = {
-  center: [18, 26] as [number, number],
-  zoom: 1.25,
+  center: [12, 30] as [number, number],
+  zoom: 1.45,
 };
 
 export function prefersReducedMotion(): boolean {
@@ -168,7 +184,9 @@ export default function AtlasMap({
         data: dataRef.current,
         cluster: true,
         clusterMaxZoom: CLUSTER_MAX_ZOOM,
-        clusterRadius: 38,
+        // Small radius: metros decompose by ~z7-9; only true campus
+        // neighbors stay grouped (and spiderfy on click).
+        clusterRadius: 22,
       });
       map.addSource("spider", {
         type: "geojson",
@@ -184,7 +202,7 @@ export default function AtlasMap({
         paint: {
           "circle-radius": [
             "step", ["get", "point_count"],
-            13.5, 25, 16.5, 60, 19.5, 150, 23.5,
+            11.5, 5, 14.5, 25, 17.5, 60, 20.5, 150, 24.5,
           ],
           "circle-color": "rgba(0,0,0,0)",
           "circle-stroke-color": INK,
@@ -198,9 +216,11 @@ export default function AtlasMap({
         source: "sites",
         filter: ["has", "point_count"],
         paint: {
+          // Campus pairs (2-4) draw small, like a pin with a badge;
+          // regional clusters keep the survey-marker presence.
           "circle-radius": [
             "step", ["get", "point_count"],
-            11, 25, 14, 60, 17, 150, 21,
+            9, 5, 12, 25, 15, 60, 18, 150, 22,
           ],
           "circle-color": PAPER,
           "circle-opacity": 0.95,
@@ -216,7 +236,7 @@ export default function AtlasMap({
         layout: {
           "text-field": ["get", "point_count_abbreviated"],
           "text-font": MONO_MEDIUM,
-          "text-size": 10.5,
+          "text-size": ["step", ["get", "point_count"], 9.5, 5, 10.5],
           "text-allow-overlap": true,
         },
         paint: { "text-color": INK_STRONG },
@@ -231,6 +251,7 @@ export default function AtlasMap({
           "icon-image": PIN_ICON_EXPRESSION as unknown as string,
           "icon-allow-overlap": true,
           "icon-padding": 0,
+          "icon-size": PIN_SIZE as unknown as number,
         },
       });
 
@@ -255,6 +276,7 @@ export default function AtlasMap({
           "icon-image": PIN_ICON_EXPRESSION as unknown as string,
           "icon-allow-overlap": true,
           "icon-padding": 0,
+          "icon-size": PIN_SIZE as unknown as number,
         },
       });
 
@@ -273,6 +295,7 @@ export default function AtlasMap({
           "icon-image": PIN_ICON_EXPRESSION as unknown as string,
           "icon-allow-overlap": true,
           "icon-padding": 0,
+          "icon-size": PIN_SIZE as unknown as number,
           visibility: "none",
         },
         paint: { "icon-opacity": 0.8 },
@@ -286,6 +309,7 @@ export default function AtlasMap({
           "icon-image": PIN_ICON_EXPRESSION as unknown as string,
           "icon-allow-overlap": true,
           "icon-padding": 0,
+          "icon-size": PIN_SIZE as unknown as number,
           visibility: "none",
         },
         paint: { "icon-opacity": 0.2 },
@@ -297,7 +321,7 @@ export default function AtlasMap({
         filter: ["==", ["get", "scenario"], "disrupted"],
         layout: { visibility: "none" },
         paint: {
-          "circle-radius": 10,
+          "circle-radius": 12,
           "circle-color": "rgba(0,0,0,0)",
           "circle-stroke-color": "#C8502E",
           "circle-stroke-width": 1.6,
@@ -313,7 +337,10 @@ export default function AtlasMap({
           "icon-image": PIN_ICON_EXPRESSION as unknown as string,
           "icon-allow-overlap": true,
           "icon-padding": 0,
-          "icon-size": 1.15,
+          "icon-size": [
+            "interpolate", ["linear"], ["zoom"],
+            3, 0.98, 8, 1.15, 11, 1.38,
+          ] as unknown as number,
           visibility: "none",
         },
       });
@@ -332,6 +359,35 @@ export default function AtlasMap({
           ] as unknown as string,
           "icon-allow-overlap": true,
           "icon-padding": 0,
+          "icon-size": PIN_SIZE as unknown as number,
+        },
+      });
+
+      // Past the survey zooms the sheet is deliberately empty (no roads),
+      // so the sites label themselves — finding becomes reading.
+      map.addLayer({
+        id: "site-labels",
+        type: "symbol",
+        source: "sites",
+        minzoom: 8.5,
+        filter: ["!", ["has", "point_count"]],
+        layout: {
+          "text-field": ["get", "name"],
+          "text-font": ["Newsreader Italic"],
+          "text-size": [
+            "interpolate", ["linear"], ["zoom"],
+            8.5, 12,
+            11, 14,
+          ],
+          "text-anchor": "top",
+          "text-offset": [0, 1.05],
+          "text-max-width": 9,
+          "text-padding": 2,
+        },
+        paint: {
+          "text-color": INK_STRONG,
+          "text-halo-color": PAPER,
+          "text-halo-width": 1.2,
         },
       });
 
@@ -339,6 +395,7 @@ export default function AtlasMap({
       const tooltip = tooltipRef.current;
       const pinLayers = [
         "site-pins",
+        "site-labels",
         "spider-pins",
         "site-selected",
         "scenario-disrupted",
@@ -384,21 +441,54 @@ export default function AtlasMap({
             number,
           ];
           const source = map.getSource("sites") as mapboxgl.GeoJSONSource;
-          source.getClusterExpansionZoom(clusterId, (err, expansionZoom) => {
-            if (err || expansionZoom == null) return;
-            if (
-              expansionZoom > CLUSTER_MAX_ZOOM ||
-              map.getZoom() >= expansionZoom
-            ) {
-              spiderfy(clusterId, center);
-            } else {
-              clearSpider();
-              map.easeTo({
-                center,
-                zoom: expansionZoom + 0.3,
-                duration: prefersReducedMotion() ? 0 : 550,
+          // One click should end with the contents visible — never a
+          // zoom ladder. Campus groups annotate in place (spiderfy);
+          // regional clusters frame all their sites at once.
+          source.getClusterLeaves(clusterId, 100, 0, (err, leaves) => {
+            if (err || !leaves?.length) return;
+            const coords = leaves.map(
+              (l) => (l.geometry as GeoJSON.Point).coordinates as [number, number],
+            );
+            const bounds = coords.reduce(
+              (b, c) => b.extend(c),
+              new mapboxgl.LngLatBounds(coords[0], coords[0]),
+            );
+            const span = Math.max(
+              bounds.getEast() - bounds.getWest(),
+              bounds.getNorth() - bounds.getSouth(),
+            );
+            const reduced = prefersReducedMotion();
+            if (span < CAMPUS_SPAN_DEG) {
+              if (map.getZoom() >= 8) {
+                placeSpider(leaves as GeoJSON.Feature[], center);
+                return;
+              }
+              // Too far out for a legible fan: step in once, then fan.
+              map.once("moveend", () => {
+                const pt = map.project(center as mapboxgl.LngLatLike);
+                const f = map.queryRenderedFeatures(
+                  [[pt.x - 12, pt.y - 12], [pt.x + 12, pt.y + 12]],
+                  { layers: ["clusters"] },
+                )[0];
+                if (f?.properties?.cluster_id != null) {
+                  spiderfy(
+                    f.properties.cluster_id as number,
+                    (f.geometry as GeoJSON.Point).coordinates as [number, number],
+                  );
+                }
               });
+              map.easeTo({ center, zoom: 8.6, duration: reduced ? 0 : 600 });
+              return;
             }
+            clearSpider();
+            const wide = map.getContainer().clientWidth > 720;
+            map.fitBounds(bounds, {
+              padding: wide
+                ? { top: 90, bottom: 90, left: 330, right: 70 }
+                : { top: 80, bottom: 150, left: 36, right: 36 },
+              maxZoom: 10.5,
+              duration: reduced ? 0 : 700,
+            });
           });
           return;
         }

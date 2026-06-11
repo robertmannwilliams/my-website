@@ -111,6 +111,13 @@ export default function FilterPanel({
             className="atlas-mono atlas-filters__tab"
             onClick={() => set({ mega, layer: "all" })}
           >
+            {mega !== "all" && (
+              <span
+                className="atlas-filters__swatch"
+                data-mega={mega}
+                aria-hidden
+              />
+            )}
             {mega === "all" ? "All" : mega}
             <span className="atlas-filters__count">{megaCounts[mega]}</span>
           </button>

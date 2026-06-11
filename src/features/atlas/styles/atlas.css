@@ -473,6 +473,36 @@
   font-size: 0.56rem;
 }
 
+/* Legend swatches on the mega tabs — the same watercolor the pins carry. */
+.atlas-filters__swatch {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  align-self: center;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+}
+
+.atlas-filters__swatch[data-mega="Inputs"] {
+  background: color-mix(in srgb, var(--wash-ochre) 32%, var(--paper));
+}
+
+.atlas-filters__swatch[data-mega="Toolchain"] {
+  background: color-mix(in srgb, var(--wash-red) 32%, var(--paper));
+}
+
+.atlas-filters__swatch[data-mega="Silicon"] {
+  background: color-mix(in srgb, var(--ink) 32%, var(--paper));
+}
+
+.atlas-filters__swatch[data-mega="Systems"] {
+  background: color-mix(in srgb, var(--wash-teal) 32%, var(--paper));
+}
+
+.atlas-filters__tab[aria-selected="true"] .atlas-filters__swatch {
+  border-color: var(--paper);
+}
+
 .atlas-filters__row {
   display: flex;
   flex-direction: column;
