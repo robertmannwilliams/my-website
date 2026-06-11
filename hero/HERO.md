@@ -78,15 +78,21 @@ than shipping it.
 7. **Proof strip:** `scripts/hero-proof.mjs` renders the master field at
    20/50/80/100% completion into one wide PNG → `hero/proof-strip.png`.
 
-- [x] Pipeline runs on Rob's sources without manual tweaking. (Reworked
-      2026-06-11 per Rob's gate notes: Hertzmann-style error-driven refinement
-      in 4 tiers r=24/12/6/3 with per-tier caps, 34,540 strokes total, 563 KB
-      gz; tensor orientation at tier scale, no global lean; computed order =
-      569-stroke toning wash → per-tier background-to-foreground passes →
-      accent tail (warm/dark) opening at 80.6%; order heatmap committed at
-      hero/order-heatmap.png.)
+- [x] Pipeline runs on Rob's sources without manual tweaking. (Reworked twice
+      per Rob's gate notes. Round 1 notes → Hertzmann-style error-driven
+      refinement, tier-scale tensor orientation, computed order with toning
+      wash + forced-late accents. Round 2 notes → oil-paint rendering: tier-0
+      tiles the full canvas at ~38% overlap (coverage 100.0% interior), curved
+      tapered stamp strokes (5 procedural bristle stamps swept 1-3 segments
+      along a bezier), 90-96% opacity wet blending + linen grain, footprint
+      area-average color with chroma restore, then global value+chroma
+      calibration to the master histogram — converged in 3 autonomous rounds
+      (contact sheets 1-3 committed): mean RGB within 1/255 per channel, sat
+      24.4% vs master 25.4%, 38,140 strokes. strokes.bin is 651 KB gz against
+      the original 600 KB budget — overage authorized by Rob's gate-2 note,
+      logged in PLAN.md.)
 - [x] Proof strip committed and shown to Rob
-- [ ] **GATE: Rob approves the strip** (round 2 pending — rework above)
+- [ ] **GATE: Rob approves the strip** (round 3 pending — oil-paint rework above)
 
 ## Phase 2 — The player
 

@@ -141,6 +141,28 @@ Rob can open on his phone.
 
 <!-- newest first: YYYY-MM-DD — what was done / what's next / open questions -->
 
+- 2026-06-11 (hero, gate round 2 → oil-paint rework) — **Rob rejected round 2
+  ("pointillist confetti, not oil paint") with a render-rework spec; built and
+  converged it in the 3 authorized autonomous rounds.** New brush system
+  (scripts/hero-brush.mjs, shared by decompose/proof/player): 5 procedural
+  bristle-textured stamp alphas swept 1-3 segments along a quadratic bezier
+  (bend from coherence), value drift along each stroke, 90-96% opacity wet
+  blending, linen-grain overlay tile. Tier-0 now TILES the whole canvas at
+  ~38% overlap (interior coverage 100.0% measured by an alpha-accumulation
+  pass) and three error-driven tiers refine on top (caps 5k/10k/22k →
+  38,140 strokes). Color = footprint area-average (kills the warm-fleck bias)
+  + per-stroke chroma restore to footprint mean sat, then a global half-res
+  calibration render sets per-channel gains (1.029/1.035/1.028) and a chroma
+  ×1.234 so the render histogram lands ON the master: mean RGB (159,154,152)
+  vs (158,154,153), sat 24.4% vs 25.4%. Contact sheets committed for all 3
+  rounds (hero/contact-sheet-{1,2,3}.png: full view + flags/workers/tower
+  1:1 crops, master vs render). **Budget note (authorized by Rob's gate-2
+  instruction): strokes.bin is 651 KB gz vs the original 600 KB budget —
+  packing already bit-packs alpha+stamp and bend+drift and stores variant
+  colors as int8 deltas; the remaining weight is the 38k stroke count the
+  coverage + legibility contract needs.** Gate round 3 pending on the new
+  proof strip. Then Phases 2-4.
+
 - 2026-06-11 (hero, separate project — spec in hero/HERO.md) — **Phase 1
   decomposition pipeline built, reworked once per Rob's gate notes, awaiting
   gate round 2.** v1 (single-pass dart sampling, 12.3k strokes) rejected at the
