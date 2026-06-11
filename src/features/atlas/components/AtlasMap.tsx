@@ -26,6 +26,9 @@ export interface AtlasMapProps {
   /** Non-null switches the atlas into scenario view: clustering off,
    *  disrupted sites flagged red, impacted layers faded. */
   scenarioData: GeoJSON.FeatureCollection | null;
+  /** Page-end lock: when true the map owns scroll/drag gestures; while
+   *  false (approaching) it must never steal the page scroll. */
+  locked: boolean;
   selectedId: string | null;
   onSelect: (siteId: string | null) => void;
   onMapReady?: (map: mapboxgl.Map) => void;
@@ -46,6 +49,7 @@ export function prefersReducedMotion(): boolean {
 export default function AtlasMap({
   data,
   scenarioData,
+  locked,
   selectedId,
   onSelect,
   onMapReady,
@@ -59,6 +63,7 @@ export default function AtlasMap({
   >(null);
   const dataRef = useRef(data);
   const scenarioRef = useRef(scenarioData);
+  const lockedRef = useRef(locked);
   const selectedRef = useRef(selectedId);
   const onSelectRef = useRef(onSelect);
   const onMapReadyRef = useRef(onMapReady);
@@ -67,6 +72,7 @@ export default function AtlasMap({
   useEffect(() => {
     dataRef.current = data;
     scenarioRef.current = scenarioData;
+    lockedRef.current = locked;
     selectedRef.current = selectedId;
     onSelectRef.current = onSelect;
     onMapReadyRef.current = onMapReady;
@@ -93,9 +99,10 @@ export default function AtlasMap({
       dragRotate: false,
       pitchWithRotate: false,
       touchPitch: false,
-      // The atlas sits mid-page: plain scrolling must scroll the PAGE.
-      // Zoom needs cmd/ctrl+wheel; panning on touch needs two fingers.
-      cooperativeGestures: true,
+      // Gesture-dead until the page bottoms out (the `locked` effect
+      // below) — while approaching, scroll belongs to the page.
+      scrollZoom: false,
+      dragPan: false,
     });
     map.touchZoomRotate.disableRotation();
     map.addControl(
@@ -408,6 +415,10 @@ export default function AtlasMap({
         selectedRef.current ?? "__none__",
       ]);
       applyScenarioRef.current?.(scenarioRef.current);
+      if (lockedRef.current) {
+        map.scrollZoom.enable();
+        map.dragPan.enable();
+      }
       map.resize();
       onMapReadyRef.current?.(map);
     });
@@ -474,6 +485,20 @@ export default function AtlasMap({
   useEffect(() => {
     applyScenarioRef.current?.(scenarioData);
   }, [scenarioData]);
+
+  // Page-end lock: hand the gestures to the map, take them back on exit.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (locked) {
+      map.scrollZoom.enable();
+      map.dragPan.enable();
+    } else {
+      map.scrollZoom.disable();
+      map.dragPan.disable();
+    }
+    map.getCanvas().style.cursor = locked ? "" : "default";
+  }, [locked]);
 
   return (
     <div ref={containerRef} className="atlas-map">

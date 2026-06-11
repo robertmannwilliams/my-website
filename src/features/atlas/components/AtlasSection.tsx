@@ -46,6 +46,7 @@ export default function AtlasSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const mapRef = useRef<MapboxMap | null>(null);
   const [nearViewport, setNearViewport] = useState(false);
+  const [locked, setLocked] = useState(false);
   const [filters, setFilters] = useState<AtlasFilters>(DEFAULT_FILTERS);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [scenarioOn, setScenarioOn] = useState(false);
@@ -89,6 +90,30 @@ export default function AtlasSection() {
       window.removeEventListener("scroll", onScroll);
     };
   }, [nearViewport]);
+
+  // Lock-in: the atlas is the last thing on the page. Once the reader
+  // bottoms out, the map owns the gestures (plain scroll zooms, drag pans)
+  // and the Back chip is the way home. During the approach the map stays
+  // gesture-dead so it can't grab the page scroll. Hysteresis avoids
+  // flapping right at the boundary.
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const compute = () => {
+      const bottom = el.getBoundingClientRect().bottom;
+      const vh = window.innerHeight;
+      setLocked((prev) =>
+        prev ? bottom < vh + 90 : bottom <= vh + 4,
+      );
+    };
+    compute();
+    window.addEventListener("scroll", compute, { passive: true });
+    window.addEventListener("resize", compute);
+    return () => {
+      window.removeEventListener("scroll", compute);
+      window.removeEventListener("resize", compute);
+    };
+  }, []);
 
   const shownSites = useMemo(
     () => filterSites(allSites, filters),
@@ -151,11 +176,20 @@ export default function AtlasSection() {
               data={data}
               scenarioData={scenarioData}
               selectedId={selectedId}
+              locked={locked}
               onSelect={setSelectedId}
               onMapReady={(map) => {
                 mapRef.current = map;
               }}
             />
+            <a
+              href="#colophon"
+              className={`atlas-mono atlas-section__back${locked ? " is-shown" : ""}`}
+              aria-hidden={!locked}
+              tabIndex={locked ? 0 : -1}
+            >
+              ↑ Back to the story
+            </a>
             <FilterPanel
               filters={filters}
               onChange={(next) => {

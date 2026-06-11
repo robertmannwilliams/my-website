@@ -36,9 +36,9 @@ export default function AIStackStoryPage() {
 
       <StoryFlow beats={flow.beats} sites={flow.sites} />
 
-      <AtlasSection />
-
-      <footer className="story story-colophon">
+      {/* The drawing is signed before the map is handed over — the atlas is
+          the literal end of the page, where it can own the gestures. */}
+      <footer className="story story-colophon" id="colophon">
         <TitleBlock
           fields={[
             { label: "Project", value: "The Physical AI Stack" },
@@ -48,7 +48,7 @@ export default function AIStackStoryPage() {
           ]}
         />
         <p className="story-colophon__note atlas-annotation">
-          Figures in this draft are unverified; a sourcing pass precedes
+          Figures in this draft are mid-verification; a final pass precedes
           launch. Corrections welcome.
         </p>
         <nav className="story-colophon__links atlas-mono" aria-label="Related pages">
@@ -56,6 +56,8 @@ export default function AIStackStoryPage() {
           <Link href="/aistack/primer">Deep Dive: the full primer</Link>
         </nav>
       </footer>
+
+      <AtlasSection />
     </main>
   );
 }

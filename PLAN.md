@@ -137,6 +137,17 @@ Rob can open on his phone.
 
 <!-- newest first: YYYY-MM-DD — what was done / what's next / open questions -->
 
+- 2026-06-11 (later) — **Atlas lock-in replaces cooperative gestures** (Rob's call:
+  "end the narrative, lock in the map, press back"). The colophon moved ABOVE the
+  atlas, making the atlas the literal end of the page: story → wash-out → signed
+  colophon → the map, full stop. Map gestures (scrollZoom, dragPan) are disabled
+  during the approach so the canvas can never steal page scroll; when the page
+  bottoms out (section bottom ≤ viewport, with hysteresis) the lock engages — plain
+  wheel zooms, drag pans, like a real map — and a floating "↑ Back to the story"
+  chip (anchor to #colophon, smooth scroll) is the way home; scrolling back up
+  releases the lock. Verified the full cycle: approach=dead, bottom=live+chip,
+  back=released. cooperativeGestures and its hint CSS removed.
+
 - 2026-06-11 — **Story→atlas seam fixed** (Rob's report: "two full maps... stuck
   between scrolling and moving around the map"). Two causes, two fixes: (1) the
   story table now washes out to blank paper as the reader scrolls past the last

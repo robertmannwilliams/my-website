@@ -194,9 +194,9 @@
 /* ---------- Atlas mode ---------- */
 
 .atlas-section {
-  /* Real air after the story sheet ends — the break is part of the fix
-     for the story→atlas seam. */
-  margin-top: clamp(6rem, 16vh, 11rem);
+  /* The signed colophon sits between the story and the map; this is the
+     last stretch of paper before the page ends in the atlas. */
+  margin-top: clamp(3rem, 8vh, 5rem);
   border-top: 1px solid var(--ink);
   border-bottom: 1px solid var(--ink);
   position: relative;
@@ -213,14 +213,39 @@
   border-bottom: 1px solid var(--ink-faint);
 }
 
-/* Cooperative-gesture hints (mapbox), restyled to the drafting table. */
-.atlas-root .mapboxgl-scroll-zoom-blocker,
-.atlas-root .mapboxgl-touch-pan-blocker {
-  font-family: var(--font-plex-mono), monospace;
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  color: var(--paper);
-  background: color-mix(in srgb, var(--ink-strong) 78%, transparent);
+/* Lock-in escape hatch: appears when the map owns the gestures. */
+.atlas-section__back {
+  position: absolute;
+  z-index: 6;
+  top: 0.9rem;
+  left: 50%;
+  transform: translate(-50%, -0.4rem);
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  color: var(--ink-strong);
+  text-decoration: none;
+  padding: 0.45rem 0.85rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms ease-out, transform 300ms ease-out;
+}
+
+.atlas-section__back.is-shown {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+}
+
+.atlas-section__back:hover {
+  color: var(--wash-red);
+  border-color: var(--wash-red);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atlas-section__back {
+    transition: none;
+    transform: translate(-50%, 0);
+  }
 }
 
 .atlas-section__eyebrow {
