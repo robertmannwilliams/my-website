@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import type { HomeLink } from "@/content/homepage";
-import EntryPanorama from "@/components/home/EntryPanorama";
+import HeroPainting from "@/components/hero/HeroPainting";
 import styles from "./HomePage.module.css";
 
 interface HomePageExperienceProps {
@@ -45,7 +45,7 @@ export default function HomePageExperience({
       >
         <div className={styles.thresholdStage}>
           <h1 className={styles.srOnly}>Robert Williams</h1>
-          <EntryPanorama className={styles.panorama} />
+          <HeroPainting />
           <button className={styles.enterButton} type="button" onClick={handleEnter}>
             {copy.entryCue}
           </button>

@@ -99,36 +99,47 @@ than shipping it.
 `components/HeroPainting.tsx` (client component, canvas 2D first — only escalate to
 WebGL if the frame budget fails on a real phone):
 
-- [ ] Stroke renderer: each stroke drawn as a rotated rounded-rect/ellipse dab;
-      batch by setTransform; draw onto an offscreen canvas that accumulates, so
-      steady-state cost is compositing, not redrawing 12k strokes
-- [ ] Replay scheduler with tempo curve (ease: fast attack, slow finish; slight
-      per-stroke jitter so nothing feels mechanical)
-- [ ] Session-aware replay length (full vs 1.5s fast)
-- [ ] Reduced-motion + no-JS static paths; lazy-mount via IntersectionObserver
-- [ ] Acceptance: full performance on desktop + iPhone preview, 60fps steady state
+- [x] Stroke renderer: stamp-swept bezier dabs mirroring scripts/hero-brush.mjs
+      (the round-3 brush replaced the original capsule spec); accumulates onto
+      an offscreen canvas, steady-state cost is compositing only
+- [x] Replay scheduler with tempo curve (count(τ) = 1-(1-τ)^2.2; per-stroke
+      jitter is baked into the packed order)
+- [x] Session-aware replay length (full 5.5s vs 1.5s fast via sessionStorage)
+- [x] Reduced-motion (instant final-frame JPG, no replay/atmosphere) + no-JS
+      (<noscript> img); rAF pauses when tab hidden or hero off-screen (IO)
+- [ ] Acceptance: full performance on desktop + iPhone preview, 60fps steady
+      state (rides Rob's device review of the deploy — verified in desktop
+      Chrome via the dev skip() hook; replay tempo proven by the committed
+      replay-preview MP4s, which use the identical curve)
 
 ## Phase 3 — Atmosphere
 
-- [ ] Wind field: pointer velocity → local displacement with spring-back (strokes
-      near the pointer redraw from the live layer; cap the active set ~600 strokes)
-- [ ] Warm dapple following the pointer (temporary +L on affected strokes)
-- [ ] Press-and-hold pentimento: radial mask → underdrawing beneath; 600ms release
-- [ ] Touch equivalents; ensure page scroll is never hijacked (vertical pan passes
-      through; wind only on horizontal-ish movement)
-- [ ] All atmosphere disabled under reduced motion
+- [x] Wind field: pointer velocity → spring-back displacement, active set
+      capped at 600, spatial hash over stroke positions
+- [x] Warm dapple following the pointer (decaying +L with warm bias)
+- [x] Press-and-hold pentimento: radial destination-out mask fades paint to
+      ~25% over underdrawing.jpg (lazy-loaded on first pointerdown); 600ms
+      release
+- [x] Touch equivalents: touch-action pan-y (vertical scroll always passes
+      through), wind only on horizontal-ish touch movement
+- [x] All atmosphere disabled under reduced motion (and until the replay ends)
+- Feel-tuning (spring constants, dapple strength, hold radius) rides Rob's
+  device review.
 
 ## Phase 4 — World-keying + integration
 
-- [ ] Geo middleware/server component exposing visitor city + coords; Open-Meteo
-      fetch (timeout 1s, cached 30min) + visitor-local hour → variant pick per
-      Behavior §3; NYC fallback verified by faking absent headers
-- [ ] Crossfade rule: variant applies at load only — never mid-session swaps
-- [ ] Replace current homepage hero; keep page structure; final-frame `<img>`
-      fallback inside `<noscript>`; OG/meta updated to og.jpg
-- [ ] Lighthouse: no regression on LCP (the paper-color canvas + early static
-      fallback should keep LCP honest); a11y ≥ 95; verify Safari iOS
-- [ ] Session log updated; Rob reviews the Vercel preview on his phone
+- [x] /api/hero-geo route handler reads Vercel IP-geo headers (homepage stays
+      static); client picks variant from visitor clock + Open-Meteo (1s
+      timeout, 30min sessionStorage cache); NYC fallback verified by curling
+      with and without faked headers
+- [x] Variant applies at load only (decided before the first stroke, bounded
+      ~1.2s race; never swapped mid-session)
+- [x] Replaced EntryPanorama in the homepage threshold (page structure kept,
+      old files retained); <noscript> final-frame img; OG/meta → /hero/og.jpg
+- [ ] Lighthouse: architecture protects LCP (static page, paper canvas paints
+      immediately, hero assets fetch post-mount, async) — formal run + Safari
+      iOS check ride the deploy review
+- [x] Session log updated; Vercel deploy is live for Rob's phone review
 
 ## Notes for the build
 

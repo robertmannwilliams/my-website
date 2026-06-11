@@ -141,6 +141,36 @@ Rob can open on his phone.
 
 <!-- newest first: YYYY-MM-DD — what was done / what's next / open questions -->
 
+- 2026-06-11 (hero, Phases 2-4 — gate passed, hero SHIPPED to the homepage) —
+  **Rob passed gate 4 ("Pass — build on"); player, atmosphere, and
+  world-keying built and integrated in one pass.** `HeroPainting.tsx`:
+  parses strokes.bin v4, mirrors the hero-brush stamp renderer exactly
+  (sync-comment in both files), accumulates onto an offscreen canvas
+  (steady-state = composite only), tempo curve 1-(1-τ)^2.2 over 5.5s (1.5s
+  fast repeat via sessionStorage), pauses on hidden tab/off-screen and
+  re-anchors the clock by inverting the curve on resume, DPR capped at 2,
+  cover-crop windowing (phone = taller box, centered vertical crop).
+  Atmosphere: spring wind (K=90/C=13, ≤600 active strokes via spatial hash),
+  warm dapple decay, press-and-hold pentimento (radial destination-out to
+  underdrawing.jpg at 25% floor, 600ms release), touch-action pan-y so
+  scroll is never hijacked; everything off under reduced-motion (which gets
+  the final JPG instantly; no-JS gets a <noscript> img). World-keying:
+  /api/hero-geo reads Vercel headers (homepage stays static ○), client
+  races variant pick (clock + Open-Meteo, 30min cache) against a 1.2s
+  timeout — verified with curled fake headers (London) and the NYC
+  fallback; variant locks before the first stroke. Homepage threshold now
+  renders the painting (EntryPanorama retired, files kept; ENTER button and
+  structure untouched); OG/twitter images → /hero/og.jpg. Verified in real
+  Chrome via the dev `window.__hero.skip()` hook (full 46,748-stroke draw,
+  master variant via NYC fallback on a clear afternoon — correct); build +
+  tsc clean, homepage still static. **For Rob's phone review (the deploy is
+  live):** the full 5.5s performance on first load, the 1.5s fast replay on
+  return, drag a finger across the paint (wind), press-and-hold for the
+  underdrawing, and the dusk variant after 16:30 local / rain variant in
+  rain. Tuning knobs (spring, dapple, hold radius, tempo) are all single
+  constants at the top of HeroPainting.tsx. Lighthouse + iOS Safari check
+  ride this review.
+
 - 2026-06-11 (hero, gate round 3 → crisp layer + sequenced replay) — **Rob's
   gate-3 notes split into render quality (A) and replay feel (B); both built,
   high-pass convergence honest-but-short after the 3 authorized rounds.**
