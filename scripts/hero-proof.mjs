@@ -10,7 +10,7 @@ import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { applyGrain, drawStroke, generateGrainTile, makeScratch } from "./hero-brush.mjs";
+import { applyGrainAtop, drawStroke, generateGrainTile, makeScratch } from "./hero-brush.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const BIN = path.join(ROOT, "public", "hero", "strokes.bin");
@@ -116,7 +116,7 @@ async function main() {
         stamps, scratch,
       );
     }
-    if (stage === 1) applyGrain(pctx, grain, W, H, s.header.grain ?? 0.05);
+    if (stage === 1) applyGrainAtop(pctx, grain, W, H, s.header.grain ?? 0.05);
     const px = gutter + idx * (PANEL_W + gutter);
     ctx.drawImage(panel, px, gutter);
     ctx.fillStyle = INK;

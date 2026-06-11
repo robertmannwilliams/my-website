@@ -16,7 +16,6 @@ import { parseStrokes, type StrokeField } from "./heroStrokes";
 import { pickVariant } from "./heroVariant";
 import styles from "./HeroPainting.module.css";
 
-const PAPER = "#eee8da";
 const DPR_CAP = 2;
 const FULL_MS = 5500;
 const FAST_MS = 1500;
@@ -109,9 +108,10 @@ export default function HeroPainting({ className }: { className?: string }) {
       if (!accum) accum = document.createElement("canvas");
       accum.width = w;
       accum.height = h;
+      // transparent ground: the page IS the paper, so the painting floats
+      // and its stroke dissolve is the only boundary — no rectangle seam
       const a = accum.getContext("2d")!;
-      a.fillStyle = PAPER;
-      a.fillRect(0, 0, w, h);
+      a.clearRect(0, 0, w, h);
       // a resize mid- or post-performance repaints what's already drawn
       if (drawn > 0) drawRange(a, 0, drawn);
       composite();
@@ -200,13 +200,22 @@ export default function HeroPainting({ className }: { className?: string }) {
 
     function composite() {
       if (!accum) return;
+      ctx.clearRect(0, 0, view.w, view.h);
       const needsMask = hold > 0.001 && under;
       if (needsMask && under) {
-        // pentimento: underdrawing beneath, paint layer with a soft radial
-        // hole fading the strokes to ~25% around the held point
+        // pentimento: underdrawing beneath (clipped to the reveal circle so
+        // its paper never paints a rectangle), paint layer above with a soft
+        // radial hole fading the strokes to ~25% around the held point
         const uw = under.width, uh = under.height;
         const s2 = Math.max(view.w / uw, view.h / uh);
+        const R0 = 240 * dpr;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(holdAt.x, holdAt.y, R0, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.globalAlpha = Math.min(1, hold * 1.4);
         ctx.drawImage(under, (view.w - uw * s2) / 2, (view.h - uh * s2) / 2, uw * s2, uh * s2);
+        ctx.restore();
         if (!tmp) tmp = document.createElement("canvas");
         if (tmp.width !== view.w || tmp.height !== view.h) {
           tmp.width = view.w;
@@ -236,9 +245,10 @@ export default function HeroPainting({ className }: { className?: string }) {
         ctx.restore();
       }
       if (grainPattern && field) {
+        // linen rides the paint only (source-atop) — bare ground stays page
         ctx.save();
         ctx.globalAlpha = field.grain;
-        ctx.globalCompositeOperation = "multiply";
+        ctx.globalCompositeOperation = "source-atop";
         ctx.fillStyle = grainPattern;
         ctx.fillRect(0, 0, view.w, view.h);
         ctx.restore();
@@ -470,8 +480,12 @@ export default function HeroPainting({ className }: { className?: string }) {
         layout();
 
         if (reduced) {
-          // instant final frame: no replay, no atmosphere
-          const final = await loadImage(`/hero/final-${picked.variant in field.colors ? picked.variant : "master"}.jpg`);
+          // instant final frame: no replay, no atmosphere. The .webp carries
+          // alpha so the dissolve bleeds into the page like the live render.
+          const v = picked.variant in field.colors ? picked.variant : "master";
+          const final = await loadImage(`/hero/final-${v}.webp`).catch(() =>
+            loadImage(`/hero/final-${v}.jpg`),
+          );
           if (disposed || !accum) return;
           const a = accum.getContext("2d")!;
           const s2 = Math.max(view.w / final.width, view.h / final.height);
@@ -540,11 +554,11 @@ export default function HeroPainting({ className }: { className?: string }) {
       });
     }
 
-    // paper before anything arrives — the canvas IS the loading state
+    // transparent before anything arrives — the page's own paper IS the
+    // loading state; the first strokes arriving are the reveal
     canvas.width = 16;
     canvas.height = 9;
-    ctx.fillStyle = PAPER;
-    ctx.fillRect(0, 0, 16, 9);
+    ctx.clearRect(0, 0, 16, 9);
 
     const ro = new ResizeObserver(() => layout());
     ro.observe(box);
@@ -591,7 +605,7 @@ export default function HeroPainting({ className }: { className?: string }) {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           className={styles.fallback}
-          src="/hero/final-master.jpg"
+          src="/hero/final-master.webp"
           alt="Impressionist painting of an American city under construction."
         />
       </noscript>

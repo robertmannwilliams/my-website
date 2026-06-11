@@ -4,12 +4,14 @@
 
 .box {
   position: relative;
-  width: min(98vw, 82rem);
+  /* width clamp folds the old max-height in (72svh * 1672/941), so the box
+   * always keeps the field's aspect — the full edge dissolve stays visible
+   * and nothing is cropped. Transparent: the page is the paper; the
+   * painting's own dissolve is its only boundary. */
+  width: min(98vw, 82rem, calc(72svh * 1.7768));
   aspect-ratio: 1672 / 941;
-  max-height: 72svh;
   margin-inline: auto;
-  overflow: hidden;
-  background: #eee8da;
+  background: transparent;
 }
 
 @media (max-width: 760px) {
@@ -17,7 +19,7 @@
     width: 100vw;
     aspect-ratio: auto;
     height: 56svh;
-    max-height: none;
+    overflow: hidden; /* full-bleed: sides crop off the screen edges */
   }
 }
 

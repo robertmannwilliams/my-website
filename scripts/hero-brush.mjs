@@ -206,3 +206,20 @@ export function applyGrain(ctx, grainTile, w, h, strength = 0.05) {
   }
   ctx.restore();
 }
+
+/**
+ * Grain clipped to the PAINT (source-atop): the linen rides the strokes and
+ * never tints bare ground — essential once the painting floats transparent
+ * on the page so no rectangle seam exists (Rob's bleed note, 2026-06-11).
+ */
+export function applyGrainAtop(ctx, grainTile, w, h, strength = 0.05) {
+  ctx.save();
+  ctx.globalAlpha = strength;
+  ctx.globalCompositeOperation = "source-atop";
+  for (let y = 0; y < h; y += grainTile.height) {
+    for (let x = 0; x < w; x += grainTile.width) {
+      ctx.drawImage(grainTile, x, y);
+    }
+  }
+  ctx.restore();
+}

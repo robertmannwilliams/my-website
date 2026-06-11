@@ -28,7 +28,7 @@ import ffmpegPath from "ffmpeg-static";
 import {
   generateStampSprite,
   generateGrainTile,
-  applyGrain,
+  applyGrainAtop,
   drawStroke,
   makeScratch,
   SOFT_STAMPS,
@@ -58,7 +58,7 @@ const FINE_PUNCH = 1.25;
 // opacity placed by residual error, colors as footprint MEDIANS so the
 // broken-color flecks come back over the blended base. The crisp register
 // carries most of the high-pass energy, so it gets the density.
-const CRISP_TIER = { r: 2, t: 14, cap: 23000, grid: 3 };
+const CRISP_TIER = { r: 2, t: 14, cap: 22700, grid: 3 };
 // Unsharp factor on crisp colors: medians against the local low-pass,
 // punched so adjacent touches carry the master's fleck contrast.
 const CRISP_PUNCH = 1.9;
@@ -239,13 +239,36 @@ async function registrationScore(masterFile, variantFile) {
 // stroke construction
 // ---------------------------------------------------------------------------
 
+/** Width of the edge-dissolve band as a fraction of min(w,h). Generous:
+ *  the painting must BLEED into the page, not sit in a frame (Rob,
+ *  2026-06-11 post-ship note). */
+const EDGE_BAND = 0.14;
+
 function dissolveAlpha(x, y, w, h, alpha) {
-  const band = 0.085 * Math.min(w, h);
+  const band = EDGE_BAND * Math.min(w, h);
   const d = Math.min(x, y, w - x, h - y) / band;
   if (d >= 1) return alpha;
-  const noise = valueNoise2(x * 0.016, y * 0.016);
-  const a = alpha * Math.pow(clamp01(d + (noise - 0.5) * 0.55), 1.5);
-  return a < 0.05 ? 0 : a;
+  const noise = valueNoise2(x * 0.013, y * 0.013);
+  // the hard floor (d/0.12) guarantees true zero AT the canvas line, so no
+  // stroke ever gets guillotined flat by the bounds — the bleed dies out,
+  // it is never cut off
+  const a =
+    alpha *
+    Math.pow(clamp01(d + (noise - 0.5) * 0.6), 1.2) *
+    clamp01(d / 0.12);
+  return a < 0.03 ? 0 : a;
+}
+
+/** Strokes shrink as they approach the border so big dabs never reach the
+ *  canvas line at visible alpha. */
+function edgeShrink(s, w, h) {
+  const band = EDGE_BAND * Math.min(w, h);
+  const d = clamp01(Math.min(s.x, s.y, w - s.x, h - s.y) / band);
+  if (d < 1) {
+    s.len *= 0.55 + 0.45 * d;
+    s.wid *= 0.7 + 0.3 * d;
+  }
+  return s;
 }
 
 /**
@@ -341,6 +364,7 @@ function finishStroke(s, master, fields, w, h, random) {
   s.vdrift = random() * 2 - 1;
   s.coh = coh;
   s.density = fields.density[i];
+  edgeShrink(s, w, h);
   s.samples = footprintSamples(s, w, h);
   s.color = averageColor(master, s.samples);
   return s;
@@ -387,7 +411,7 @@ function generateWash(blurred, w, h, random) {
       const wid = WASH_SPACING * lerp(1.05, 1.35, random());
       const p = (Math.round(y) * w + Math.round(x)) * 3;
       const mix = 0.75; // barely more than tinted canvas
-      strokes.push({
+      strokes.push(edgeShrink({
         x, y, wid,
         len: wid * lerp(1.6, 2.2, random()),
         angle: (random() - 0.5) * Math.PI,
@@ -404,7 +428,7 @@ function generateWash(blurred, w, h, random) {
           clamp255(Math.round(lerp(blurred.data[p + 2], PAPER_RGB[2], mix))),
         ],
         samples: [[Math.round(x), Math.round(y)]],
-      });
+      }, w, h));
     }
   }
   return strokes;
@@ -577,6 +601,7 @@ function crispTier(ctx, master, lowMaster, fields, w, h, random, stamps, scratch
       coh,
       density: fields.density[i],
     };
+    edgeShrink(s, w, h);
     s.samples = footprintSamples(s, w, h);
     const med = footprintMedian(master, s.samples);
     // unsharp the touch against the local low-pass: the fleck's distance
@@ -818,14 +843,18 @@ function packStrokes(strokes, variants, w, h, washCount) {
 // ---------------------------------------------------------------------------
 
 /** Render the field. supersample=2 rasterizes at 2x and downsamples ONCE
- *  (gate-3 note A1 — no other smoothing exists anywhere in the pipeline). */
-function renderField(strokes, w, h, stamps, colorOf, { grain = null, upTo = strokes.length, supersample = 1 } = {}) {
+ *  (gate-3 note A1 — no other smoothing exists anywhere in the pipeline).
+ *  transparent=true leaves the ground unpainted — the painting floats and
+ *  its dissolve IS the boundary; grain rides the paint only (source-atop). */
+function renderField(strokes, w, h, stamps, colorOf, { grain = null, upTo = strokes.length, supersample = 1, transparent = false } = {}) {
   const ss = supersample;
   const canvas = createCanvas(w * ss, h * ss);
   const ctx = canvas.getContext("2d");
   const scratch = makeScratch();
-  ctx.fillStyle = PAPER;
-  ctx.fillRect(0, 0, w * ss, h * ss);
+  if (!transparent) {
+    ctx.fillStyle = PAPER;
+    ctx.fillRect(0, 0, w * ss, h * ss);
+  }
   if (ss !== 1) ctx.scale(ss, ss);
   for (let i = 0; i < upTo; i++) {
     const s = strokes[i];
@@ -833,10 +862,20 @@ function renderField(strokes, w, h, stamps, colorOf, { grain = null, upTo = stro
     drawStroke(ctx, s, r, g, b, stamps, scratch);
   }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  if (grain) applyGrain(ctx, grain, w * ss, h * ss, GRAIN_STRENGTH);
+  if (grain) applyGrainAtop(ctx, grain, w * ss, h * ss, GRAIN_STRENGTH);
   if (ss === 1) return canvas;
   const out = createCanvas(w, h);
   out.getContext("2d").drawImage(canvas, 0, 0, w * ss, h * ss, 0, 0, w, h);
+  return out;
+}
+
+/** Flatten a transparent render onto the site paper (for JPG/OG outputs). */
+function flattenOnPaper(canvas, w, h) {
+  const out = createCanvas(w, h);
+  const ctx = out.getContext("2d");
+  ctx.fillStyle = PAPER;
+  ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(canvas, 0, 0);
   return out;
 }
 
@@ -870,7 +909,7 @@ function coverageMetric(strokes, w, h, stamps, upTo) {
     drawStroke(ctx, strokes[i], 255, 255, 255, stamps, scratch);
   }
   const data = ctx.getImageData(0, 0, w, h).data;
-  const band = Math.ceil(0.085 * Math.min(w, h));
+  const band = Math.ceil(EDGE_BAND * Math.min(w, h));
   let covered = 0, total = 0;
   for (let y = band; y < h - band; y += 2) {
     for (let x = band; x < w - band; x += 2) {
@@ -939,7 +978,7 @@ async function renderReplayVideo(ordered, w, h, stamps, grain, seconds, fps, out
       drawStroke(actx, s, s.color[0], s.color[1], s.color[2], stamps, scratch);
     }
     fctx.drawImage(acc, 0, 0);
-    applyGrain(fctx, grain, vw, vh, GRAIN_STRENGTH);
+    applyGrainAtop(fctx, grain, vw, vh, GRAIN_STRENGTH);
     await writeFile(
       path.join(framesDir, `f${String(fileIdx++).padStart(4, "0")}.png`),
       await frame.encode("png"),
@@ -1127,7 +1166,7 @@ async function main() {
     cctx.scale(0.5, 0.5);
     for (const s of ordered) drawStroke(cctx, s, s.color[0], s.color[1], s.color[2], stamps, cscratch);
     cctx.setTransform(1, 0, 0, 1, 0, 0);
-    applyGrain(cctx, grain, cw, ch, GRAIN_STRENGTH);
+    applyGrainAtop(cctx, grain, cw, ch, GRAIN_STRENGTH);
     const calData = cctx.getImageData(0, 0, cw, ch).data;
     const cs = imageStats(calData, cw, ch, 4);
     const msFull = imageStats(master.data, w, h, 3);
@@ -1169,12 +1208,15 @@ async function main() {
       `${gz <= SIZE_BUDGET_KB * 1024 ? "OK" : "OVER — note in session log"}`,
   );
 
-  console.log("· rendering final frames (2x supersampled)");
-  const masterCanvas = renderField(ordered, w, h, stamps, (s) => s.color, { grain, supersample: 2 });
+  console.log("· rendering final frames (2x supersampled, transparent + flattened)");
+  const masterFloat = renderField(ordered, w, h, stamps, (s) => s.color, { grain, supersample: 2, transparent: true });
+  await writeFile(path.join(OUT_DIR, "final-master.webp"), await masterFloat.encode("webp", 82));
+  const masterCanvas = flattenOnPaper(masterFloat, w, h);
   await writeFile(path.join(OUT_DIR, "final-master.jpg"), await masterCanvas.encode("jpeg", 86));
   for (const v of variants) {
-    const canvas = renderField(ordered, w, h, stamps, (_s, i) => v.colors[i], { grain, supersample: 2 });
-    await writeFile(path.join(OUT_DIR, `final-${v.name}.jpg`), await canvas.encode("jpeg", 84));
+    const float = renderField(ordered, w, h, stamps, (_s, i) => v.colors[i], { grain, supersample: 2, transparent: true });
+    await writeFile(path.join(OUT_DIR, `final-${v.name}.webp`), await float.encode("webp", 82));
+    await writeFile(path.join(OUT_DIR, `final-${v.name}.jpg`), await flattenOnPaper(float, w, h).encode("jpeg", 84));
   }
 
   const fullCoverage = coverageMetric(ordered, w, h, stamps, ordered.length);
