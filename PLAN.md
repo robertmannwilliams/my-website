@@ -141,6 +141,21 @@ Rob can open on his phone.
 
 <!-- newest first: YYYY-MM-DD — what was done / what's next / open questions -->
 
+- 2026-06-11 (hero, post-ship: the bleed) — **Rob: "i want it to bleed into
+  the background" — the painting read as a pasted rectangle.** Three causes,
+  all fixed: (1) the canvas painted its own opaque paper and the grain
+  multiplied over the whole rect, seaming it against the page → canvas is
+  now fully transparent (the page IS the paper) and grain rides the paint
+  only (source-atop, pipeline + player); (2) the box's max-height clamp
+  broke the field aspect and cover-crop ate the top/bottom dissolve → width
+  clamp now folds the height limit in, box always keeps field aspect;
+  (3) the dissolve was thin and strokes got guillotined flat at the canvas
+  line → band 8.5%→14%, softer curve, hard-zero alpha floor at the line,
+  edge-shrink on border dabs. Reduced-motion/noscript paths use new
+  transparent alpha-WebP finals (312-435 KB) so they bleed identically;
+  JPGs kept for OG. Verified in Chrome at full draw: organic ragged
+  boundary on all four sides, no seam, no straight cuts. 795 KB gz.
+
 - 2026-06-11 (hero, Phases 2-4 — gate passed, hero SHIPPED to the homepage) —
   **Rob passed gate 4 ("Pass — build on"); player, atmosphere, and
   world-keying built and integrated in one pass.** `HeroPainting.tsx`:
