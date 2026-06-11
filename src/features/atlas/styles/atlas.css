@@ -194,9 +194,14 @@
 /* ---------- Atlas mode ---------- */
 
 .atlas-section {
-  margin-top: clamp(3.5rem, 9vw, 5.5rem);
+  /* Real air after the story sheet ends — the break is part of the fix
+     for the story→atlas seam. */
+  margin-top: clamp(6rem, 16vh, 11rem);
   border-top: 1px solid var(--ink);
   border-bottom: 1px solid var(--ink);
+  position: relative;
+  z-index: 2;
+  background: var(--paper);
 }
 
 .atlas-section__header {
@@ -204,8 +209,18 @@
   align-items: baseline;
   gap: 1.25rem;
   flex-wrap: wrap;
-  padding: 0.85rem clamp(1.25rem, 4vw, 2rem);
+  padding: 1.15rem clamp(1.25rem, 4vw, 2rem);
   border-bottom: 1px solid var(--ink-faint);
+}
+
+/* Cooperative-gesture hints (mapbox), restyled to the drafting table. */
+.atlas-root .mapboxgl-scroll-zoom-blocker,
+.atlas-root .mapboxgl-touch-pan-blocker {
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  color: var(--paper);
+  background: color-mix(in srgb, var(--ink-strong) 78%, transparent);
 }
 
 .atlas-section__eyebrow {
@@ -806,6 +821,19 @@ html:has(.atlas-root) body {
 
 .story-table.is-forward .story-table__scrim::before {
   opacity: 0;
+}
+
+/* The story's last breath: wash everything back to blank paper so the
+   sheet ends before the atlas begins. Wins over is-forward. */
+.story-table.is-ending .story-table__scrim::before {
+  opacity: 1;
+}
+
+.story-table.is-ending .story-inset,
+.story-table.is-ending .story-stage__caption,
+.story-table.is-ending .stamp {
+  opacity: 0;
+  transition: opacity 450ms ease-out;
 }
 
 /* The copy column scrolls over the table as drafting cards. */

@@ -48,6 +48,7 @@ export default function StoryFlow({ beats, sites }: StoryFlowProps) {
   );
   const [handoffReached, setHandoffReached] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [ending, setEnding] = useState(false);
   const stampedRef = useRef(false);
 
   const activeBeat = beats[activeIdx];
@@ -73,6 +74,13 @@ export default function StoryFlow({ beats, sites }: StoryFlowProps) {
       const p = Math.min(1, Math.max(0, total > 0 ? -rect.top / total : 0));
       const q = Math.round(p * 200) / 200;
       setProgress((prev) => (prev === q ? prev : q));
+
+      // Past the last beat, the story map washes out to blank paper so the
+      // sheet ends cleanly before the atlas takes the stage (one map at a
+      // time — no double exposure at the seam). Hysteresis avoids flicker.
+      setEnding((prev) =>
+        prev ? rect.bottom < vh * 1.18 : rect.bottom < vh * 1.02,
+      );
 
       if (rect.top > vh * 1.5 || rect.bottom < -vh * 0.5) return;
 
@@ -258,7 +266,7 @@ export default function StoryFlow({ beats, sites }: StoryFlowProps) {
           the spine — recessed while plates and copy carry the beat, forward
           when geography is the argument. */}
       <div
-        className={`story-table${showMap ? " is-forward" : ""}${stamping ? " is-stamping" : ""}`}
+        className={`story-table${showMap ? " is-forward" : ""}${stamping ? " is-stamping" : ""}${ending ? " is-ending" : ""}`}
       >
         {mapMounted && (
           <StoryMap

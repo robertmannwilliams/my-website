@@ -137,6 +137,18 @@ Rob can open on his phone.
 
 <!-- newest first: YYYY-MM-DD — what was done / what's next / open questions -->
 
+- 2026-06-11 — **Story→atlas seam fixed** (Rob's report: "two full maps... stuck
+  between scrolling and moving around the map"). Two causes, two fixes: (1) the
+  story table now washes out to blank paper as the reader scrolls past the last
+  beat (`is-ending` state with hysteresis; inset/caption/stamp fade too), so the
+  story sheet ends cleanly and only then does the atlas arrive — no double world
+  map at the seam; plus real air before the atlas header (margin to ~16vh, atlas
+  section gets paper bg + z-index so it slides over the released table). (2) the
+  atlas map now uses Mapbox cooperativeGestures — plain wheel/one-finger scroll
+  moves the PAGE; zoom needs ⌘/Ctrl+wheel, pan needs two fingers, with the hint
+  overlay restyled to Plex Mono on ink. Verified: ending fires past the last beat
+  (scrim→1), wheel over atlas no longer zooms, hint exists and is styled.
+
 - 2026-06-10 (Phase 6, pre-plates) — **Verification + launch prep run ahead of Phase 4
   at Rob's call.** Fact-check: four parallel research agents verified 29 hero-claim
   clusters against the sites' source URLs + fresh search — 26 confirmed (often with

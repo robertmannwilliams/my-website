@@ -93,6 +93,9 @@ export default function AtlasMap({
       dragRotate: false,
       pitchWithRotate: false,
       touchPitch: false,
+      // The atlas sits mid-page: plain scrolling must scroll the PAGE.
+      // Zoom needs cmd/ctrl+wheel; panning on touch needs two fingers.
+      cooperativeGestures: true,
     });
     map.touchZoomRotate.disableRotation();
     map.addControl(
