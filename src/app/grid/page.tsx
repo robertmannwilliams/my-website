@@ -1,3 +1,4 @@
+import GridMap from "@/features/grid/components/GridMap";
 import { plantsMeta, summarizeByFamily, totals } from "@/features/grid/lib/plants";
 import type { FuelFamily } from "@/features/grid/types";
 
@@ -98,6 +99,16 @@ export default function GridPage() {
           ))}
         </tbody>
       </table>
+
+      <div className="grid-plate-wrap">
+        <GridMap />
+        <p className="grid-plate-caption">
+          Fig. 2 — Plate I: the fleet. Every mark is a plant of 25 megawatts
+          or more; the faint lines are the transmission network at 220
+          kilovolts and above. Set the sheet to night to see the machine the
+          way it sees itself.
+        </p>
+      </div>
 
       <div className="grid-colophon">
         SOURCE: {plantsMeta.source}, {plantsMeta.vintage} · plants ≥{" "}

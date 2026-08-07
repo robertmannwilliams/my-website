@@ -17,6 +17,7 @@
   /* Night sheet — QUARANTINED to the night set piece (beats 2.7–3.5).
      Never referenced outside it. Pending Phase 1 proof + sign-off. */
   --night-sheet: #16213d;
+  --night-water: #111a30;
   --night-line: #9faece;
   --night-lamp: #e3c87e;
 }
@@ -129,6 +130,71 @@
   vertical-align: baseline;
   position: relative;
   top: 0.03em;
+}
+
+/* ---------- Plate I: the map ---------- */
+
+/* Break out of the 44rem column: the plate reads as a tipped-in map sheet. */
+.grid-plate-wrap {
+  width: min(94vw, 72rem);
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 2.5rem 0 0.75rem;
+}
+
+.grid-plate {
+  position: relative;
+  border: 1px solid var(--ink);
+  background: var(--paper-shade);
+}
+
+.grid-plate-map {
+  height: min(74vh, 46rem);
+  min-height: 22rem;
+}
+
+.grid-plate-toggle {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 5;
+  appearance: none;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink-strong);
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  padding: 0.5rem 0.9rem;
+  cursor: pointer;
+  min-width: 5.5rem;
+}
+
+.grid-plate-toggle:hover {
+  background: var(--paper-shade);
+}
+
+/* On the night sheet the instrument flips to match the plate. */
+.grid-plate[data-mode="night"] .grid-plate-toggle {
+  background: var(--night-sheet);
+  color: var(--night-line);
+  border-color: var(--night-line);
+}
+
+.grid-plate-caption {
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-style: italic;
+  font-size: 0.9375rem;
+  color: color-mix(in srgb, var(--ink) 72%, var(--paper));
+  margin: 0.6rem 0 2rem;
+}
+
+/* Cooperative-gesture scrim + attribution, kept quiet on paper. */
+.grid-plate .mapboxgl-ctrl-attrib {
+  font-size: 10px;
+  background: color-mix(in srgb, var(--paper) 80%, transparent);
 }
 
 .grid-colophon {

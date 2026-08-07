@@ -6,6 +6,7 @@
     "dev": "next dev --port 3001",
     "generate:homepage-sketch": "tsx scripts/generate-homepage-reference-sketch.ts",
     "build:plants": "tsx scripts/build-plants.ts",
+    "build:transmission": "tsx scripts/build-transmission.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

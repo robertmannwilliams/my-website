@@ -24,6 +24,7 @@ const SOURCE_URL =
   "https://www.eia.gov/electricity/data/eia860m/xls/june_generator2026.xlsx";
 const THRESHOLD_MW = 25;
 const OUT_PATH = path.join(process.cwd(), "data", "plants.json");
+const GEO_PATH = path.join(process.cwd(), "public", "grid-data", "plants.geo.json");
 
 type FuelFamily =
   | "nuclear" | "gas" | "coal" | "oil" | "hydro" | "wind" | "solar"
@@ -271,6 +272,25 @@ async function main() {
   fs.writeFileSync(OUT_PATH, JSON.stringify(out));
   const kb = Math.round(fs.statSync(OUT_PATH).size / 1024);
   console.log(`\nwrote ${OUT_PATH} (${kb} KB)`);
+
+  // Client-fetched GeoJSON for the map (minimal properties; served static).
+  const geo = {
+    type: "FeatureCollection" as const,
+    features: plants.map((p) => ({
+      type: "Feature" as const,
+      properties: {
+        id: p.id,
+        name: p.name,
+        fuel: p.fuel,
+        status: p.status,
+        mw: p.capacity_mw || p.construction_mw || 0,
+      },
+      geometry: { type: "Point" as const, coordinates: [p.lng, p.lat] },
+    })),
+  };
+  fs.mkdirSync(path.dirname(GEO_PATH), { recursive: true });
+  fs.writeFileSync(GEO_PATH, JSON.stringify(geo));
+  console.log(`wrote ${GEO_PATH} (${Math.round(fs.statSync(GEO_PATH).size / 1024)} KB)`);
 }
 
 main().catch((err) => {

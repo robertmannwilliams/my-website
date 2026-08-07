@@ -23,16 +23,20 @@ Design authority: `GRID-DESIGN.md` (inherits `DESIGN.md`).
 
 ## Phase 1 — Map spike: fuel pins, wires, and the night proof
 
-- [ ] Extend the paper style for the grid: fuel-washed pin system per GRID-DESIGN
-      (glyph ticks, capacity steps, construction rings), clustering tuned for
-      ~5,000 pins (perf-test the 25 MW threshold on a real phone; drop to 50 MW
-      only if it actually chugs).
-- [ ] HIFLD transmission ≥230 kV → simplified GeoJSON (build script; document
-      simplification tolerance); faint day-map layer + filter lift.
+- [x] Extend the paper style for the grid: fuel-washed pin system per GRID-DESIGN
+      (glyph ticks, capacity steps, construction rings), clustering for ~5,000
+      pins (cluster radius 22, max zoom 10; survey-marker styling from aistack).
+- [ ] Perf-verify the 25 MW threshold on a real phone (Rob's preview pass);
+      drop to 50 MW only if it actually chugs.
+- [x] HIFLD transmission ≥220 kV → simplified GeoJSON (`build:transmission`;
+      visvalingam 12% keep-shapes, 4-decimal precision, 10,495 lines, 4.4 MB
+      raw / ~1.2 MB gzipped); faint day-map layer, ≥500 kV drawn heavier.
+      Filter lift arrives with atlas assembly.
 - [ ] ISO/RTO boundary layer; regulatory wash toggle.
-- [ ] **The night proof** (highest design risk — do not defer): day→night sheet
-      crossfade on the real map style, transmission lamp-glow, city stipple,
-      night tokens. Screenshot review with Rob before anything else builds on it.
+- [x] **The night proof** built: day→night sheet crossfade (1.5 s paint
+      transitions, snapshot-restore in `map/night.ts`), transmission lamp-glow,
+      city stipple from settlement points, night pin variants swapped mid-wash,
+      reduced-motion hard cut. DAY/NIGHT toggle on the plate for review.
 - [ ] Atlas mode assembled: filters (fuel family tabs, capacity band, region,
       online era, status), detail panel, search. Independently shippable.
 - [ ] Acceptance: atlas pleasant on a phone; Rob signs off night proof + coal token.
@@ -109,3 +113,28 @@ Design authority: `GRID-DESIGN.md` (inherits `DESIGN.md`).
   **For Rob:** EIA API key (only Phase 4 blocker); coal umber token + night
   tokens await your sign-off at the Phase 1 screenshot review; say the word if
   you want a different title on the stub.
+- **2026-08-07 — Phase 1 map spike (same day, continued).** Plate I live on
+  `/grid`: full CONUS map (paper style shared with the atlas via
+  `buildPaperStyle`), 4,682 operating + 372 construction plants as fuel-washed
+  surveyor pins (glyph ticks for hydro/wind/solar, square storage marks, three
+  capacity steps, dashed construction rings; 44 canvas pin variants), clustered
+  aistack-style; HIFLD ≥220 kV transmission (10,495 simplified lines) faint on
+  the day sheet, ≥500 kV heavier; **the night set piece proven** — DAY/NIGHT
+  toggle washes the sheet to ink-navy over 1.5 s, transmission glows lamp-yellow,
+  city stipple lights up, pins dim to night variants, everything restores from a
+  live snapshot on the way back (verified across two full round-trips; reduced
+  motion = hard cut). One real bug found and fixed in verification: the toggle
+  guarded on `map.isStyleLoaded()`, which flickers false during tile loads and
+  silently ate clicks — replaced with an own load flag. `--night-water` added to
+  the night kit (GRID-DESIGN updated). Client data ships as static GeoJSON under
+  `public/grid-data/` (plants 0.9 MB, transmission 4.4 MB pre-gzip; Phase 5 perf
+  pass may tighten). Dev-only `window.__gridMap` handle left in for debugging.
+  Note for future sessions: the in-app browser pane throttles rAF when hidden —
+  Mapbox loads stall and WebGL screenshots come back as the body color; verify
+  map state programmatically (see the rAF-patch trick) and treat Vercel preview
+  on a phone as the visual arbiter. **Next:** Phase 1 remainder — ISO/RTO
+  boundaries + regulatory wash, atlas filters/detail panel/search, phone perf
+  check. **For Rob:** open the Vercel preview, scroll to Plate I, hit NIGHT —
+  this is the sign-off moment for the night tokens + coal ink-faint stand-in;
+  zoom into Texas or the Northeast to judge pin/cluster density at the 25 MW
+  threshold.

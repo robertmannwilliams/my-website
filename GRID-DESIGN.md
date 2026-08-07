@@ -38,6 +38,7 @@ All of DESIGN.md's palette carries over. The grid adds, pending the rules below:
 /* Night sheet — used ONLY inside the night set piece (beats 2.7–3.5).
    These are story-event tokens, not a theme. PENDING PHASE 1 PROOF + ROB SIGN-OFF. */
 --night-sheet:   #16213D;   /* deep ink-navy paper; the sheet, inverted */
+--night-water:   #111A30;   /* water recessed below the night sheet */
 --night-line:    #9FAECE;   /* line work + text on the night sheet */
 --night-lamp:    #E3C87E;   /* the one licensed glow: transmission + city stipple */
 ```
