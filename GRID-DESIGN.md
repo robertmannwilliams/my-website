@@ -1,5 +1,16 @@
 # GRID-DESIGN.md — The Largest Machine
 
+> **STATUS: PROVISIONAL — visual language under review (Rob, 2026-08-07).**
+> Rob's verdict on the paper-and-ink continuity: too quaint for this subject.
+> Target direction for the eventual reskin: **clean, technical, striking** —
+> think control-room / schematic / modern technical drawing, not vintage atlas.
+> The night sheet (dark base, glowing lines) is likely closer to the destination
+> than the cream paper is. Decision: build the bones first, reskin later
+> (GRID-PLAN Phase 4.5). Until then: use the current tokens as scaffolding,
+> do NOT invest in visual polish, do NOT treat anything below as signed off.
+> The structural rules (motion restraint, reduced-motion, z11 cap, no-spinner
+> live panel, widget behavior rules) still hold — they survive any skin.
+
 Design authority for the `/grid` project. When code and this document disagree, this
 document wins. It *inherits* DESIGN.md (the aistack sketchbook) wholesale — tokens,
 typography, motion rules, map grammar, never-list — and states only what the grid

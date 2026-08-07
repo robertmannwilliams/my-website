@@ -77,6 +77,25 @@ Design authority: `GRID-DESIGN.md` (inherits `DESIGN.md`).
 - [ ] Acceptance: panel correct against EIA's own dashboard; fallback verified by
       simulating API failure.
 
+## Phase 4.5 — Reskin (visual language v2)
+
+Rob's call (2026-08-07): the paper-and-ink volume-II continuity is too quaint
+for this subject. New direction: **clean, technical, striking**. Bones first,
+then this phase replaces the skin in one pass. The swap surface is deliberately
+small: map style builder, pin module, night kit, CSS tokens, widget chrome.
+
+- [ ] Direction exploration with Rob: 2–3 styled map screenshots (candidate
+      poles: dark control-room base with the night kit promoted to default;
+      light Swiss-technical monochrome + one accent; schematic/single-line
+      diagram language). Rob picks before any code spreads.
+- [ ] Rewrite GRID-DESIGN.md as its own document (drop the DESIGN.md
+      inheritance framing); new tokens, type check (Newsreader may not
+      survive), motion accents.
+- [ ] New map style builder + pin/cluster language + night treatment (or
+      day/night inversion if the dark base wins).
+- [ ] Restyle widget chrome + plate/page furniture to match.
+- [ ] Sweep story plates/diagrams for consistency with the new language.
+
 ## Phase 5 — Verification + polish
 
 - [ ] Facts-ledger audit: every number in copy traced to its source.
@@ -138,3 +157,14 @@ Design authority: `GRID-DESIGN.md` (inherits `DESIGN.md`).
   this is the sign-off moment for the night tokens + coal ink-faint stand-in;
   zoom into Texas or the Northeast to judge pin/cluster density at the 25 MW
   threshold.
+- **2026-08-07 — Direction check (same day).** Rob on the Phase 1 preview: the
+  visual language doesn't land — too quaint for the subject; wants **clean,
+  technical, striking**. Decision: keep building bones on the current
+  scaffolding tokens, defer the redesign to new Phase 4.5 (Reskin);
+  GRID-DESIGN.md marked provisional. Practical consequences for coming
+  sessions: no visual-polish investment (pin glyph refinement, night-piece
+  finesse, drafting-instrument widget chrome all frozen at "works"); design
+  sign-off gates (coal token, night tokens) are moot until 4.5; build widgets
+  and atlas UI structurally plain. The night sheet's dark-base look is a live
+  candidate to become the default in the reskin. **Next:** Phase 1 remainder
+  (ISO/RTO boundaries, atlas filters/detail panel/search), then Phase 2.
