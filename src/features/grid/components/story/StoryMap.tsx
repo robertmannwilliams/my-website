@@ -30,6 +30,7 @@ export default function StoryMap({ beat }: { beat: StoryBeat | null }) {
   const nightRef = useRef(false);
   const trailRef = useRef<[number, number][]>([]);
   const pendingRef = useRef<StoryBeat | null>(null);
+  const uriTimersRef = useRef<number[]>([]);
 
   useEffect(() => {
     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -94,6 +95,128 @@ export default function StoryMap({ beat }: { beat: StoryBeat | null }) {
         },
         "marine-label",
       );
+
+      // Regulatory wash (beat 3.7).
+      map.addSource("regulatory", {
+        type: "geojson",
+        data: "/grid-data/regulatory.json",
+      });
+      map.addLayer(
+        {
+          id: "regulatory-fill",
+          type: "fill",
+          source: "regulatory",
+          layout: { visibility: "none" },
+          paint: {
+            "fill-color": [
+              "match", ["get", "status"],
+              "choice", "#4E7E74",
+              "limited", "#C99A3C",
+              "rgba(0,0,0,0)",
+            ],
+            "fill-opacity": [
+              "match", ["get", "status"],
+              "choice", 0.18,
+              "limited", 0.14,
+              0,
+            ],
+          },
+        },
+        "marine-label",
+      );
+
+      // The three interconnections (beats 1.9, 3.1, 3.3).
+      map.addSource("interconnections", {
+        type: "geojson",
+        data: "/grid-data/interconnections.json",
+      });
+      map.addLayer(
+        {
+          id: "intercon-line",
+          type: "line",
+          source: "interconnections",
+          layout: { visibility: "none" },
+          paint: {
+            "line-color": INK,
+            "line-width": 1.6,
+            "line-dasharray": [4, 2, 1, 2],
+            "line-opacity": 0.8,
+          },
+        },
+        "marine-label",
+      );
+      map.addLayer(
+        {
+          id: "intercon-label",
+          type: "symbol",
+          source: "interconnections",
+          layout: {
+            visibility: "none",
+            "text-field": ["get", "LABEL"],
+            "text-font": MONO_MEDIUM,
+            "text-size": ["interpolate", ["linear"], ["zoom"], 3, 12, 6, 16],
+            "text-letter-spacing": 0.18,
+          },
+          paint: {
+            "text-color": "#1C3263",
+            "text-halo-color": PAPER,
+            "text-halo-width": 1.2,
+          },
+        },
+        "marine-label",
+      );
+
+      // The doors: DC ties (points) + Hydro-Québec arcs (beats 3.3, 3.4).
+      map.addSource("ties", { type: "geojson", data: "/grid-data/ties.json" });
+      map.addLayer(
+        {
+          id: "hq-arc",
+          type: "line",
+          source: "ties",
+          filter: ["==", ["get", "kind"], "arc"],
+          layout: { visibility: "none", "line-cap": "round" },
+          paint: {
+            "line-color": INK,
+            "line-width": 1.6,
+            "line-dasharray": [2.4, 2],
+            "line-opacity": 0.85,
+          },
+        },
+        "marine-label",
+      );
+      map.addLayer({
+        id: "ties-pt",
+        type: "circle",
+        source: "ties",
+        filter: ["==", ["get", "kind"], "tie"],
+        layout: { visibility: "none" },
+        paint: {
+          "circle-radius": 4.5,
+          "circle-color": PAPER,
+          "circle-stroke-color": INK,
+          "circle-stroke-width": 1.5,
+        },
+      });
+      map.addLayer({
+        id: "ties-label",
+        type: "symbol",
+        source: "ties",
+        filter: ["==", ["get", "kind"], "tie"],
+        layout: {
+          visibility: "none",
+          "text-field": ["get", "name"],
+          "text-font": MONO_MEDIUM,
+          "text-size": 10,
+          "text-offset": [0, 1],
+          "text-anchor": "top",
+          "text-allow-overlap": true,
+        },
+        paint: {
+          "text-color": "#1C3263",
+          "text-halo-color": PAPER,
+          "text-halo-width": 1,
+        },
+      });
 
       map.addSource("regions", { type: "geojson", data: "/grid-data/regions.json" });
       map.addLayer(
@@ -263,10 +386,20 @@ export default function StoryMap({ beat }: { beat: StoryBeat | null }) {
         }
       }
 
-      // Overlay
-      for (const id of ["regions-line", "regions-label"]) {
-        if (m.getLayer(id)) {
-          m.setLayoutProperty(id, "visibility", beat.overlay === "regions" ? "visible" : "none");
+      // Overlays: exactly the requested sets on, everything else off.
+      const OVERLAY_LAYERS: Record<string, string[]> = {
+        regions: ["regions-line", "regions-label"],
+        regulation: ["regulatory-fill"],
+        interconnections: ["intercon-line", "intercon-label"],
+        ties: ["ties-pt", "ties-label"],
+        quebec: ["hq-arc"],
+      };
+      for (const [key, ids] of Object.entries(OVERLAY_LAYERS)) {
+        const on = (beat.overlays as string[]).includes(key);
+        for (const id of ids) {
+          if (m.getLayer(id)) {
+            m.setLayoutProperty(id, "visibility", on ? "visible" : "none");
+          }
         }
       }
 
@@ -283,6 +416,40 @@ export default function StoryMap({ beat }: { beat: StoryBeat | null }) {
             );
           }
         }, reduced ? 0 : NIGHT_WASH_MS / 2);
+      }
+
+      // Uri (beat 3.5): the one gavel strike — the glow flickers and dies.
+      // Reduced motion: no flicker, the region simply renders dark.
+      for (const t of uriTimersRef.current) window.clearTimeout(t);
+      uriTimersRef.current = [];
+      const setGlow = (v: number) => {
+        if (m.getLayer("city-lights")) {
+          m.setPaintProperty("city-lights", "circle-opacity-transition", { duration: 90, delay: 0 } as never);
+          m.setPaintProperty("city-lights", "circle-opacity", v);
+        }
+        if (m.getLayer("transmission-glow")) {
+          m.setPaintProperty("transmission-glow", "line-opacity-transition", { duration: 90, delay: 0 } as never);
+          m.setPaintProperty("transmission-glow", "line-opacity", v);
+        }
+      };
+      if (beat.uri) {
+        if (reduced) {
+          setGlow(0);
+        } else {
+          const dips: Array<[number, number]> = [
+            [900, 0.12], [1150, 0.4], [1500, 0.08], [1800, 0.26], [2200, 0],
+          ];
+          for (const [delay, v] of dips) {
+            uriTimersRef.current.push(window.setTimeout(() => setGlow(v), delay));
+          }
+        }
+      } else if (beat.night) {
+        // Back on a normal night beat (e.g. scrolling up from 3.5):
+        // restore the night baselines the wash would have set.
+        setGlow(0.4);
+        if (m.getLayer("city-lights")) {
+          m.setPaintProperty("city-lights", "circle-opacity", 0.45);
+        }
       }
     };
 

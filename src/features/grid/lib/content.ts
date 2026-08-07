@@ -1,4 +1,4 @@
-// Grid story content pipeline (GRID-PLAN Phase 2). Parses content/grid/
+// Grid story content pipeline (GRID-PLAN Phase 2–3). Parses content/grid/
 // act files (frontmatter beats + per-beat copy under "## Beat {id}") and
 // resolves site ids against data/plants.json — failing the build loudly on
 // anything malformed, per the aistack discipline.
@@ -9,8 +9,11 @@ import matter from "gray-matter";
 import { plants } from "./plants";
 import type { FuelFamily } from "../types";
 
-export type BeatKind = "map" | "text" | "widget" | "live";
+export type BeatKind = "map" | "text" | "widget" | "diagram" | "live";
 export type WidgetName = "dispatch-stack" | "duck-curve" | "hold-60";
+export type DiagramName = "balance" | "bill" | "demand-bend";
+export type OverlayName =
+  | "regions" | "regulation" | "interconnections" | "ties" | "quebec";
 
 export interface BeatSite {
   id: string;
@@ -27,12 +30,19 @@ export interface StoryBeat {
   sites: BeatSite[];
   camera?: { center?: [number, number]; zoom?: number };
   widget?: WidgetName;
-  overlay?: "regions";
+  diagram?: DiagramName;
+  overlays: OverlayName[];
   night: boolean;
+  /** Beat 3.5 — the signature moment: the Texas glow flickers out. */
+  uri: boolean;
 }
 
 const WIDGETS: WidgetName[] = ["dispatch-stack", "duck-curve", "hold-60"];
-const KINDS: BeatKind[] = ["map", "text", "widget", "live"];
+const DIAGRAMS: DiagramName[] = ["balance", "bill", "demand-bend"];
+const OVERLAYS: OverlayName[] = [
+  "regions", "regulation", "interconnections", "ties", "quebec",
+];
+const KINDS: BeatKind[] = ["map", "text", "widget", "diagram", "live"];
 
 interface RawBeat {
   id: string | number;
@@ -40,8 +50,10 @@ interface RawBeat {
   sites?: string[];
   camera?: { center?: [number, number]; zoom?: number };
   widget?: string;
-  overlay?: string;
+  diagram?: string;
+  overlay?: string | string[];
   night?: boolean;
+  uri?: boolean;
 }
 
 export function loadAct(actFile: string): StoryBeat[] {
@@ -83,14 +95,20 @@ export function loadAct(actFile: string): StoryBeat[] {
       sites.push({ id: p.id, name: p.name, fuel: p.fuel, lng: p.lng, lat: p.lat });
     }
 
+    const overlays = (
+      Array.isArray(b.overlay) ? b.overlay : b.overlay ? [b.overlay] : []
+    ) as OverlayName[];
+    for (const o of overlays) {
+      if (!OVERLAYS.includes(o)) errors.push(`beat ${id}: unknown overlay "${o}"`);
+    }
     if (b.kind === "widget" && !WIDGETS.includes(b.widget as WidgetName)) {
       errors.push(`beat ${id}: unknown widget "${b.widget}"`);
     }
+    if (b.kind === "diagram" && !DIAGRAMS.includes(b.diagram as DiagramName)) {
+      errors.push(`beat ${id}: unknown diagram "${b.diagram}"`);
+    }
     if (b.kind === "map" && sites.length === 0 && !b.camera?.center) {
       errors.push(`beat ${id}: map beat needs sites or camera.center`);
-    }
-    if (b.overlay && b.overlay !== "regions") {
-      errors.push(`beat ${id}: unknown overlay "${b.overlay}"`);
     }
 
     beats.push({
@@ -100,8 +118,10 @@ export function loadAct(actFile: string): StoryBeat[] {
       sites,
       camera: b.camera,
       widget: b.widget as WidgetName | undefined,
-      overlay: b.overlay as "regions" | undefined,
+      diagram: b.diagram as DiagramName | undefined,
+      overlays,
       night: Boolean(b.night),
+      uri: Boolean(b.uri),
     });
   }
 
@@ -114,4 +134,9 @@ export function loadAct(actFile: string): StoryBeat[] {
     );
   }
   return beats;
+}
+
+/** Load acts in order into one continuous flow (no chapter headers). */
+export function loadActs(...actFiles: string[]): StoryBeat[] {
+  return actFiles.flatMap((f) => loadAct(f));
 }

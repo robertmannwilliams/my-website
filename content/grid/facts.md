@@ -47,6 +47,66 @@ WRITTEN (GRID-PLAN discipline; audited in Phase 5). Format:
 - 2.10 · "cheapest hours in America" (West TX night wind, frequent
   negative/near-zero LMPs) · ERCOT West hub historical LMPs · TO VERIFY
 
+## Act 1
+
+- 1.1 · outlet holds 120 V · US standard 120 V nominal · OK
+- 1.3 · Lackawanna Energy Center, Jessup PA, ~1,500 MW gas, PJM ·
+  data/plants.json eia-60357 (1,498.5 MW) · OK
+- 1.4 · step-up to 345,000 V · 345 kV is a standard EHV class in PJM;
+  generator output typically 13.8–24 kV · OK (illustrative but typical)
+- 1.5 · "every circuit above 220,000 volts" on the sheet · matches the
+  transmission layer filter (VOLTAGE >= 220) · OK
+- 1.7 · pole transformer 7,200 V → 120/240 V · standard US distribution
+  primary/secondary · OK
+- 1.7 · most outages born in distribution · DOE/EIA reliability data —
+  majority of customer outage-minutes originate in distribution · TO VERIFY
+  a citable stat
+- 1.8 · "very nearly the speed of light" · EM energy propagation in
+  conductors is a large fraction of c · OK (phrase kept loose on purpose)
+- 1.9 · Eastern Interconnection lockstep at 60 Hz · standard · OK
+
+## Act 3
+
+- 3.1 · three interconnections, electrically separate AC islands · NERC ·
+  OK (map layer is a whole-state approximation, marked provisional)
+- 3.2 · 1935 federal jurisdiction over interstate utilities → Texas
+  isolation · Federal Power Act of 1935; standard ERCOT-history account ·
+  OK — phrase "one regulatory dodge" is editorial, keep
+- 3.3 · "a dozen-odd doors, combined capacity a rounding error" · E–W
+  back-to-back ties ≈ 1.3 GW; ERCOT ties ≈ 1.2 GW vs 70–120 GW machine
+  peaks · TO VERIFY totals + tie list (ties.json is hand-authored,
+  city-level, provisional)
+- 3.4 · Hydro-Québec HVDC into New England + NY · Phase II HVDC (Radisson–
+  Sandy Pond/Ayer) ~2,000 MW; Châteauguay + CHPE to NY · TO VERIFY current
+  line set (CHPE in service 2026?)
+- 3.5 · Uri: ~20,000 MW tripped/shed; 4.5 M homes; frequency below 59.4 Hz;
+  minutes from months-long collapse; 246 deaths · FERC/NERC Nov 2021 final
+  report (load shed max ~20 GW; ~4.5 M customers); TX DSHS final death
+  count 246; the "minutes / 59.4 Hz for ~4 min" detail · STRICTEST CHECK —
+  verify every figure against the FERC/NERC report before launch
+- 3.6 · blackout = frequency collapse + load shedding as defense · standard
+  power-systems account · OK
+- 3.7 · FERC wholesale/interstate vs 50 state commissions retail · Federal
+  Power Act split · OK
+- 3.8 · "roughly half the bill is delivery" · EIA residential price
+  components: generation ≈ 55–60%, T&D ≈ 40–45% · BORDERLINE ("roughly
+  half" leans generous) — TO VERIFY latest split
+- 3.8 · "bill climbs → usually the wires" · recent rate growth driven by
+  T&D investment (EIA/RMI analyses) · TO VERIFY
+
+## Act 4
+
+- 4.1 · flat demand ~2005–2022, bend ~2023, data centers/factories/EVs ·
+  EIA annual retail sales + recent EIA/NERC growth outlooks · OK, TO VERIFY
+  bend year phrasing
+- 4.2 · ">2 TW in queues, more than the existing fleet, mostly clean" ·
+  LBNL "Queued Up" (~2.6 TW active at end-2023; fleet ≈ 1.3 TW) · TO VERIFY
+  latest edition's number
+- 4.3 · major transmission takes 10+ years, mostly permitting · DOE/ACEG
+  transmission studies · OK (typical-case claim)
+- 4.4 · auctions every five minutes; "few thousand humming plants" ·
+  matches 2.4; 4,682 operating plants ≥25 MW in this dataset · OK
+
 ## Widget data (illustrative, labeled as such in-widget)
 
 - dispatch-stack · stylized one-region stack (wind 8 GW @$0, solar +15 GW

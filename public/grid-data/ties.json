@@ -1,0 +1,24 @@
+{
+  "type": "FeatureCollection",
+  "meta": {
+    "source": "Hand-authored from public ISO/utility documentation",
+    "note": "The doors between the machines: back-to-back DC ties (points) and the Hydro-Quebec HVDC exports (arcs). Coordinates are city-level, PROVISIONAL; capacities omitted pending the Phase 5 facts audit.",
+    "generated": "2026-08-07"
+  },
+  "features": [
+    { "type": "Feature", "properties": { "kind": "tie", "name": "Miles City" }, "geometry": { "type": "Point", "coordinates": [-105.85, 46.41] } },
+    { "type": "Feature", "properties": { "kind": "tie", "name": "Rapid City" }, "geometry": { "type": "Point", "coordinates": [-103.25, 44.08] } },
+    { "type": "Feature", "properties": { "kind": "tie", "name": "Stegall" }, "geometry": { "type": "Point", "coordinates": [-103.33, 41.55] } },
+    { "type": "Feature", "properties": { "kind": "tie", "name": "Virginia Smith" }, "geometry": { "type": "Point", "coordinates": [-102.98, 41.14] } },
+    { "type": "Feature", "properties": { "kind": "tie", "name": "Lamar" }, "geometry": { "type": "Point", "coordinates": [-102.62, 38.09] } },
+    { "type": "Feature", "properties": { "kind": "tie", "name": "Blackwater" }, "geometry": { "type": "Point", "coordinates": [-103.21, 34.42] } },
+    { "type": "Feature", "properties": { "kind": "tie", "name": "Eddy County" }, "geometry": { "type": "Point", "coordinates": [-104.25, 32.4] } },
+    { "type": "Feature", "properties": { "kind": "tie", "name": "North DC Tie" }, "geometry": { "type": "Point", "coordinates": [-99.18, 34.03] } },
+    { "type": "Feature", "properties": { "kind": "tie", "name": "East DC Tie" }, "geometry": { "type": "Point", "coordinates": [-95.04, 33.09] } },
+    { "type": "Feature", "properties": { "kind": "tie", "name": "Eagle Pass" }, "geometry": { "type": "Point", "coordinates": [-100.5, 28.71] } },
+    { "type": "Feature", "properties": { "kind": "tie", "name": "Laredo VFT" }, "geometry": { "type": "Point", "coordinates": [-99.5, 27.56] } },
+    { "type": "Feature", "properties": { "kind": "tie", "name": "Railroad DC Tie" }, "geometry": { "type": "Point", "coordinates": [-98.34, 26.3] } },
+    { "type": "Feature", "properties": { "kind": "arc", "name": "Québec–New England" }, "geometry": { "type": "LineString", "coordinates": [[-77.7, 53.7], [-72.5, 47.5], [-71.5, 42.56]] } },
+    { "type": "Feature", "properties": { "kind": "arc", "name": "Québec–New York" }, "geometry": { "type": "LineString", "coordinates": [[-73.75, 45.2], [-73.55, 44.0], [-73.9, 41.5]] } }
+  ]
+}

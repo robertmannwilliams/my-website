@@ -76,17 +76,32 @@ Design authority: `GRID-DESIGN.md` (inherits `DESIGN.md`).
 
 ## Phase 3 — All acts
 
-- [ ] Acts 1, 3, 4 copy authored (facts ledger alongside; Uri numbers against the
-      FERC/NERC final report — strictest check in the piece).
-- [ ] Act 1 plates + the watt's-journey camera path along real line geometry.
-- [ ] Act 3: interconnection islands frame, DC-tie "doors" beat, Hydro-Québec
-      interchange arrows, **the Uri flicker** (signature moment, reduced-motion
-      variant per GRID-DESIGN), daylight return at 3.6, regulatory wash beat,
-      bill-decoded diagram.
-- [ ] Act 4: demand-bends chart, queue beat, wires beat, atlas handover transition.
+- [x] Acts 1, 3, 4 copy authored — 22 new beats, register contract, facts
+      ledger alongside. Uri figures drafted from the standard record (20 GW
+      shed, 4.5 M homes+businesses, <59.4 Hz, 246 deaths) and marked
+      STRICTEST CHECK in the ledger — the line-by-line pass against the
+      FERC/NERC final report itself stays a Phase 5 gate.
+- [ ] Act 1 plates — DEFERRED past the Phase 4.5 reskin on purpose (don't
+      illustrate in a visual language that's being replaced). Beats read as
+      text/map/diagram meanwhile.
+- [x] Watt's-journey camera path (simplified: corridor cameras Jessup →
+      ridgelines → city edge over the real transmission layer, not a
+      line-following tween — revisit only if the reskin wants more).
+- [x] Act 3: interconnection islands (state-dissolve approximation, marked
+      provisional), DC-tie "doors" (hand-authored ties.json, 12 ties,
+      city-level), Hydro-Québec arcs, **the Uri flicker** (lit → 5-step
+      flicker → dark over ~2.2 s; reduced-motion renders dark, no flicker;
+      night baselines restore on scroll-back), daylight return at 3.6,
+      regulatory wash beat, bill diagram.
+- [x] Act 4: demand-bend chart, queue beat, wires beat; 4.4 is a `live` beat
+      rendering an honest placeholder card until Phase 4; handover is a plain
+      scroll into the atlas plate — the expand transition belongs to the
+      single-spine consolidation.
+- [ ] Single-spine consolidation: one map instance carrying story → atlas
+      (currently two instances on the page).
 - [ ] Hero-site blurbs: ~40–60 hand-written `why_it_matters` entries (incl. the
       Canadian hero sites as manual plant entries).
-- [ ] Acceptance: full story scroll start to finish.
+- [ ] Acceptance: full story scroll start to finish on Rob's phone.
 
 ## Phase 4 — Live layer
 
@@ -231,3 +246,26 @@ small: map style builder, pin module, night kit, CSS tokens, widget chrome.
   minutes on the preview: note where the register lands, whether the
   widgets feel like instruments or toys, and whether night-at-2.7 works
   for you. Copy is markdown in `content/grid/act2.md` — edit at will.
+- **2026-08-07 — Phase 3: the full story (same day, "ok go").** All four
+  acts live on `/grid` — 32 beats, outlet to handover. New copy: Act 1
+  (the watt's journey, anchored on Lackawanna Energy Center eia-60357),
+  Act 3 (islands → 1935 → the doors → Québec → Uri → decode-the-bill),
+  Act 4 (the bend → the queue → the wires → live placeholder → handover).
+  New data: `interconnections.json` (three islands dissolved from us-atlas
+  states — whole-state approximation, provisional), `ties.json`
+  (hand-authored: 12 DC ties + 2 Hydro-Québec arcs, city-level,
+  provisional). New engine features: beat kinds `diagram` (balance / bill /
+  demand-bend in-code SVGs) + `live` (placeholder card until Phase 4),
+  multi-overlay beats, and the **Uri flicker** — verified lit→flicker→dark,
+  baseline restore on scroll-back, day return at 3.6. Copy discipline:
+  every new number ledgered; Uri wording tightened to "homes and
+  businesses"; the register held to short declaratives throughout. Night
+  now spans 2.7–3.5 across act boundaries. Build validation caught nothing
+  loose (all 32 beats resolve). **Deferred consciously:** Act 1 plates
+  (post-reskin), hero blurbs + Canadian sites, single-spine consolidation,
+  handover transition. **Next:** Rob's full-story phone pass; then hero
+  blurbs + spine consolidation, or Phase 4 live layer (needs EIA key), or
+  the 4.5 reskin exploration — Rob picks. **For Rob:** the story now reads
+  end-to-end (~8 minutes). The Uri beat is the piece's gavel strike — tell
+  me if the copy earns it. And the EIA key remains the only Phase 4
+  blocker.

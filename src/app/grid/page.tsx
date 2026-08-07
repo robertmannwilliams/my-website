@@ -1,6 +1,6 @@
 import GridMap from "@/features/grid/components/GridMap";
 import StoryFlow from "@/features/grid/components/story/StoryFlow";
-import { loadAct } from "@/features/grid/lib/content";
+import { loadActs } from "@/features/grid/lib/content";
 import { plantsMeta, summarizeByFamily, totals } from "@/features/grid/lib/plants";
 import type { FuelFamily } from "@/features/grid/types";
 
@@ -35,7 +35,7 @@ const FAMILY_WASH: Record<FuelFamily, string> = {
 export default function GridPage() {
   const t = totals();
   const families = summarizeByFamily();
-  const act2 = loadAct("act2.md");
+  const story = loadActs("act1.md", "act2.md", "act3.md", "act4.md");
 
   return (
     <main className="grid-sheet">
@@ -104,11 +104,11 @@ export default function GridPage() {
       </table>
 
       <p className="grid-plate-caption">
-        Fig. 2 — a slice of the story, running ahead of the rest of the
-        survey: one day on the grid, four in the morning to midnight. Scroll.
+        Fig. 2 — the story, in draft: from the outlet in the wall to the
+        handover of the map. Four acts, thirty-two beats. Scroll.
       </p>
 
-      <StoryFlow beats={act2} />
+      <StoryFlow beats={story} />
 
       <div className="grid-plate-wrap">
         <GridMap />

@@ -131,9 +131,49 @@ function buildRegulatory() {
   console.log(`wrote ${REGULATORY_OUT}: ${features.length} states, ${Math.round(fs.statSync(REGULATORY_OUT).size / 1024)} KB`);
 }
 
+/** The three interconnections, approximated by whole states (the real
+ *  boundaries cut through MT/NM/SD/TX — fine at continental zoom, marked
+ *  PROVISIONAL). AK and HI belong to none of them. */
+const WESTERN = new Set(["WA", "OR", "CA", "NV", "ID", "UT", "AZ", "CO", "WY", "MT", "NM"]);
+const INTERCON_OUT = path.join(process.cwd(), "public", "grid-data", "interconnections.json");
+
+function buildInterconnections() {
+  const topo = require("us-atlas/states-10m.json") as Topology;
+  const geoms = (topo.objects.states as { geometries: Array<{ id?: unknown }> }).geometries;
+  const group = (pred: (postal: string) => boolean) =>
+    topojson.merge(
+      topo as never,
+      geoms.filter((g) => {
+        const postal = FIPS_TO_POSTAL[String(g.id)];
+        return postal != null && postal !== "AK" && postal !== "HI" && pred(postal);
+      }) as never[],
+    );
+  const features = [
+    { name: "Eastern Interconnection", label: "EASTERN", pred: (p: string) => p !== "TX" && !WESTERN.has(p) },
+    { name: "Western Interconnection", label: "WESTERN", pred: (p: string) => WESTERN.has(p) },
+    { name: "ERCOT (Texas) Interconnection", label: "TEXAS", pred: (p: string) => p === "TX" },
+  ].map(({ name, label, pred }) => ({
+    type: "Feature" as const,
+    properties: { name, LABEL: label },
+    geometry: group(pred),
+  }));
+  const out = {
+    type: "FeatureCollection" as const,
+    meta: {
+      source: "Derived: us-atlas states dissolved into interconnection groups",
+      note: "Whole-state approximation (real boundaries split MT/NM/SD/TX). PROVISIONAL — display at continental zoom only.",
+      generated: new Date().toISOString().slice(0, 10),
+    },
+    features,
+  };
+  fs.writeFileSync(INTERCON_OUT, JSON.stringify(out));
+  console.log(`wrote ${INTERCON_OUT}: ${features.length} interconnections, ${Math.round(fs.statSync(INTERCON_OUT).size / 1024)} KB`);
+}
+
 async function main() {
   await buildRegions();
   buildRegulatory();
+  buildInterconnections();
 }
 
 main().catch((err) => {

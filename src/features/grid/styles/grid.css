@@ -424,6 +424,63 @@
   fill: var(--wash-red);
 }
 
+/* Story diagrams */
+.grid-diag-ink line,
+.grid-diag-ink path {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  fill: none;
+  stroke-linecap: round;
+}
+
+.grid-diag-label {
+  fill: var(--ink);
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.grid-diag-strong {
+  fill: var(--ink-strong);
+  font-weight: 600;
+}
+
+.grid-diag-caption {
+  fill: color-mix(in srgb, var(--ink) 62%, var(--paper));
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-style: italic;
+  font-size: 10.5px;
+}
+
+.grid-diag-box {
+  fill: var(--paper-shade);
+  stroke: var(--ink);
+  stroke-width: 1.2;
+}
+
+.grid-diag-box[data-seg="generation"] {
+  fill: color-mix(in srgb, var(--ink) 22%, var(--paper));
+}
+
+.grid-diag-box[data-seg="transmission"] {
+  fill: color-mix(in srgb, var(--wash-ochre) 30%, var(--paper));
+}
+
+.grid-diag-box[data-seg="distribution"] {
+  fill: color-mix(in srgb, var(--wash-teal) 26%, var(--paper));
+}
+
+.grid-diag-line {
+  fill: none;
+  stroke: var(--ink-strong);
+  stroke-width: 1.8;
+}
+
+.grid-live-placeholder {
+  border: 1px dashed var(--ink-faint);
+  padding: 0.7rem 0.8rem;
+}
+
 .grid-dial-arc {
   fill: none;
   stroke: var(--ink-faint);

@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { StoryBeat } from "../../lib/content";
 import StoryMap from "./StoryMap";
+import Diagram from "./diagrams";
 import DispatchStack from "./widgets/DispatchStack";
 import DuckCurve from "./widgets/DuckCurve";
 import Hold60 from "./widgets/Hold60";
@@ -59,6 +60,18 @@ export default function StoryFlow({ beats }: { beats: StoryBeat[] }) {
               <div className="grid-story-card">
                 <p>{beat.copy}</p>
                 {Widget && <Widget />}
+                {beat.kind === "diagram" && beat.diagram && (
+                  <Diagram name={beat.diagram} />
+                )}
+                {beat.kind === "live" && (
+                  <div className="grid-widget grid-live-placeholder">
+                    <p className="grid-widget-note">
+                      LIVE PANEL — arrives with the EIA data hookup (Phase 4).
+                      This sheet will show national demand and the fuel mix,
+                      this hour, as you read.
+                    </p>
+                  </div>
+                )}
               </div>
             </article>
           );
