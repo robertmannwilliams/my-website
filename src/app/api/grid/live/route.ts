@@ -15,11 +15,14 @@ const FUEL_CODES: Record<string, string> = {
   NUC: "nuclear",
   COL: "coal",
   SUN: "solar",
+  SNB: "solar", // solar with integrated battery
   WND: "wind",
+  WNB: "wind",
   WAT: "hydro",
   OIL: "oil",
   BAT: "battery",
   PS: "battery",
+  GEO: "geothermal",
   OTH: "other",
 };
 
@@ -61,22 +64,32 @@ export async function GET() {
   if (!key) return snapshotResponse();
 
   try {
-    const [demandRows, mixRows] = await Promise.all([
-      eia("/region-data/data/", {
-        "facets[respondent][]": "US48",
-        "facets[type][]": "D",
-        length: "1",
-      }, key),
-      eia("/fuel-type-data/data/", {
-        "facets[respondent][]": "US48",
-        length: "24",
-      }, key),
-    ]);
+    // The two EIA series lag differently (demand is near-real-time; the
+    // fuel mix trails by hours). Anchor everything on the newest COMPLETE
+    // mix period, then fetch demand for that same hour — never mix hours.
+    const mixRows = await eia("/fuel-type-data/data/", {
+      "facets[respondent][]": "US48",
+      length: "48",
+    }, key);
+    const periods = [...new Set(mixRows.map((r) => r.period))].sort().reverse();
+    const totalFor = (p: string) =>
+      mixRows.filter((r) => r.period === p)
+        .reduce((s, r) => s + Number(r.value), 0);
+    let chosen = periods[0];
+    if (periods[1] && totalFor(periods[0]) < 0.8 * totalFor(periods[1])) {
+      chosen = periods[1]; // newest hour still mid-publish
+    }
 
+    const demandRows = await eia("/region-data/data/", {
+      "facets[respondent][]": "US48",
+      "facets[type][]": "D",
+      start: chosen,
+      end: chosen,
+      length: "1",
+    }, key);
     const demand = demandRows[0];
-    const latestPeriod = mixRows[0].period;
     const mix = mixRows
-      .filter((r) => r.period === latestPeriod)
+      .filter((r) => r.period === chosen)
       .map((r) => ({
         fuel: FUEL_CODES[r.fueltype ?? ""] ?? "other",
         gw: Math.round(Number(r.value) / 100) / 10,
@@ -87,6 +100,7 @@ export async function GET() {
         else acc.push(r);
         return acc;
       }, [])
+      .filter((r) => r.gw >= 0.3)
       .sort((a, b) => b.gw - a.gw);
 
     return NextResponse.json(

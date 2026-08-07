@@ -22,6 +22,7 @@ const FUEL_LABEL: Record<string, string> = {
   wind: "Wind",
   hydro: "Hydro",
   battery: "Batteries",
+  geothermal: "Geothermal",
   oil: "Oil",
   other: "Other",
 };
@@ -76,7 +77,7 @@ export default function LivePanel() {
       </div>
       <p className="grid-widget-note">
         {data.live
-          ? `Generation by fuel, gigawatts, ${fmtPeriod(data.as_of)} — the EIA feed runs an hour or two behind the machine itself.`
+          ? `Generation by fuel, gigawatts, ${fmtPeriod(data.as_of)} — the public EIA feed trails the machine itself by some hours.`
           : `Stylized ${data.as_of} — the live feed plugs in with the EIA data hookup (Phase 4).`}
       </p>
     </div>

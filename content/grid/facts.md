@@ -129,9 +129,14 @@ these records "Manual entry · figures approximate".
   magnitudes per EIA Hourly Grid Monitor ranges · REPRESENTATIVE, labeled
   as such in the UI and in the file · OK by design
 - Live path: EIA v2 rto/region-data (US48 demand) + rto/fuel-type-data
-  (US48 mix), ~1–2 h lag stated in the panel note · activates when
-  EIA_API_KEY is set · verify against EIA's own dashboard at Phase 4
-  acceptance
+  (US48 mix), anchored on the newest complete MIX period so both readouts
+  share one hour (the two series lag differently — mix can trail demand by
+  many hours; observed 16 h on 2026-08-07) · panel states the timestamp and
+  "trails by some hours" · VERIFIED live against the API 2026-08-07
+- Known caveat: US48 demand ≠ mix total (observed gap ~85 GW at night) —
+  EIA's fuel-mix coverage is less complete than demand reporting; the panel
+  presents them as separate readouts and never claims they sum · OK by
+  design, recheck at Phase 5
 
 ## Widget data (illustrative, labeled as such in-widget)
 
