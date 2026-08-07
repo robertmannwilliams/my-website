@@ -127,3 +127,12 @@ panel shows why_it_matters, operator, status, capex, customers, and source links
 - `npm run dev` — local dev
 - `npm run build` — must pass before every push
 - `npx tsc --noEmit` — typecheck
+
+## Sibling project: The Grid (`/grid`)
+
+Volume II of the atlas series: how power works in North America. Separate doc set —
+concept in `docs/grid-spec-package.md`, design in `GRID-DESIGN.md` (inherits
+DESIGN.md), build plan + session log in `GRID-PLAN.md`. When working on `/grid`,
+follow the same session protocol but against GRID-PLAN.md. Grid data lives in
+`data/plants.json` (EIA-860M derived, built by `scripts/build-plants.ts`), feature
+code in `src/features/grid/`.

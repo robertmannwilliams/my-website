@@ -1,0 +1,148 @@
+/* The Largest Machine — Volume II tokens and Phase-0 sheet.
+   Source of truth: GRID-DESIGN.md (inherits DESIGN.md / atlas.css wholesale;
+   the layout applies .atlas-root alongside .grid-root for the base surface). */
+
+:root {
+  /* Fuel-family washes — derive from the sketchbook palette (GRID-DESIGN §Tokens). */
+  --fuel-nuclear: var(--ink);
+  --fuel-gas: var(--wash-ochre);
+  --fuel-oil: var(--wash-red);
+  --fuel-clean: var(--wash-teal);
+  --fuel-storage: var(--wash-teal);
+  /* Coal's umber token is PENDING ROB SIGN-OFF (GRID-DESIGN); until then coal
+     renders in --ink-faint. Do not use a new hex before sign-off. */
+  --fuel-coal: var(--ink-faint);
+  --fuel-other: var(--paper);
+
+  /* Night sheet — QUARANTINED to the night set piece (beats 2.7–3.5).
+     Never referenced outside it. Pending Phase 1 proof + sign-off. */
+  --night-sheet: #16213d;
+  --night-line: #9faece;
+  --night-lamp: #e3c87e;
+}
+
+/* ---------- Phase 0: the surveyor's note ---------- */
+
+.grid-sheet {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: clamp(2.5rem, 8vw, 5rem) 1.25rem 4rem;
+}
+
+.grid-titleblock {
+  border: 1px solid var(--ink);
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.grid-titleblock > div {
+  padding: 0.5rem 0.75rem;
+  border-left: 1px solid var(--ink);
+}
+
+.grid-titleblock > div:first-child {
+  border-left: none;
+}
+
+.grid-titleblock .label {
+  display: block;
+  font-size: 0.5625rem;
+  color: color-mix(in srgb, var(--ink) 62%, var(--paper));
+  margin-bottom: 0.15rem;
+}
+
+.grid-sheet h1 {
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-size: clamp(2rem, 6vw, 2.75rem);
+  font-weight: 550;
+  line-height: 1.12;
+  color: var(--ink-strong);
+  margin: 2.25rem 0 0.4rem;
+}
+
+.grid-deck {
+  font-style: italic;
+  color: color-mix(in srgb, var(--ink) 78%, var(--paper));
+  margin: 0 0 2rem;
+}
+
+.grid-note {
+  max-width: 65ch;
+}
+
+.grid-note p {
+  margin: 0 0 1.1rem;
+}
+
+/* Survey table — Plex Mono, ruled like a field ledger. */
+.grid-ledger {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.8125rem;
+  margin: 1.75rem 0;
+}
+
+.grid-ledger caption {
+  caption-side: top;
+  text-align: left;
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-style: italic;
+  font-size: 0.9375rem;
+  color: color-mix(in srgb, var(--ink) 72%, var(--paper));
+  padding-bottom: 0.5rem;
+}
+
+.grid-ledger th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--ink);
+  padding: 0.3rem 0.5rem 0.3rem 0;
+}
+
+.grid-ledger td {
+  border-bottom: 1px solid color-mix(in srgb, var(--ink-faint) 55%, transparent);
+  padding: 0.42rem 0.5rem 0.42rem 0;
+}
+
+.grid-ledger td.num,
+.grid-ledger th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.grid-swatch {
+  display: inline-block;
+  width: 0.7em;
+  height: 0.7em;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  margin-right: 0.55em;
+  vertical-align: baseline;
+  position: relative;
+  top: 0.03em;
+}
+
+.grid-colophon {
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--ink);
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--ink) 70%, var(--paper));
+  line-height: 1.7;
+}
+
+.grid-colophon a {
+  color: inherit;
+  text-underline-offset: 2px;
+}
