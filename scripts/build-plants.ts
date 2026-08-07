@@ -273,7 +273,13 @@ async function main() {
   const kb = Math.round(fs.statSync(OUT_PATH).size / 1024);
   console.log(`\nwrote ${OUT_PATH} (${kb} KB)`);
 
-  // Client-fetched GeoJSON for the map (minimal properties; served static).
+  // Client-fetched GeoJSON for the map. Properties are terse (5k features):
+  // op operator, tech technology, yr online year, iso market region from the
+  // BA code, st state, cmw under-construction MW.
+  const BA_TO_ISO: Record<string, string> = {
+    CISO: "CAISO", ERCO: "ERCOT", ISNE: "ISO-NE", MISO: "MISO",
+    NYIS: "NYISO", PJM: "PJM", SWPP: "SPP",
+  };
   const geo = {
     type: "FeatureCollection" as const,
     features: plants.map((p) => ({
@@ -284,6 +290,12 @@ async function main() {
         fuel: p.fuel,
         status: p.status,
         mw: p.capacity_mw || p.construction_mw || 0,
+        op: p.operator,
+        tech: p.technology,
+        yr: p.online_year,
+        iso: (p.ba && BA_TO_ISO[p.ba]) || "none",
+        st: p.state,
+        ...(p.construction_mw ? { cmw: p.construction_mw } : {}),
       },
       geometry: { type: "Point" as const, coordinates: [p.lng, p.lat] },
     })),

@@ -183,6 +183,229 @@
   border-color: var(--night-line);
 }
 
+/* ---------- Atlas controls (plain scaffolding — reskinned in Phase 4.5) ---------- */
+
+.grid-controls {
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.75rem;
+  color: var(--ink);
+  margin-bottom: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.grid-controls-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.5rem;
+  align-items: center;
+}
+
+.grid-controls select,
+.grid-search input {
+  font: inherit;
+  color: var(--ink-strong);
+  background: var(--paper);
+  border: 1px solid var(--ink-faint);
+  padding: 0.35rem 0.5rem;
+  border-radius: 0;
+}
+
+.grid-search {
+  position: relative;
+  flex: 1 1 14rem;
+  min-width: 12rem;
+}
+
+.grid-search input {
+  width: 100%;
+}
+
+.grid-search-results {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+.grid-search-results button {
+  all: unset;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.45rem 0.6rem;
+  cursor: pointer;
+  color: var(--ink-strong);
+}
+
+.grid-search-results button span {
+  color: color-mix(in srgb, var(--ink) 62%, var(--paper));
+}
+
+.grid-search-results button:hover,
+.grid-search-results button:focus-visible {
+  background: var(--paper-shade);
+}
+
+.grid-fuel-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.grid-fuel-chips button {
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--ink-faint);
+  padding: 0.28rem 0.55rem;
+  cursor: pointer;
+}
+
+.grid-fuel-chips button[aria-pressed="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+.grid-layer-toggles {
+  display: flex;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+.grid-layer-toggles label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.grid-controls-status {
+  color: color-mix(in srgb, var(--ink) 70%, var(--paper));
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.grid-clear {
+  all: unset;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  color: var(--ink);
+}
+
+/* ---------- Detail card ---------- */
+
+.grid-detail {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 5;
+  width: min(20rem, calc(100% - 1.5rem));
+  max-height: min(60%, 22rem);
+  overflow-y: auto;
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  padding: 0.8rem 0.9rem;
+}
+
+.grid-detail header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 0 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.grid-detail h3 {
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-size: 1.125rem;
+  font-weight: 550;
+  color: var(--ink-strong);
+  margin: 0;
+  grid-column: 1;
+}
+
+.grid-detail-kicker {
+  grid-column: 1;
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ink) 68%, var(--paper));
+}
+
+.grid-detail header button {
+  all: unset;
+  grid-column: 2;
+  grid-row: 1;
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: var(--ink);
+  padding: 0 0.2rem;
+}
+
+.grid-detail dl {
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+.grid-detail dl > div {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  border-top: 1px solid color-mix(in srgb, var(--ink-faint) 45%, transparent);
+}
+
+.grid-detail dt {
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ink) 62%, var(--paper));
+  align-self: baseline;
+  padding-top: 0.15rem;
+}
+
+.grid-detail dd {
+  margin: 0;
+  color: var(--ink-strong);
+}
+
+.grid-detail-src {
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--ink) 55%, var(--paper));
+  margin: 0.6rem 0 0;
+}
+
+/* On the night sheet the card and controls stay readable but flip to the kit. */
+.grid-plate[data-mode="night"] .grid-detail {
+  background: var(--night-sheet);
+  border-color: var(--night-line);
+  color: var(--night-line);
+}
+
+.grid-plate[data-mode="night"] .grid-detail h3,
+.grid-plate[data-mode="night"] .grid-detail dd {
+  color: var(--night-line);
+}
+
 .grid-plate-caption {
   font-family: var(--font-newsreader), Georgia, serif;
   font-style: italic;

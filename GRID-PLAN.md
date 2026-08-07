@@ -32,14 +32,21 @@ Design authority: `GRID-DESIGN.md` (inherits `DESIGN.md`).
       visvalingam 12% keep-shapes, 4-decimal precision, 10,495 lines, 4.4 MB
       raw / ~1.2 MB gzipped); faint day-map layer, ≥500 kV drawn heavier.
       Filter lift arrives with atlas assembly.
-- [ ] ISO/RTO boundary layer; regulatory wash toggle.
+- [x] ISO/RTO boundary layer (7 footprints via `build:regions`, NRDC mirror of
+      the retired HIFLD layer, 2017 vintage, PROVISIONAL) + regulatory wash
+      toggle (retail-choice status by state, us-atlas geometry, classification
+      PROVISIONAL until Phase 5 facts audit).
 - [x] **The night proof** built: day→night sheet crossfade (1.5 s paint
       transitions, snapshot-restore in `map/night.ts`), transmission lamp-glow,
       city stipple from settlement points, night pin variants swapped mid-wash,
       reduced-motion hard cut. DAY/NIGHT toggle on the plate for review.
-- [ ] Atlas mode assembled: filters (fuel family tabs, capacity band, region,
-      online era, status), detail panel, search. Independently shippable.
-- [ ] Acceptance: atlas pleasant on a phone; Rob signs off night proof + coal token.
+- [x] Atlas mode assembled: fuel chips, status/capacity/era/region selects,
+      wires/regions/regulation layer toggles, client-side search (name or
+      operator) with camera fly-to, detail card (EIA fields + construction MW),
+      shown-count + clear-filters line, plant labels past z8.5. Plain
+      scaffolding chrome per the Phase 4.5 freeze.
+- [ ] Acceptance: atlas pleasant on a phone (Rob's preview pass; night/coal
+      sign-offs moot until the reskin).
 
 ## Phase 2 — Vertical slice: Act 2 (the design proof)
 
@@ -168,3 +175,24 @@ small: map style builder, pin module, night kit, CSS tokens, widget chrome.
   and atlas UI structurally plain. The night sheet's dark-base look is a live
   candidate to become the default in the reskin. **Next:** Phase 1 remainder
   (ISO/RTO boundaries, atlas filters/detail panel/search), then Phase 2.
+- **2026-08-07 — Phase 1 complete: atlas assembled (same day, "keep going").**
+  New pipelines: `build:regions` → `regions.json` (7 ISO/RTO footprints; EIA's
+  own ArcGIS layer now token-locked and HIFLD's retired, so sourced from
+  NRDC's public mirror, 2017 vintage, marked PROVISIONAL in meta) +
+  `regulatory.json` (51 states, retail-choice classification — choice /
+  limited / traditional — geometry from us-atlas; classification PROVISIONAL
+  pending Phase 5 audit). `plants.geo.json` enriched with operator, tech,
+  online year, market region (BA→ISO map), state, construction MW (1.4 MB).
+  GridMap now owns filter state (fuel set, status, capacity band, era,
+  region → setData refeed, clusters recount), layer toggles, search index,
+  and a detail card; new `AtlasControls` + `DetailCard` components, plain
+  chrome per the reskin freeze. Night kit extended to the new layers —
+  snapshot-restore proven to round-trip expression-valued paints. Verified
+  programmatically end-to-end (nuclear filter = exactly the ledger's 55;
+  nuclear×PJM = 17; search→Palo Verde flies camera + opens card; canvas
+  pin-click opens card; mobile 375px no overflow, chips wrap to 2 rows).
+  Build/tsc clean. **Phase 1 done except Rob's phone acceptance.** **Next:**
+  Phase 2 — generalize the beat engine + content pipeline, author Act 2 copy,
+  dispatch-stack / duck-curve / hold-60Hz widgets, temporal camera. **For
+  Rob:** same preview, now with controls — filter to Nuclear, toggle
+  Regions + Regulation, search your favorite plant.

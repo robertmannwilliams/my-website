@@ -105,8 +105,10 @@ export default function GridPage() {
         <p className="grid-plate-caption">
           Fig. 2 — Plate I: the fleet. Every mark is a plant of 25 megawatts
           or more; the faint lines are the transmission network at 220
-          kilovolts and above. Set the sheet to night to see the machine the
-          way it sees itself.
+          kilovolts and above. Filter by fuel, size, era, or market region;
+          toggle the region and regulation overlays; click any mark for its
+          record. Set the sheet to night to see the machine the way it sees
+          itself.
         </p>
       </div>
 

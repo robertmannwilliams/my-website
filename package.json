@@ -7,6 +7,7 @@
     "generate:homepage-sketch": "tsx scripts/generate-homepage-reference-sketch.ts",
     "build:plants": "tsx scripts/build-plants.ts",
     "build:transmission": "tsx scripts/build-transmission.ts",
+    "build:regions": "tsx scripts/build-regions.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -46,6 +47,7 @@
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5",
+    "us-atlas": "^3.0.1",
     "xlsx": "^0.18.5",
     "zod": "^4.3.6"
   }

@@ -29,6 +29,39 @@ export interface Plant {
   status: "operating" | "construction";
 }
 
+/** Terse feature properties in public/grid-data/plants.geo.json. */
+export interface PlantProps {
+  id: string;
+  name: string;
+  fuel: FuelFamily;
+  status: "operating" | "construction";
+  mw: number;
+  op: string;
+  tech: string;
+  yr: number | null;
+  iso: string;
+  st: string;
+  cmw?: number;
+}
+
+export type MarketRegion =
+  | "CAISO" | "ERCOT" | "ISO-NE" | "MISO" | "NYISO" | "PJM" | "SPP" | "none";
+
+export interface AtlasFilters {
+  /** Empty set = all fuels. */
+  fuels: Set<FuelFamily>;
+  status: "all" | "operating" | "construction";
+  band: "all" | "s" | "m" | "l";
+  era: "all" | "pre1970" | "1970s" | "2000s" | "recent";
+  region: "all" | MarketRegion;
+}
+
+export interface LayerVisibility {
+  wires: boolean;
+  regions: boolean;
+  regulation: boolean;
+}
+
 export interface PlantsFile {
   meta: {
     title: string;
