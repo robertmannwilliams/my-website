@@ -107,6 +107,32 @@ WRITTEN (GRID-PLAN discipline; audited in Phase 5). Format:
 - 4.4 · auctions every five minutes; "few thousand humming plants" ·
   matches 2.4; 4,682 operating plants ≥25 MW in this dataset · OK
 
+## Hero blurbs (data/hero-sites.json)
+
+Blanket entry: 32 US blurbs + 8 Canadian records, hand-written 2026-08-07.
+Structured fields for US sites come from EIA-860M; blurb claims are from the
+standard public record and get individually verified at the Phase 5 audit.
+Claims flagged now: Vogtle largest US nuclear post-Unit-4 (checked against
+this dataset: 4,658 > Palo Verde 4,210 · OK); Bath County "America's biggest
+battery" (3.0 GW pumped storage vs largest chemical batteries <1 GW · OK,
+wording "by far" fine); Bruce "largest operating nuclear station in the
+world" (TO VERIFY vs Kori/Hanul post-2024); Susquehanna data-center deal
+details (TO VERIFY current arrangement); Traverse "largest single-phase in
+North America" (developer claim · TO VERIFY); Churchill Falls contract
+status post-2024 renegotiation (TO VERIFY — copy says "sold", past tense,
+deliberately). Canadian capacities/coords approximate; detail cards label
+these records "Manual entry · figures approximate".
+
+## Live panel (data/live-snapshot.json + /api/grid/live)
+
+- Snapshot fallback: stylized hot-August evening, US48 demand 628 GW, mix
+  magnitudes per EIA Hourly Grid Monitor ranges · REPRESENTATIVE, labeled
+  as such in the UI and in the file · OK by design
+- Live path: EIA v2 rto/region-data (US48 demand) + rto/fuel-type-data
+  (US48 mix), ~1–2 h lag stated in the panel note · activates when
+  EIA_API_KEY is set · verify against EIA's own dashboard at Phase 4
+  acceptance
+
 ## Widget data (illustrative, labeled as such in-widget)
 
 - dispatch-stack · stylized one-region stack (wind 8 GW @$0, solar +15 GW

@@ -45,6 +45,7 @@ export default function DetailCard({
           ×
         </button>
       </header>
+      {plant.why && <p className="grid-detail-why">{plant.why}</p>}
       <dl>
         {rows.map(([k, v]) => (
           <div key={k}>
@@ -53,7 +54,9 @@ export default function DetailCard({
           </div>
         ))}
       </dl>
-      <p className="grid-detail-src">EIA-860M · June 2026</p>
+      <p className="grid-detail-src">
+        {plant.ca ? "Manual entry · figures approximate" : "EIA-860M · June 2026"}
+      </p>
     </aside>
   );
 }

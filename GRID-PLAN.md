@@ -99,19 +99,28 @@ Design authority: `GRID-DESIGN.md` (inherits `DESIGN.md`).
       single-spine consolidation.
 - [ ] Single-spine consolidation: one map instance carrying story → atlas
       (currently two instances on the page).
-- [ ] Hero-site blurbs: ~40–60 hand-written `why_it_matters` entries (incl. the
-      Canadian hero sites as manual plant entries).
+- [x] Hero-site blurbs: 40 hand-written entries (32 US + 8 Canadian manual
+      records — Robert-Bourassa, Manic-5, Churchill Falls, Bruce, Adam Beck,
+      W.A.C. Bennett, Limestone, Travers) in `data/hero-sites.json`, merged by
+      the pipeline (blurb ids validated against the plant set, build fails on
+      a miss). Detail cards show the blurb; Canadian cards say "Manual entry ·
+      figures approximate"; IESO/AESO join the region filter. More blurbs can
+      land anytime — the file is the API. Beat 3.4 now pins Robert-Bourassa.
 - [ ] Acceptance: full story scroll start to finish on Rob's phone.
 
 ## Phase 4 — Live layer
 
-- [ ] `/api/grid/live`: EIA v2 proxy, key server-side, ~10 min cache, baked
-      snapshot fallback (never a spinner/error per GRID-DESIGN).
-- [ ] Live panel (4.4): national demand + fuel mix now; region picker (IP guess,
-      manual override, no permission prompts).
+- [x] `/api/grid/live`: EIA v2 proxy (US48 demand + fuel mix), key
+      server-side, ~10 min cache, baked snapshot fallback (never a
+      spinner/error). Built keyless-first: serves the labeled snapshot today,
+      flips live automatically when `EIA_API_KEY` lands in env.
+- [x] Live panel (4.4): Lower-48 demand + fuel-mix bars, LIVE vs
+      REPRESENTATIVE SNAPSHOT badge. (Region picker deferred — national
+      first; add with the atlas overlay.)
+- [ ] Region picker (IP guess, manual override, no permission prompts).
 - [ ] Atlas live overlay: per-BA demand readout on region hover; docked panel.
-- [ ] Acceptance: panel correct against EIA's own dashboard; fallback verified by
-      simulating API failure.
+- [ ] Acceptance: live path verified against EIA's own dashboard once the key
+      exists (fallback path verified now — keyless returns the snapshot).
 
 ## Phase 4.5 — Reskin (visual language v2)
 
@@ -269,3 +278,20 @@ small: map style builder, pin module, night kit, CSS tokens, widget chrome.
   end-to-end (~8 minutes). The Uri beat is the piece's gavel strike — tell
   me if the copy earns it. And the EIA key remains the only Phase 4
   blocker.
+- **2026-08-07 — Hero sites + live layer (same day, "keep going").** 40
+  hand-written hero blurbs (32 US, validated against the plant set at
+  build; 8 manual Canadian records with IESO/AESO added to the region
+  filter and "Manual entry" source lines). One factual catch while
+  writing: Vogtle (4,658 MW) has overtaken Palo Verde as the largest US
+  nuclear plant — blurbs written accordingly, cross-checked against the
+  dataset. The live layer shipped keyless-first: `/api/grid/live` proxies
+  EIA v2 when `EIA_API_KEY` exists and serves a clearly-labeled
+  representative snapshot otherwise (verified: keyless returns snapshot;
+  panel renders 628 GW + 8 fuel bars with the SNAPSHOT badge in beat 4.4).
+  Ledger extended for blurb claims (Bruce/Traverse/Susquehanna/Churchill
+  flagged TO VERIFY) and the snapshot. **Remaining before launch:** spine
+  consolidation + handover transition, Phase 4 region picker + atlas
+  overlay + live acceptance (needs the key), Phase 4.5 reskin (needs
+  Rob), Phase 5 audit/polish. **For Rob:** drop the EIA key into
+  `.env.local` and Vercel as `EIA_API_KEY` and beat 4.4 goes live on its
+  own; meanwhile the atlas now rewards clicking the famous plants.

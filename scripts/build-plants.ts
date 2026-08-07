@@ -46,6 +46,25 @@ interface Plant {
   online_year: number | null;
   units: number;
   status: "operating" | "construction";
+  country: "us" | "ca";
+}
+
+interface HeroFile {
+  blurbs: Record<string, string>;
+  canada: Array<{
+    id: string;
+    name: string;
+    operator: string;
+    state: string;
+    lat: number;
+    lng: number;
+    fuel: FuelFamily;
+    technology: string;
+    capacity_mw: number;
+    online_year: number;
+    iso: string;
+    why: string;
+  }>;
 }
 
 /** Order matters: storage checks must precede gas/hydro substring matches. */
@@ -220,6 +239,7 @@ async function main() {
       online_year: relevantYears.length ? Math.min(...relevantYears) : null,
       units: units.length,
       status,
+      country: "us",
     };
     if (conMw > 0) plant.construction_mw = Math.round(conMw * 10) / 10;
     plants.push(plant);
@@ -255,6 +275,43 @@ async function main() {
     console.log(`  ${fam.padEnd(11)} ${String(e.n).padStart(5)} plants  ${e.gw.toFixed(0).padStart(5)} GW`);
   }
 
+  // ---- Hero blurbs + manual Canadian records (data/hero-sites.json) ----
+  const heroPath = path.join(process.cwd(), "data", "hero-sites.json");
+  const hero = JSON.parse(fs.readFileSync(heroPath, "utf8")) as HeroFile;
+  const ids = new Set(plants.map((p) => p.id));
+  const missing = Object.keys(hero.blurbs).filter((id) => !ids.has(id));
+  if (missing.length) {
+    fail(`hero blurb ids not in plant set: ${missing.join(", ")}`);
+  }
+  const usCount = plants.length;
+  for (const c of hero.canada) {
+    if (!c.id.startsWith("ca-") || !c.lat || !c.lng || !c.capacity_mw || !c.why) {
+      fail(`malformed canada record: ${c.id}`);
+    }
+    plants.push({
+      id: c.id,
+      name: c.name,
+      operator: c.operator,
+      state: c.state,
+      county: null,
+      lat: c.lat,
+      lng: c.lng,
+      ba: null,
+      fuel: c.fuel,
+      technology: c.technology,
+      capacity_mw: c.capacity_mw,
+      online_year: c.online_year,
+      units: 1,
+      status: "operating",
+      country: "ca",
+    });
+  }
+  console.log(`hero blurbs: ${Object.keys(hero.blurbs).length} US · manual Canadian sites: ${hero.canada.length}`);
+
+  const heroWhy = new Map<string, string>(Object.entries(hero.blurbs));
+  for (const c of hero.canada) heroWhy.set(c.id, c.why);
+  const canadaIso = new Map(hero.canada.map((c) => [c.id, c.iso]));
+
   const out = {
     meta: {
       title: "US power plants (grid atlas dataset)",
@@ -265,7 +322,11 @@ async function main() {
       threshold_mw: THRESHOLD_MW,
       notes:
         "Generators aggregated to plants. Operating = OP/SB/OA units; construction = U/V/TS units from the Planned sheet. Excluded: OS units, planned-not-under-construction (P/L/T), Puerto Rico sheets. fuel = dominant family by nameplate MW; coordinates rounded to 4 decimals (EIA precision is plant-gate at best).",
-      counts: { plants: plants.length, operating_gw: Math.round(totalGw) },
+      counts: {
+        plants: usCount,
+        operating_gw: Math.round(totalGw),
+        canada_manual: hero.canada.length,
+      },
     },
     plants,
   };
@@ -293,9 +354,13 @@ async function main() {
         op: p.operator,
         tech: p.technology,
         yr: p.online_year,
-        iso: (p.ba && BA_TO_ISO[p.ba]) || "none",
+        iso: p.country === "ca"
+          ? (canadaIso.get(p.id) ?? "none")
+          : (p.ba && BA_TO_ISO[p.ba]) || "none",
         st: p.state,
         ...(p.construction_mw ? { cmw: p.construction_mw } : {}),
+        ...(heroWhy.has(p.id) ? { why: heroWhy.get(p.id), hero: 1 } : {}),
+        ...(p.country === "ca" ? { ca: 1 } : {}),
       },
       geometry: { type: "Point" as const, coordinates: [p.lng, p.lat] },
     })),

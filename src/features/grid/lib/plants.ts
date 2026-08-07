@@ -12,11 +12,12 @@ export interface FamilySummary {
   gw: number;
 }
 
-/** Operating capacity by fuel family, largest first. */
+/** Operating capacity by fuel family, largest first. US federal inventory
+ *  only — the manual Canadian hero records are atlas-only. */
 export function summarizeByFamily(): FamilySummary[] {
   const acc = new Map<FuelFamily, FamilySummary>();
   for (const p of plants) {
-    if (p.status !== "operating") continue;
+    if (p.status !== "operating" || p.country === "ca") continue;
     const e = acc.get(p.fuel) ?? { fuel: p.fuel, plants: 0, gw: 0 };
     e.plants += 1;
     e.gw += p.capacity_mw / 1000;
@@ -30,6 +31,7 @@ export function totals() {
   let constructionMw = 0;
   let operatingGw = 0;
   for (const p of plants) {
+    if (p.country === "ca") continue; // Sheet-0 counts the federal inventory
     if (p.status === "operating") {
       operating += 1;
       operatingGw += p.capacity_mw / 1000;

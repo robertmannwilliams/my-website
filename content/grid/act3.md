@@ -18,6 +18,7 @@ beats:
   - id: "3.4"
     kind: map
     overlay: quebec
+    sites: [ca-robert-bourassa]
     camera: { center: [-72.5, 46.5], zoom: 4.6 }
     night: true
   - id: "3.5"

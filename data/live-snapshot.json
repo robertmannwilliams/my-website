@@ -1,0 +1,15 @@
+{
+  "note": "REPRESENTATIVE baked fallback for the live panel — stylized typical hot-August early evening, US Lower 48, magnitudes per EIA Hourly Grid Monitor ranges. Served whenever the EIA key or feed is unavailable; always labeled as a snapshot in the UI. Ledgered in content/grid/facts.md.",
+  "as_of": "a summer evening, 2026",
+  "demand_gw": 628,
+  "mix": [
+    { "fuel": "gas", "gw": 298 },
+    { "fuel": "nuclear", "gw": 95 },
+    { "fuel": "coal", "gw": 66 },
+    { "fuel": "solar", "gw": 58 },
+    { "fuel": "wind", "gw": 44 },
+    { "fuel": "hydro", "gw": 31 },
+    { "fuel": "other", "gw": 14 },
+    { "fuel": "battery", "gw": 6 }
+  ]
+}

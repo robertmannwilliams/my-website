@@ -26,7 +26,10 @@ const FUELS: Array<{ key: FuelFamily; label: string }> = [
   { key: "other", label: "Other" },
 ];
 
-const REGIONS = ["CAISO", "ERCOT", "ISO-NE", "MISO", "NYISO", "PJM", "SPP", "none"] as const;
+const REGIONS = [
+  "CAISO", "ERCOT", "ISO-NE", "MISO", "NYISO", "PJM", "SPP",
+  "IESO", "AESO", "none",
+] as const;
 
 interface Props {
   filters: AtlasFilters;

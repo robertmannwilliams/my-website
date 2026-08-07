@@ -476,9 +476,51 @@
   stroke-width: 1.8;
 }
 
-.grid-live-placeholder {
-  border: 1px dashed var(--ink-faint);
-  padding: 0.7rem 0.8rem;
+.grid-live-badge {
+  font-size: 0.625rem;
+  letter-spacing: 0.12em;
+  color: color-mix(in srgb, var(--ink) 62%, var(--paper));
+  border: 1px solid var(--ink-faint);
+  padding: 0.15rem 0.45rem;
+  align-self: center;
+}
+
+.grid-live[data-live] .grid-live-badge {
+  color: var(--wash-teal);
+  border-color: var(--wash-teal);
+}
+
+.grid-live-mix {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  margin: 0.5rem 0;
+}
+
+.grid-live-row {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr 2.4rem;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.6875rem;
+}
+
+.grid-live-bar {
+  display: block;
+  height: 0.7rem;
+  background: var(--paper-shade);
+  border: 1px solid color-mix(in srgb, var(--ink-faint) 60%, transparent);
+}
+
+.grid-live-bar > span {
+  display: block;
+  height: 100%;
+  background: color-mix(in srgb, var(--ink) 30%, var(--paper));
+}
+
+.grid-live-gw {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .grid-dial-arc {
@@ -686,6 +728,13 @@
   line-height: 1;
   color: var(--ink);
   padding: 0 0.2rem;
+}
+
+.grid-detail-why {
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  margin: 0 0 0.6rem;
 }
 
 .grid-detail dl {
