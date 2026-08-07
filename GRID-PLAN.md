@@ -50,14 +50,28 @@ Design authority: `GRID-DESIGN.md` (inherits `DESIGN.md`).
 
 ## Phase 2 — Vertical slice: Act 2 (the design proof)
 
-- [ ] Generalize the aistack beat engine + content pipeline for `content/grid/`
-      (new beat kinds: `widget`, `live`); loud validation against plants.json.
-- [ ] Act 2 copy authored (register contract; facts ledger entries as written).
-- [ ] Dispatch-stack widget (2.4) incl. "add solar" toggle + static fallback.
-- [ ] Duck-curve scrubber (2.6) tied to map sun position.
-- [ ] Hold-60Hz widget (2.8) on the night map + static fallback.
-- [ ] Temporal camera choreography (PA → CA → TX with the sun); night entrance
-      at 2.7 sequenced with the story, not scroll position.
+- [x] Story engine built for `content/grid/` (beat kinds `map | text | widget |
+      live`); gray-matter pipeline with loud validation (site ids against
+      plants.json, orphan copy, unknown widgets/overlays — build fails).
+      Purpose-built compact engine (`story/StoryFlow` + `story/StoryMap`)
+      following the aistack grammar rather than literally extracting its code —
+      smaller surface for the reskin to repaint. Journey trail, story density
+      rule, overlay + night per beat, reduced-motion jumpTo.
+- [x] Act 2 copy authored: 10 beats, register contract; facts ledger
+      (`content/grid/facts.md`) written alongside — one arithmetic error
+      caught by the ledger during drafting (16 vs 40 Susquehannas).
+- [x] Dispatch-stack widget (2.4) incl. "add solar" toggle (demand 65 GW:
+      $160 peaker-set → $40 CC-set with solar — the lesson in one click).
+- [x] Duck-curve scrubber (2.6) with belly/neck annotations. (Sun-position
+      tie-in to the map dropped — scrubber stands alone; revisit only if the
+      reskin wants it.)
+- [x] Hold-60Hz widget (2.8): fail path (~8 s untouched), win path
+      (peaker + battery bridge), retry, four-second-computer reveal,
+      reduced-motion static variant. Sim advances by wall-clock dt so
+      throttled background timers slow ticks, not the game.
+- [x] Temporal camera choreography (CONUS regions → Susquehanna → seaboard →
+      Solar Star → LA night entrance → Menifee → Horse Hollow); night enters
+      at 2.7 via beat state, not scroll position.
 - [ ] Acceptance: Rob approves the slice on a phone preview before replication.
 
 ## Phase 3 — All acts
@@ -196,3 +210,24 @@ small: map style builder, pin module, night kit, CSS tokens, widget chrome.
   dispatch-stack / duck-curve / hold-60Hz widgets, temporal camera. **For
   Rob:** same preview, now with controls — filter to Nuclear, toggle
   Regions + Regulation, search your favorite plant.
+- **2026-08-07 — Phase 2 slice: Act 2 live (same day, "go").** The story
+  engine runs on `/grid` between the surveyor's note and the atlas plate:
+  10 authored beats scroll over a sticky story map (its own non-interactive
+  instance for now; single-spine consolidation is Phase 3 handover work).
+  Beats 2.2/2.6/2.9/2.10 anchor on real plants (Susquehanna eia-6103, Solar
+  Star eia-58388/9, Menifee Power Bank eia-66494 — Moss Landing's battery is
+  off the June-2026 inventory post-fire, so Menifee carries the beat — and
+  Horse Hollow eia-56291). Night enters at 2.7 and holds through midnight.
+  Widgets verified end-to-end incl. both hold-60 outcomes. Facts ledger
+  started with statuses (several TO VERIFY for Phase 5; 2.6 "as much as a
+  nuclear reactor" flagged BORDERLINE). Verification notes: IO delivery and
+  WebGL screenshots both need a visible pane — beat machinery was driven
+  directly via the dev `__applyBeat` handle plus one IO wake test
+  (scroll→2.2→camera confirmed). Hold-60 tuning knob: after the peaker's
+  online the dial pins at 60.30 (cap); game-feel polish deferred to 4.5.
+  Build/tsc clean. **Next:** Rob's phone pass on the slice, then Phase 3
+  (Acts 1/3/4 + single-spine map + handover) or reskin exploration —
+  Rob's call on order. **For Rob:** the slice reads top to bottom in ~3
+  minutes on the preview: note where the register lands, whether the
+  widgets feel like instruments or toys, and whether night-at-2.7 works
+  for you. Copy is markdown in `content/grid/act2.md` — edit at will.

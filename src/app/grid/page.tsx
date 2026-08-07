@@ -1,4 +1,6 @@
 import GridMap from "@/features/grid/components/GridMap";
+import StoryFlow from "@/features/grid/components/story/StoryFlow";
+import { loadAct } from "@/features/grid/lib/content";
 import { plantsMeta, summarizeByFamily, totals } from "@/features/grid/lib/plants";
 import type { FuelFamily } from "@/features/grid/types";
 
@@ -33,6 +35,7 @@ const FAMILY_WASH: Record<FuelFamily, string> = {
 export default function GridPage() {
   const t = totals();
   const families = summarizeByFamily();
+  const act2 = loadAct("act2.md");
 
   return (
     <main className="grid-sheet">
@@ -100,10 +103,17 @@ export default function GridPage() {
         </tbody>
       </table>
 
+      <p className="grid-plate-caption">
+        Fig. 2 — a slice of the story, running ahead of the rest of the
+        survey: one day on the grid, four in the morning to midnight. Scroll.
+      </p>
+
+      <StoryFlow beats={act2} />
+
       <div className="grid-plate-wrap">
         <GridMap />
         <p className="grid-plate-caption">
-          Fig. 2 — Plate I: the fleet. Every mark is a plant of 25 megawatts
+          Fig. 3 — Plate I: the fleet. Every mark is a plant of 25 megawatts
           or more; the faint lines are the transmission network at 220
           kilovolts and above. Filter by fuel, size, era, or market region;
           toggle the region and regulation overlays; click any mark for its

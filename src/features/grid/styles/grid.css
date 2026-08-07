@@ -183,6 +183,279 @@
   border-color: var(--night-line);
 }
 
+/* ---------- Story engine (Act 2 slice; plain chrome, reskinned in 4.5) ---------- */
+
+.grid-story {
+  position: relative;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+}
+
+.grid-story-map {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.grid-story-map-canvas {
+  height: 100%;
+}
+
+.grid-story-beats {
+  position: relative;
+  z-index: 2;
+  margin-top: -100dvh;
+  pointer-events: none;
+}
+
+.grid-story-beat {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  padding: 2rem clamp(1rem, 5vw, 4rem);
+}
+
+.grid-story-beat[data-kind="widget"] {
+  min-height: 110dvh;
+}
+
+.grid-story-card {
+  pointer-events: auto;
+  max-width: 24rem;
+  background: color-mix(in srgb, var(--paper) 94%, transparent);
+  border: 1px solid var(--ink);
+  padding: 1.1rem 1.25rem;
+}
+
+.grid-story-beat[data-kind="widget"] .grid-story-card {
+  max-width: 34rem;
+}
+
+.grid-story-card > p {
+  margin: 0;
+}
+
+.grid-story-card > p + * {
+  margin-top: 1rem;
+}
+
+@media (max-width: 759px) {
+  .grid-story-beat {
+    align-items: flex-end;
+    padding-bottom: 1.25rem;
+  }
+
+  .grid-story-card {
+    max-width: 100%;
+  }
+}
+
+/* ---------- Widgets (shared plain chrome) ---------- */
+
+.grid-widget {
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 0.75rem;
+  color: var(--ink);
+}
+
+.grid-widget svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.grid-widget-readouts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  margin: 0.5rem 0;
+  letter-spacing: 0.04em;
+}
+
+.grid-widget-readouts strong {
+  font-weight: 600;
+  color: var(--ink-strong);
+}
+
+.grid-widget-marginal {
+  color: color-mix(in srgb, var(--ink) 68%, var(--paper));
+  font-style: italic;
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-size: 0.8125rem;
+}
+
+.grid-stack {
+  display: flex;
+  gap: 2px;
+  height: 3.4rem;
+  align-items: stretch;
+}
+
+.grid-stack-block {
+  flex-basis: 0;
+  border: 1px solid var(--ink-faint);
+  background: var(--paper-shade);
+  position: relative;
+  overflow: hidden;
+  transition: background-color 160ms, border-color 160ms;
+}
+
+.grid-stack-block[data-lit] {
+  background: color-mix(in srgb, var(--ink) 26%, var(--paper));
+  border-color: var(--ink);
+}
+
+.grid-stack-block span {
+  position: absolute;
+  left: 0.3rem;
+  bottom: 0.2rem;
+  font-size: 0.5625rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.grid-stack-axis {
+  display: flex;
+  justify-content: space-between;
+  color: color-mix(in srgb, var(--ink) 60%, var(--paper));
+  font-size: 0.625rem;
+  margin: 0.25rem 0 0.6rem;
+}
+
+.grid-widget-slider {
+  display: block;
+  margin: 0.6rem 0 0.3rem;
+}
+
+.grid-widget-slider input {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  accent-color: var(--ink);
+}
+
+.grid-widget-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+.grid-widget-note {
+  font-size: 0.6875rem;
+  color: color-mix(in srgb, var(--ink) 62%, var(--paper));
+  margin: 0.6rem 0 0;
+  line-height: 1.5;
+}
+
+.grid-widget-btn {
+  font: inherit;
+  letter-spacing: 0.08em;
+  color: var(--ink-strong);
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  padding: 0.45rem 0.8rem;
+  cursor: pointer;
+}
+
+.grid-widget-btn:hover:not(:disabled) {
+  background: var(--paper-shade);
+}
+
+.grid-widget-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.grid-widget-btnrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.grid-widget-verdict p {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-size: 0.9375rem;
+}
+
+.grid-widget-verdict[data-failed] p {
+  color: var(--wash-red);
+}
+
+/* Duck curve + dial SVG parts */
+.grid-duck-rule {
+  stroke: color-mix(in srgb, var(--ink-faint) 45%, transparent);
+  stroke-width: 0.6;
+}
+
+.grid-duck-tick {
+  fill: color-mix(in srgb, var(--ink) 62%, var(--paper));
+  font-size: 8.5px;
+  font-family: var(--font-plex-mono), monospace;
+}
+
+.grid-duck-demand {
+  fill: none;
+  stroke: var(--ink-faint);
+  stroke-width: 1.2;
+  stroke-dasharray: 3 2.4;
+}
+
+.grid-duck-net {
+  fill: none;
+  stroke: var(--ink-strong);
+  stroke-width: 1.8;
+}
+
+.grid-duck-solar {
+  fill: none;
+  stroke: var(--wash-ochre);
+  stroke-width: 1.4;
+}
+
+.grid-duck-cursor {
+  stroke: var(--wash-red);
+  stroke-width: 1;
+}
+
+.grid-duck-dot {
+  fill: var(--wash-red);
+}
+
+.grid-dial-arc {
+  fill: none;
+  stroke: var(--ink-faint);
+  stroke-width: 1.2;
+}
+
+.grid-dial-tick {
+  stroke: var(--ink);
+  stroke-width: 1;
+}
+
+.grid-dial-needle {
+  stroke: var(--ink-strong);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.grid-dial-needle[data-low] {
+  stroke: var(--wash-red);
+}
+
+.grid-dial-hub {
+  fill: var(--ink-strong);
+}
+
+.grid-dial-readout {
+  fill: var(--ink-strong);
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
 /* ---------- Atlas controls (plain scaffolding — reskinned in Phase 4.5) ---------- */
 
 .grid-controls {
